@@ -298,7 +298,7 @@ The root config files (`eslint.config.mjs`, `vitest.config.ts`) re-export from t
 - **tRPC**
 - **Better Auth**
 - **Pino**
-- **node-cron**
+- **node-cron** - Used to clean up stale data and dangling images(shouldn't happen)
 
 ### Database
 
