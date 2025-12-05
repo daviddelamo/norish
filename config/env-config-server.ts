@@ -107,7 +107,8 @@ const ServerConfigSchema = z.object({
   CONTENT_INDICATORS: z.string().optional(),
   CONTENT_INGREDIENTS: z.string().optional(),
 
-  CHROME_WS_ENDPOINT: z.string()
+  CHROME_WS_ENDPOINT: z
+    .string()
     .min(1, "CHROME_WS_ENDPOINT is required for web scraping")
     .default("ws://chrome-headless:3000"),
 

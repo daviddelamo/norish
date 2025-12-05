@@ -15,7 +15,6 @@ vi.mock("@/server/ai/prompts/loader", () => ({
 // Import mocks for assertions
 import { getConfig, setConfig } from "../../mocks/server-config";
 import { isUserServerAdmin } from "../../mocks/users";
-import { loadDefaultPrompts } from "@/server/ai/prompts/loader";
 
 import {
   createMockAdminUser,
@@ -24,6 +23,7 @@ import {
   createMockAdminContext,
 } from "./test-utils";
 
+import { loadDefaultPrompts } from "@/server/ai/prompts/loader";
 import {
   ServerConfigKeys,
   PromptsConfigSchema,
@@ -144,13 +144,11 @@ describe("prompts procedures", () => {
       setConfig.mockResolvedValue(undefined);
 
       const testRouter = t.router({
-        updatePrompts: adminProcedure
-          .input(PromptsConfigSchema)
-          .mutation(async ({ input }) => {
-            await setConfig(ServerConfigKeys.PROMPTS, input, ctx.user.id, false);
+        updatePrompts: adminProcedure.input(PromptsConfigSchema).mutation(async ({ input }) => {
+          await setConfig(ServerConfigKeys.PROMPTS, input, ctx.user.id, false);
 
-            return { success: true };
-          }),
+          return { success: true };
+        }),
       });
 
       const caller = t.createCallerFactory(testRouter)(ctx);
@@ -173,13 +171,11 @@ describe("prompts procedures", () => {
       };
 
       const testRouter = t.router({
-        updatePrompts: adminProcedure
-          .input(PromptsConfigSchema)
-          .mutation(async ({ input }) => {
-            await setConfig(ServerConfigKeys.PROMPTS, input, ctx.user.id, false);
+        updatePrompts: adminProcedure.input(PromptsConfigSchema).mutation(async ({ input }) => {
+          await setConfig(ServerConfigKeys.PROMPTS, input, ctx.user.id, false);
 
-            return { success: true };
-          }),
+          return { success: true };
+        }),
       });
 
       const caller = t.createCallerFactory(testRouter)(ctx);
@@ -191,13 +187,11 @@ describe("prompts procedures", () => {
       const ctx = createMockAdminContext(mockAdmin);
 
       const testRouter = t.router({
-        updatePrompts: adminProcedure
-          .input(PromptsConfigSchema)
-          .mutation(async ({ input }) => {
-            await setConfig(ServerConfigKeys.PROMPTS, input, ctx.user.id, false);
+        updatePrompts: adminProcedure.input(PromptsConfigSchema).mutation(async ({ input }) => {
+          await setConfig(ServerConfigKeys.PROMPTS, input, ctx.user.id, false);
 
-            return { success: true };
-          }),
+          return { success: true };
+        }),
       });
 
       const caller = t.createCallerFactory(testRouter)(ctx);

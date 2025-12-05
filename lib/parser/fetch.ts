@@ -127,8 +127,10 @@ export async function fetchViaPuppeteer(targetUrl: string): Promise<string> {
         const checkContent = () => {
           // Check for JSON-LD
           const jsonLd = document.querySelector('script[type="application/ld+json"]');
-          if (jsonLd?.textContent?.toLowerCase().includes('recipe')) {
+
+          if (jsonLd?.textContent?.toLowerCase().includes("recipe")) {
             resolve(true);
+
             return;
           }
 
@@ -144,26 +146,31 @@ export async function fetchViaPuppeteer(targetUrl: string): Promise<string> {
           for (const el of ingredientContainers) {
             if (el.textContent && el.textContent.trim().length > 20) {
               resolve(true);
+
               return;
             }
           }
           for (const el of instructionContainers) {
             if (el.textContent && el.textContent.trim().length > 20) {
               resolve(true);
+
               return;
             }
           }
 
           // Check for schema.org microdata
           const schemaRecipe = document.querySelector('[itemtype*="Recipe"]');
+
           if (schemaRecipe?.textContent && schemaRecipe.textContent.trim().length > 100) {
             resolve(true);
+
             return;
           }
 
           elapsed += checkInterval;
           if (elapsed >= maxWait) {
             resolve(false);
+
             return;
           }
 
@@ -189,4 +196,3 @@ export async function fetchViaPuppeteer(targetUrl: string): Promise<string> {
     return ""; // Fallback will use HTTP
   }
 }
-

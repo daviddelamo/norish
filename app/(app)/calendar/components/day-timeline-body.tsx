@@ -127,11 +127,9 @@ export function DayTimelineBody({
                     <div className="flex min-w-0 items-center gap-2">
                       <MealIcon slot={it.slot} />
                       <span
-                        className={`truncate text-sm md:text-base ${it.itemType === "note" ? "text-default-600 italic" : "text-foreground"} ${it.itemType === "recipe" ? "cursor-pointer hover:text-primary" : ""}`}
+                        className={`truncate text-sm md:text-base ${it.itemType === "note" ? "text-default-600 italic" : "text-foreground"} ${it.itemType === "recipe" ? "hover:text-primary cursor-pointer" : ""}`}
                         onDoubleClick={
-                          it.itemType === "recipe"
-                            ? () => navigateToRecipe(it.recipeId)
-                            : undefined
+                          it.itemType === "recipe" ? () => navigateToRecipe(it.recipeId) : undefined
                         }
                       >
                         {displayName}

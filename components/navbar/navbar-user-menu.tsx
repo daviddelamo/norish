@@ -51,8 +51,6 @@ export default function NavbarUserMenu({ trigger = "avatar" }: NavbarUserMenuPro
     }
   };
 
-
-
   if (!user) return null;
 
   return (

@@ -57,6 +57,7 @@ export async function transcribeAudio(audioPath: string): Promise<string> {
 
     let transcript: string;
     const responseData = response as unknown;
+
     if (typeof responseData === "string") {
       // Some local transcribers might return plain text
       transcript = responseData.trim();

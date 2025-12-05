@@ -1,7 +1,8 @@
+import type { PromptsConfig } from "@/server/db/zodSchemas/server-config";
+
 import { readFileSync } from "fs";
 import { join } from "path";
 
-import type { PromptsConfig } from "@/server/db/zodSchemas/server-config";
 import { getPrompts } from "@/config/server-config-loader";
 
 const PROMPTS_DIR = join(process.cwd(), "server", "ai", "prompts");

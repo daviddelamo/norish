@@ -1,7 +1,11 @@
 "use client";
 
 import { Card, CardBody, CardHeader, Accordion, AccordionItem } from "@heroui/react";
-import { SparklesIcon, VideoCameraIcon, ChatBubbleBottomCenterTextIcon } from "@heroicons/react/16/solid";
+import {
+  SparklesIcon,
+  VideoCameraIcon,
+  ChatBubbleBottomCenterTextIcon,
+} from "@heroicons/react/16/solid";
 
 import AIConfigForm from "./ai-config-form";
 import VideoProcessingForm from "./video-processing-form";

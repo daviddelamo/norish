@@ -29,7 +29,8 @@ async function buildConversionPrompt(
 
   const units = targetSystem === "metric" ? "g, ml, L, kg, °C" : "cups, tbsp, tsp, oz, lb, °F";
   const prompt = await loadPrompt("unit-conversion");
-  aiLogger.debug({prompt}, "Loaded unit conversion prompt template");
+
+  aiLogger.debug({ prompt }, "Loaded unit conversion prompt template");
 
   const filled = fillPrompt(prompt, { sourceSystem, targetSystem, units });
 

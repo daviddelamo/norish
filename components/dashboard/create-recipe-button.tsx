@@ -48,13 +48,7 @@ export default function CreateRecipeButton() {
       {/* Mobile - Icon only */}
       <Dropdown placement="bottom-end">
         <DropdownTrigger>
-          <Button
-            isIconOnly
-            className="md:hidden mx-2"
-            color="primary"
-            radius="full"
-            size="md"
-          >
+          <Button isIconOnly className="mx-2 md:hidden" color="primary" radius="full" size="md">
             <PlusIcon className="h-5 w-5" />
           </Button>
         </DropdownTrigger>

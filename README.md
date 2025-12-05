@@ -133,7 +133,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
-  # Chrome headless 
+  # Chrome headless
   chrome-headless:
     image: zenika/alpine-chrome:latest
     container_name: chrome-headless

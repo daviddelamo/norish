@@ -106,15 +106,13 @@ const getPrompts = adminProcedure.query(async () => {
  * Update prompts config.
  * Accepts the PromptsConfig object directly.
  */
-const updatePrompts = adminProcedure
-  .input(PromptsConfigSchema)
-  .mutation(async ({ input, ctx }) => {
-    log.info({ userId: ctx.user.id }, "Updating prompts config");
+const updatePrompts = adminProcedure.input(PromptsConfigSchema).mutation(async ({ input, ctx }) => {
+  log.info({ userId: ctx.user.id }, "Updating prompts config");
 
-    await setConfig(ServerConfigKeys.PROMPTS, input, ctx.user.id, false);
+  await setConfig(ServerConfigKeys.PROMPTS, input, ctx.user.id, false);
 
-    return { success: true };
-  });
+  return { success: true };
+});
 
 export const contentConfigProcedures = router({
   updateContentIndicators,

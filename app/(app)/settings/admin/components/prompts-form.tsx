@@ -29,8 +29,7 @@ export default function PromptsForm() {
   useEffect(() => {
     if (prompts) {
       const changed =
-        recipeExtraction !== prompts.recipeExtraction ||
-        unitConversion !== prompts.unitConversion;
+        recipeExtraction !== prompts.recipeExtraction || unitConversion !== prompts.unitConversion;
 
       setHasChanges(changed);
     }
@@ -38,20 +37,19 @@ export default function PromptsForm() {
 
   const handleSave = async () => {
     setSaving(true);
-      await updatePrompts({
-        recipeExtraction,
-        unitConversion,
-      }).finally(() => {
-        setSaving(false);
-      });
+    await updatePrompts({
+      recipeExtraction,
+      unitConversion,
+    }).finally(() => {
+      setSaving(false);
+    });
   };
 
   const handleRestoreDefaults = async () => {
     setRestoring(true);
-    await restoreDefaultConfig(ServerConfigKeys.PROMPTS)
-      .finally(() => {
-        setRestoring(false);
-      });
+    await restoreDefaultConfig(ServerConfigKeys.PROMPTS).finally(() => {
+      setRestoring(false);
+    });
   };
 
   if (isLoading) {
@@ -65,11 +63,9 @@ export default function PromptsForm() {
   return (
     <div className="flex flex-col gap-6 p-2">
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium">Recipe Extraction Prompt</label>
-        <p className="text-default-500 text-xs">
-          This prompt is used when extracting recipe data from web pages or video transcripts.
-        </p>
         <Textarea
+          description="This prompt is used when extracting recipe data from web pages or video transcripts."
+          label="Recipe Extraction Prompt"
           maxRows={15}
           minRows={6}
           placeholder="Enter the recipe extraction prompt..."
@@ -79,12 +75,10 @@ export default function PromptsForm() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium">Unit Conversion Prompt</label>
-        <p className="text-default-500 text-xs">
-          This prompt is used when converting recipe measurements between metric and US systems.
-          Available variables: {"{{sourceSystem}}"}, {"{{targetSystem}}"}, {"{{units}}"}
-        </p>
         <Textarea
+          description={`This prompt is used when converting recipe measurements between metric and US
+              systems. Available variables: {{sourceSystem}}, {{targetSystem}}, {{units}}`}
+          label="Unit Conversion Prompt"
           maxRows={10}
           minRows={4}
           placeholder="Enter the unit conversion prompt..."
@@ -93,7 +87,7 @@ export default function PromptsForm() {
         />
       </div>
 
-      <div className="flex items-center justify-between ">
+      <div className="flex items-center justify-between">
         <Button
           color="warning"
           isLoading={restoring}

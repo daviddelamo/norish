@@ -31,6 +31,7 @@ export async function parseRecipeFromUrl(url: string): Promise<FullRecipeInsertD
   }
 
   const html = await fetchViaPuppeteer(url);
+
   if (!html) throw new Error("Cannot fetch recipe page.");
 
   const isRecipe = await isPageLikelyRecipe(html);
