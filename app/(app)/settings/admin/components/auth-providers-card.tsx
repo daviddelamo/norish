@@ -27,7 +27,6 @@ import {
   TrashIcon,
   BeakerIcon,
   ExclamationTriangleIcon,
-  EnvelopeIcon,
 } from "@heroicons/react/16/solid";
 
 import { useAdminSettingsContext } from "../context";
@@ -278,7 +277,6 @@ export default function AuthProvidersCard() {
         <div className="bg-default-50 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <EnvelopeIcon className="text-default-500 h-5 w-5" />
               <div className="flex flex-col gap-0.5">
                 <span className="font-medium">Email & Password</span>
                 <span className="text-default-500 text-sm">

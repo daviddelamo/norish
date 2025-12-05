@@ -1,11 +1,7 @@
 "use client";
 
 import { Card, CardBody, CardHeader, Accordion, AccordionItem } from "@heroui/react";
-import {
-  SparklesIcon,
-  VideoCameraIcon,
-  ChatBubbleBottomCenterTextIcon,
-} from "@heroicons/react/16/solid";
+import { SparklesIcon } from "@heroicons/react/16/solid";
 
 import AIConfigForm from "./ai-config-form";
 import VideoProcessingForm from "./video-processing-form";
@@ -28,12 +24,7 @@ export default function AIProcessingCard() {
           <AccordionItem
             key="ai"
             subtitle="Recipe parsing and extraction"
-            title={
-              <div className="flex items-center gap-2">
-                <SparklesIcon className="h-4 w-4" />
-                AI Configuration
-              </div>
-            }
+            title={<div className="flex items-center gap-2">AI Configuration</div>}
           >
             <AIConfigForm />
           </AccordionItem>
@@ -41,12 +32,7 @@ export default function AIProcessingCard() {
           <AccordionItem
             key="video"
             subtitle="Social media video extraction & transcription"
-            title={
-              <div className="flex items-center gap-2">
-                <VideoCameraIcon className="h-4 w-4" />
-                Video Processing
-              </div>
-            }
+            title={<div className="flex items-center gap-2">Video Processing</div>}
           >
             <VideoProcessingForm />
           </AccordionItem>
@@ -54,12 +40,7 @@ export default function AIProcessingCard() {
           <AccordionItem
             key="prompts"
             subtitle="Customize AI instructions for recipe processing"
-            title={
-              <div className="flex items-center gap-2">
-                <ChatBubbleBottomCenterTextIcon className="h-4 w-4" />
-                Prompts
-              </div>
-            }
+            title={<div className="flex items-center gap-2">Prompts</div>}
           >
             <PromptsForm />
           </AccordionItem>
