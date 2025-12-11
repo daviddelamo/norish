@@ -1,0 +1,47 @@
+services:
+  norish:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: norish-app
+    restart: always
+    ports:
+      - '3000:3000'
+    volumes:
+      - 'norish_data:/app/uploads'
+    environment:
+      AUTH_URL: 'https://norish.damaleia.com'
+      DATABASE_URL: 'postgres://postgres:norish@db:5432/norish'
+      MASTER_KEY: ${MASTER_KEY}
+      CHROME_WS_ENDPOINT: 'ws://chrome-headless:3000'
+      GOOGLE_CLIENT_ID: '${GOOGLE_CLIENT_ID}'
+      GOOGLE_CLIENT_SECRET: '${GOOGLE_CLIENT_SECRET}'
+      BETTER_AUTH_URL: '${BETTER_AUTH_URL}'
+    depends_on:
+      - db
+  db:
+    image: 'postgres:17-alpine'
+    container_name: norish-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: norish
+      POSTGRES_DB: norish
+    volumes:
+      - 'db_data:/var/lib/postgresql/data'
+  chrome-headless:
+    image: 'zenika/alpine-chrome:latest'
+    container_name: chrome-headless
+    restart: unless-stopped
+    command:
+      - '--no-sandbox'
+      - '--disable-gpu'
+      - '--disable-dev-shm-usage'
+      - '--remote-debugging-address=0.0.0.0'
+      - '--remote-debugging-port=3000'
+      - '--headless'
+    ports:
+      - '3003:3000'
+volumes:
+  db_data: ocsc488ks4koo444o8gg4gos_db-data
+  norish_data: ocsc488ks4koo444o8gg4gos_norish-data
