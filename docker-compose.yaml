@@ -6,7 +6,7 @@ services:
     container_name: norish-app
     restart: always
     ports:
-      - '3000:3000'
+      - '3005:3005'
     volumes:
       - 'norish_data:/app/uploads'
     environment:
@@ -41,7 +41,7 @@ services:
       - '--remote-debugging-port=3000'
       - '--headless'
     ports:
-      - '3003:3000'
+      - '3004:3000'
 volumes:
   db_data:
     external: true
