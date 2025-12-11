@@ -256,7 +256,7 @@ describe("GET /api/recipes", () => {
         it("includes household user IDs in list context", async () => {
             getHouseholdMock.mockResolvedValue({
                 id: "household-1",
-                users: [{ userId: "user-1" }, { userId: "user-2" }],
+                users: [{ id: "user-1" }, { id: "user-2" }],
             });
             listRecipesMock.mockResolvedValue({ recipes: [], total: 0 });
 

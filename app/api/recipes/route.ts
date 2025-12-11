@@ -61,7 +61,7 @@ export async function GET(req: Request) {
 
         // Get household for user permissions
         const household = await getHouseholdForUser(userId);
-        const householdUserIds = household?.users?.map((u) => u.userId) ?? null;
+        const householdUserIds = household?.users?.map((u) => u.id) ?? null;
         const isServerAdmin = session.user.isServerAdmin ?? false;
 
         // Single recipe by ID
