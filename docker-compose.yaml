@@ -43,5 +43,9 @@ services:
     ports:
       - '3003:3000'
 volumes:
-  db_data: ocsc488ks4koo444o8gg4gos_db-data
-  norish_data: ocsc488ks4koo444o8gg4gos_norish-data
+  db_data:
+    external: true
+    name: ocsc488ks4koo444o8gg4gos_db-data
+  norish_data:
+    external: true
+    name: ocsc488ks4koo444o8gg4gos_norish-data
