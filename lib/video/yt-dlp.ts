@@ -199,6 +199,9 @@ export async function getVideoMetadata(url: string): Promise<VideoMetadata> {
     if (cookiesPath) {
       execArgs.push("--cookies", cookiesPath);
     }
+
+    // Instagram carousels may contain images - only get first video item
+    execArgs.push("--playlist-items", "1");
   }
 
   try {
@@ -273,6 +276,9 @@ export async function downloadVideoAudio(url: string): Promise<string> {
       if (cookiesPath) {
         args.push("--cookies", cookiesPath);
       }
+
+      // Instagram carousels may contain images - only get first video item
+      args.push("--playlist-items", "1");
     }
 
     await ytDlpWrap.execPromise(args);
