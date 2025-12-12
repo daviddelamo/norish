@@ -120,7 +120,13 @@ let instagramCookiesInitialized = false;
 function getInstagramCookiesPath(): string | null {
   const cookiesBase64 = SERVER_CONFIG.INSTAGRAM_COOKIES;
 
+  log.debug(
+    { hasInstagramCookies: !!cookiesBase64, cookiesLength: cookiesBase64?.length ?? 0 },
+    "Checking Instagram cookies env var"
+  );
+
   if (!cookiesBase64) {
+    log.warn("INSTAGRAM_COOKIES env var not set - Instagram video authentication disabled");
     return null;
   }
 
