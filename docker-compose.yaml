@@ -9,8 +9,6 @@ services:
       - '3005:3005'
     volumes:
       - 'norish_data:/app/uploads'
-      # Uncomment to enable Instagram video support (requires cookies.txt file)
-      - './instagram-cookies.txt:/app/config/instagram-cookies.txt:ro'
     environment:
       AUTH_URL: '${BETTER_AUTH_URL}'
       DATABASE_URL: 'postgres://postgres:norish@db:5432/norish'
@@ -19,8 +17,8 @@ services:
       GOOGLE_CLIENT_ID: '${GOOGLE_CLIENT_ID}'
       GOOGLE_CLIENT_SECRET: '${GOOGLE_CLIENT_SECRET}'
       BETTER_AUTH_URL: '${BETTER_AUTH_URL}'
-      # Uncomment to enable Instagram video support
-      INSTAGRAM_COOKIES_PATH: '/app/config/instagram-cookies.txt'
+      # Base64-encoded Instagram cookies.txt content (optional, for video support)
+      INSTAGRAM_COOKIES: '${INSTAGRAM_COOKIES}'
     depends_on:
       - db
   db:

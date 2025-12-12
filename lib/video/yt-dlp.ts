@@ -109,15 +109,44 @@ function isInstagramUrl(url: string): boolean {
   return url.includes("instagram.com");
 }
 
+// Path where we'll write the cookies file (in the video temp directory)
+const instagramCookiesFilePath = path.join(SERVER_CONFIG.UPLOADS_DIR, "video-temp", "instagram-cookies.txt");
+let instagramCookiesInitialized = false;
+
 /**
- * Get the Instagram cookies file path if configured and exists
+ * Get the Instagram cookies file path.
+ * If INSTAGRAM_COOKIES env var is set (base64-encoded), decode and write to temp file.
  */
 function getInstagramCookiesPath(): string | null {
-  const cookiesPath = SERVER_CONFIG.INSTAGRAM_COOKIES_PATH;
+  const cookiesBase64 = SERVER_CONFIG.INSTAGRAM_COOKIES;
 
-  if (cookiesPath && fsSync.existsSync(cookiesPath)) {
-    log.debug({ cookiesPath }, "Using Instagram cookies file");
-    return cookiesPath;
+  if (!cookiesBase64) {
+    return null;
+  }
+
+  // Write cookies file on first use
+  if (!instagramCookiesInitialized) {
+    try {
+      // Ensure directory exists
+      const dir = path.dirname(instagramCookiesFilePath);
+      if (!fsSync.existsSync(dir)) {
+        fsSync.mkdirSync(dir, { recursive: true });
+      }
+
+      // Decode base64 and write to file
+      const cookiesContent = Buffer.from(cookiesBase64, "base64").toString("utf-8");
+      fsSync.writeFileSync(instagramCookiesFilePath, cookiesContent, { mode: 0o600 });
+      instagramCookiesInitialized = true;
+      log.info({ path: instagramCookiesFilePath }, "Instagram cookies file created from env var");
+    } catch (err) {
+      log.error({ err }, "Failed to write Instagram cookies file");
+      return null;
+    }
+  }
+
+  if (fsSync.existsSync(instagramCookiesFilePath)) {
+    log.debug({ cookiesPath: instagramCookiesFilePath }, "Using Instagram cookies file");
+    return instagramCookiesFilePath;
   }
 
   return null;

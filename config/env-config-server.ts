@@ -128,8 +128,8 @@ const ServerConfigSchema = z.object({
   // Scheduler Configuration
   SCHEDULER_CLEANUP_MONTHS: z.coerce.number().default(3),
 
-  // Platform-specific cookies for video processing
-  INSTAGRAM_COOKIES_PATH: z.string().optional(),
+  // Platform-specific cookies for video processing (base64-encoded Netscape cookies.txt content)
+  INSTAGRAM_COOKIES: z.string().optional(),
 });
 
 export type ServerConfig = z.infer<typeof ServerConfigSchema>;

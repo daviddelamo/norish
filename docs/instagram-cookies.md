@@ -1,16 +1,6 @@
 # Instagram Cookie Authentication for Video Processing
 
-When importing recipes from Instagram videos, authentication may be required. This guide explains how to set up cookie-based authentication.
-
-## Why Cookies Are Needed
-
-Instagram requires login to access most video content. When you see an error like:
-
-```
-ERROR: [Instagram] Requested content is not available, rate-limit reached or login required.
-```
-
-You need to provide authentication cookies from your browser.
+When importing recipes from Instagram videos, authentication is required. This guide explains how to set up cookie-based authentication using an environment variable.
 
 ## Setup Instructions
 
@@ -26,24 +16,31 @@ Steps:
 2. Click the extension icon while on instagram.com
 3. Export/download the cookies as `cookies.txt`
 
-### 2. Place the File
+### 2. Encode the Cookies as Base64
 
-Save the exported file as `instagram-cookies.txt` in the same directory as your `docker-compose.yaml`.
+Convert the cookies file content to base64:
 
-### 3. Update docker-compose.yaml
+```bash
+# Linux/macOS
+base64 -w 0 cookies.txt
 
-Uncomment the following lines in your `docker-compose.yaml`:
-
-```yaml
-services:
-  norish:
-    volumes:
-      - 'norish_data:/app/uploads'
-      - './instagram-cookies.txt:/app/config/instagram-cookies.txt:ro'  # Uncomment this
-    environment:
-      # ... other env vars ...
-      INSTAGRAM_COOKIES_PATH: '/app/config/instagram-cookies.txt'  # Uncomment this
+# Or using cat and base64
+cat cookies.txt | base64 -w 0
 ```
+
+Copy the entire output string.
+
+### 3. Set the Environment Variable
+
+Add the base64-encoded cookies to your deployment:
+
+**For docker-compose (.env file):**
+```bash
+INSTAGRAM_COOKIES=TmV0c2NhcGUgSFRUUCBDb29raWUgRmls...
+```
+
+**For Coolify/Railway/etc:**
+Add `INSTAGRAM_COOKIES` as an environment variable with the base64 string.
 
 ### 4. Restart the Container
 
@@ -55,7 +52,7 @@ docker compose up -d
 ## Maintaining Cookies
 
 - **Cookies expire**: Instagram session cookies typically last a few weeks to months
-- **Re-export when needed**: If you start seeing authentication errors again, export fresh cookies
+- **Re-export when needed**: If you start seeing authentication errors again, export fresh cookies and update the env var
 - **Stay logged in**: Keep your Instagram session active in the browser you used to export
 
 ## Troubleshooting
@@ -63,11 +60,11 @@ docker compose up -d
 | Issue | Solution |
 |-------|----------|
 | Still getting login errors | Re-export cookies, ensure you're logged into Instagram |
-| File not found errors | Check the file path and permissions |
-| Container can't read file | Ensure the file has read permissions (`chmod 644`) |
+| Base64 decode errors | Make sure there are no line breaks in the base64 string |
+| Permission errors | The app will create the cookies file with proper permissions |
 
 ## Security Notes
 
-- The cookies file contains your Instagram session - keep it secure
-- The `:ro` mount flag makes it read-only inside the container
-- Don't commit this file to version control (it's in `.gitignore`)
+- The cookies content is stored in your environment variables - keep them secure
+- Don't commit the `.env` file with credentials to version control
+- The cookies file is written to the container's temp directory with restricted permissions (600)
