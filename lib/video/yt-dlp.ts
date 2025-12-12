@@ -109,8 +109,8 @@ function isInstagramUrl(url: string): boolean {
   return url.includes("instagram.com");
 }
 
-// Path where we'll write the cookies file (in the video temp directory)
-const instagramCookiesFilePath = path.join(SERVER_CONFIG.UPLOADS_DIR, "video-temp", "instagram-cookies.txt");
+// Path where we'll write the cookies file (use /tmp which is always writable)
+const instagramCookiesFilePath = "/tmp/instagram-cookies.txt";
 let instagramCookiesInitialized = false;
 
 /**
