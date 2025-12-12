@@ -10,7 +10,7 @@ services:
     volumes:
       - 'norish_data:/app/uploads'
     environment:
-      AUTH_URL: 'https://norish.damaleia.com'
+      AUTH_URL: '${BETTER_AUTH_URL}'
       DATABASE_URL: 'postgres://postgres:norish@db:5432/norish'
       MASTER_KEY: ${MASTER_KEY}
       CHROME_WS_ENDPOINT: 'ws://chrome-headless:3000'
