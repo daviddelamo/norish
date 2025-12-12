@@ -102,6 +102,27 @@ const binDir = SERVER_CONFIG.NODE_ENV === "production" ? "/app/bin" : ".";
 const ytDlpPath = path.resolve(binDir, ytDlpFilename);
 const outputDir = path.join(SERVER_CONFIG.UPLOADS_DIR, "video-temp");
 
+/**
+ * Check if the URL is an Instagram URL
+ */
+function isInstagramUrl(url: string): boolean {
+  return url.includes("instagram.com");
+}
+
+/**
+ * Get the Instagram cookies file path if configured and exists
+ */
+function getInstagramCookiesPath(): string | null {
+  const cookiesPath = SERVER_CONFIG.INSTAGRAM_COOKIES_PATH;
+
+  if (cookiesPath && fsSync.existsSync(cookiesPath)) {
+    log.debug({ cookiesPath }, "Using Instagram cookies file");
+    return cookiesPath;
+  }
+
+  return null;
+}
+
 export async function ensureYtDlpBinary(): Promise<void> {
   log.debug({ ytDlpPath }, "Checking for binary");
   try {
@@ -134,9 +155,20 @@ export async function ensureYtDlpBinary(): Promise<void> {
 
 export async function getVideoMetadata(url: string): Promise<VideoMetadata> {
   const ytDlpWrap = new YTDlpWrap(ytDlpPath);
+  const execArgs: string[] = [url, "--dump-json", "--no-warnings"];
+
+  // Add cookies for Instagram authentication
+  if (isInstagramUrl(url)) {
+    const cookiesPath = getInstagramCookiesPath();
+
+    if (cookiesPath) {
+      execArgs.push("--cookies", cookiesPath);
+    }
+  }
 
   try {
-    const info = await ytDlpWrap.getVideoInfo(url);
+    const output = await ytDlpWrap.execPromise(execArgs);
+    const info = JSON.parse(output);
 
     return {
       title: info.title || "Untitled Video",
@@ -199,6 +231,15 @@ export async function downloadVideoAudio(url: string): Promise<string> {
       args.push("--ffmpeg-location", ffmpegDir);
     }
 
+    // Add cookies for Instagram authentication
+    if (isInstagramUrl(url)) {
+      const cookiesPath = getInstagramCookiesPath();
+
+      if (cookiesPath) {
+        args.push("--cookies", cookiesPath);
+      }
+    }
+
     await ytDlpWrap.execPromise(args);
     try {
       await fs.stat(outputFile);
@@ -212,7 +253,7 @@ export async function downloadVideoAudio(url: string): Promise<string> {
 
     // Cleanup on failure
     try {
-      await fs.unlink(outputFile).catch(() => {});
+      await fs.unlink(outputFile).catch(() => { });
     } catch (cleanupErr) {
       log.error({ err: cleanupErr }, "Failed to cleanup temp file");
     }
