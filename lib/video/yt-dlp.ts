@@ -100,7 +100,8 @@ const ytDlpFilename = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
 // In development, download to current directory on first use
 const binDir = SERVER_CONFIG.NODE_ENV === "production" ? "/app/bin" : ".";
 const ytDlpPath = path.resolve(binDir, ytDlpFilename);
-const outputDir = path.join(SERVER_CONFIG.UPLOADS_DIR, "video-temp");
+// Use /tmp for video temp files to avoid permission issues with mounted volumes
+const outputDir = SERVER_CONFIG.NODE_ENV === "production" ? "/tmp/video-temp" : path.join(SERVER_CONFIG.UPLOADS_DIR, "video-temp");
 
 /**
  * Check if the URL is an Instagram URL
