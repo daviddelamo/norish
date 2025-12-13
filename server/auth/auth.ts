@@ -171,12 +171,12 @@ function createAuth() {
       ...SERVER_CONFIG.TRUSTED_ORIGINS,
       ...(process.env.NODE_ENV === "development"
         ? [
-            "http://*/*",
-            "http://10.0.0.*:*/*",
-            "http://192.168.*.*:*/*",
-            "http://172.*.*.*:*/*",
-            "http://localhost:*/*",
-          ]
+          "http://*/*",
+          "http://10.0.0.*:*/*",
+          "http://192.168.*.*:*/*",
+          "http://172.*.*.*:*/*",
+          "http://localhost:*/*",
+        ]
         : []),
     ],
     // Email and password authentication (conditionally enabled)
@@ -300,6 +300,9 @@ function createAuth() {
       apiKey({
         enableSessionForAPIKeys: true,
         apiKeyHeaders: ["x-api-key"],
+        rateLimit: {
+          enabled: false,
+        },
       }),
 
       nextCookies(),
