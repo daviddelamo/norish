@@ -8,11 +8,12 @@ export function useUser() {
   // Transform BetterAuth session to our User type
   const user: User | null = session?.user
     ? {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image ?? null,
-      }
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      image: session.user.image ?? null,
+      language: ((session.user as any).language as "en" | "es") || "en",
+    }
     : null;
 
   return {
