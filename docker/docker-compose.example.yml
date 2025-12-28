@@ -5,6 +5,7 @@ services:
     restart: always  # Required for server restart functionality from Admin UI
     ports:
       - "3000:3000"
+    user: "1000:1000"
     # user: "1000:1000"  # Match your host user's UID:GID (run `id` to check), only needed with bind mounts
     # The example uses named volume 'norish_data' which handles permissions automatically
     volumes:
@@ -48,8 +49,12 @@ services:
       # Option 4: Google OAuth (uncomment and remove OIDC above)
       # GOOGLE_CLIENT_ID: <google-client-id>
       # GOOGLE_CLIENT_SECRET: <google-client-secret>
+
+      # Redis for real-time events (required)
+      REDIS_URL: redis://redis:6379
     depends_on:
       - db
+      - redis
 
   # PostgreSQL Database
   db:
@@ -80,7 +85,16 @@ services:
     ports:
       - "3003:3000"
 
+  # Redis for real-time events
+  redis:
+    image: redis:8.4.0
+    container_name: norish-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
 # Use this or map the volume to a host path if you want to persist data
 volumes:
   db_data:
   norish_data:
+  redis_data:

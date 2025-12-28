@@ -107,6 +107,9 @@ const ServerConfigSchema = z.object({
     .default(false),
   VIDEO_MAX_LENGTH_SECONDS: z.coerce.number().default(120),
   YT_DLP_VERSION: z.string().default("2025.11.12"),
+  YT_DLP_BIN_DIR: z
+    .string()
+    .default(process.env.NODE_ENV === "production" ? "/app/bin" : process.cwd()),
 
   // Transcription Configuration (separate from AI_PROVIDER)
   TRANSCRIPTION_PROVIDER: z
@@ -130,6 +133,9 @@ const ServerConfigSchema = z.object({
 
   // Platform-specific cookies for video processing (base64-encoded Netscape cookies.txt content)
   INSTAGRAM_COOKIES: z.string().optional(),
+
+  // Redis Configuration
+  REDIS_URL: z.string().url().default("redis://localhost:6379"),
 });
 
 export type ServerConfig = z.infer<typeof ServerConfigSchema>;

@@ -36,11 +36,8 @@ Norish does not try to be Tandoor or Mealie it is minimalistic by nature, thus I
 
 On my _todolist_ are still in order of current priority:
 
-- Implement Redis instead of the built in event emitter - this is hacky, and does not scale.
 - Mobile apps.
-- Liking recipes and perhaps a rating system.
-- Basic markdown support so you can make heading sections in the recipes.
-- Recipe linking
+- Public shareable recipe links.
 
 ---
 
@@ -48,6 +45,9 @@ On my _todolist_ are still in order of current priority:
 
 - **Easy import** of recipes via URL, with a fallback to AI if configured.
 - **Video recipe import** from YouTube Shorts, Instagram Reels, TikTok, and more _(requires OpenAI provider)_
+- **Image recipe import** import a recipe from any set of images containing a recipe _(requires OpenAI provider)_
+- **Nutritional information** Calculate nutritional information for a recipe _(requires OpenAI provider)_
+- **Allergy warning** show allergy warnings for planned recipes. Can auto detect allergies based on ingredients. _(auto detection requires OpenAI provider)_
 - **Unit conversion** Convert units from metric to US or vice versa, note: AI has to be enabled and setup for this.
 - **Recurring groceries** Groceries can be marked as recurring this can be done using NLP or the interface
   - Currently we support: daily, weekly on day, monthly, montly on day. Every _x_ weeks on day.
@@ -83,6 +83,7 @@ services:
     restart: always # Required for server restart functionality
     ports:
       - "3000:3000"
+    user: "1000:1000"
     volumes:
       - norish_data:/app/uploads
     environment:
@@ -91,10 +92,12 @@ services:
       DATABASE_URL: postgres://postgres:norish@db:5432/norish
       MASTER_KEY: <32-byte-base64-key> # Generate with: openssl rand -base64 32
       CHROME_WS_ENDPOINT: ws://chrome-headless:3000
+      REDIS_URL: redis://redis:6379
 
       # OPTIONAL
       # NEXT_PUBLIC_LOG_LEVEL: info       # trace, debug, info, warn, error, fatal (default: info in prod, debug in dev)
       # TRUSTED_ORIGINS:http://192.168.1.100:3000,https://norish.example.com  # Additional trusted origins, comma separated. Useful when behind a proxy or using multiple domains.
+      # YT_DLP_BIN_DIR: # Custom folder path for `yt-dlp` (default: /app/bin)
 
       # ─────────────────────────────────────────────────────────────────────────
       # FIRST USER SETUP
@@ -125,6 +128,7 @@ services:
       # GOOGLE_CLIENT_SECRET: <google-client-secret>
     depends_on:
       - db
+      - redis
 
   db:
     image: postgres:17-alpine
@@ -149,12 +153,19 @@ services:
       - "--remote-debugging-address=0.0.0.0"
       - "--remote-debugging-port=3000"
       - "--headless"
-    ports:
-      - "3003:3000"
+
+  # Redis for real-time events and job queues
+  redis:
+    image: redis:8.4.0
+    container_name: norish-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
 
 volumes:
   db_data:
   norish_data:
+  redis_data:
 ```
 
 ### First-User Setup
@@ -215,12 +226,13 @@ Only a few environment variables are required. All other settings are managed vi
 
 ### Required Variables
 
-| Variable             | Description                                   | Example                               |
-| -------------------- | --------------------------------------------- | ------------------------------------- |
-| `AUTH_URL`           | Public URL of your Norish instance            | `https://norish.example.com`          |
-| `DATABASE_URL`       | PostgreSQL connection string                  | `postgres://user:pass@db:5432/norish` |
-| `MASTER_KEY`         | Master key for deriving encryption keys       | `openssl rand -base64 32`             |
-| `CHROME_WS_ENDPOINT` | Puppeteer WebSocket endpoint for web scraping | `ws://chrome-headless:3000`           |
+| Variable             | Description                                    | Example                               |
+| -------------------- | ---------------------------------------------- | ------------------------------------- |
+| `AUTH_URL`           | Public URL of your Norish instance             | `https://norish.example.com`          |
+| `DATABASE_URL`       | PostgreSQL connection string                   | `postgres://user:pass@db:5432/norish` |
+| `MASTER_KEY`         | Master key for deriving encryption keys        | `openssl rand -base64 32`             |
+| `CHROME_WS_ENDPOINT` | Puppeteer WebSocket endpoint for web scraping  | `ws://chrome-headless:3000`           |
+| `REDIS_URL`          | Redis connection URL for events and job queues | `redis://redis:6379`                  |
 
 ### Optional Variables
 
@@ -231,6 +243,7 @@ Only a few environment variables are required. All other settings are managed vi
 | `RECIPES_DISK_DIR`      | Upload storage directory                | `/app/uploads` |
 | `NEXT_PUBLIC_LOG_LEVEL` | Log level                               | `info`         |
 | `TRUSTED_ORIGINS`       | Comma seperated list of trusted origins | `empty`        |
+| `YT_DLP_BIN_DIR`        | Custom folder path for `yt-dlp`         | `/app/bin`     |
 
 ### First-Time Auth Provider
 
@@ -260,7 +273,9 @@ pnpm install
 # Create your environment file
 cp .env.example .env.local
 
-# Spin up a postgres instance either via docker or another way.
+# Spin up a postgres and redis instance (e.g. via docker)
+# docker run -d --name norish-db -e POSTGRES_PASSWORD=norish -e POSTGRES_DB=norish -p 5432:5432 postgres:17-alpine
+# docker run -d --name norish-redis -p 6379:6379 redis:7-alpine
 
 # Run the app
 pnpm run dev
@@ -313,16 +328,18 @@ The root config files (`eslint.config.mjs`, `vitest.config.ts`) re-export from t
 
 ### Backend
 
-- **Node.js** - Custom server that embeds the Next server for WS/Cron support.
+- **Node.js** - Custom server that embeds the Next server for WS/Redis support.
 - **tRPC**
 - **Better Auth**
 - **Pino**
-- **node-cron** - Used to clean up stale data and dangling images(shouldn't happen)
+- **Redis**
+- **BullMQ** - Job queue for background tasks (recipe import, AI processing, etc.)
 
 ### Database
 
 - **PostgreSQL**
 - **Drizzle ORM**
+- **Redis** - Used for real-time pub/sub events and BullMQ job queues
 
 ### AI & Processing
 
