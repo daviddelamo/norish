@@ -48,18 +48,18 @@ RUN pnpm install --prod --offline --frozen-lockfile --recursive
 
 # Install production deps, then remove wrong-platform binaries
 RUN set -eux; cd node_modules/.pnpm; \
-    find . -maxdepth 1 -type d -name "@next+swc-*" \
-      ! -name "*linux-x64-musl*" \
-      ! -name "*linux-arm64-musl*" \
-      -exec rm -rf {} +; \
-    find . -maxdepth 1 -type d -name "@img+sharp-*" \
-      ! -name "*linuxmusl-x64*" \
-      ! -name "*linuxmusl-arm64*" \
-      -exec rm -rf {} +; \
-    find . -maxdepth 1 -type d -name "@img+sharp-libvips-*" \
-      ! -name "*linuxmusl-x64*" \
-      ! -name "*linuxmusl-arm64*" \
-      -exec rm -rf {} +;
+  find . -maxdepth 1 -type d -name "@next+swc-*" \
+  ! -name "*linux-x64-musl*" \
+  ! -name "*linux-arm64-musl*" \
+  -exec rm -rf {} +; \
+  find . -maxdepth 1 -type d -name "@img+sharp-*" \
+  ! -name "*linuxmusl-x64*" \
+  ! -name "*linuxmusl-arm64*" \
+  -exec rm -rf {} +; \
+  find . -maxdepth 1 -type d -name "@img+sharp-libvips-*" \
+  ! -name "*linuxmusl-x64*" \
+  ! -name "*linuxmusl-arm64*" \
+  -exec rm -rf {} +;
 
 ##############################
 # Build stage
@@ -75,10 +75,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" \
-    SKIP_ENV_VALIDATION=1
+  SKIP_ENV_VALIDATION=1
 
 RUN pnpm run build && \
-    rm -rf .next/cache .next/trace
+  rm -rf .next/cache .next/trace
 
 ##############################
 # Runtime stage (minimal, no pnpm)
@@ -89,24 +89,26 @@ ARG YT_DLP_VERSION=2025.11.12
 
 # PostgreSQL client lib + ffmpeg + vips (for sharp) - runtime only, no -dev packages
 RUN apk add --no-cache libpq ffmpeg vips && \
-    # Clean up npm (not needed, we use node directly)
-    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack && \
-    rm -rf /var/cache/apk/* /tmp/* /root/.npm
+  # Clean up npm (not needed, we use node directly)
+  rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack && \
+  rm -rf /var/cache/apk/* /tmp/* /root/.npm
 
 WORKDIR /app
 
 ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
-    SKIP_ENV_VALIDATION=0 \
-    PORT=3000 \
-    HOST="0.0.0.0"
+  NEXT_TELEMETRY_DISABLED=1 \
+  SKIP_ENV_VALIDATION=0 \
+  PORT=3000 \
+  HOST="0.0.0.0"
 
 # Create non-root user with configurable UID/GID (always ensure norish exists)
 ARG UID=1000
 ARG GID=1000
 
-RUN addgroup -g ${GID} -S norishapp || true && \
-    adduser  -u ${UID} -S norish -G norishapp || true
+RUN deluser --remove-home node || true \
+  && delgroup node || true \
+  && addgroup -g ${GID} -S norishapp \
+  && adduser -u ${UID} -S norish -G norishapp
 
 # Copy Next.js standalone output (includes minimal node_modules for Next.js itself)
 COPY --from=build --chown=${UID}:${GID} /app/.next/standalone ./
@@ -126,17 +128,17 @@ COPY --from=prod-deps --chown=${UID}:${GID} /app/node_modules ./node_modules
 
 # Create uploads, video temp, and binaries directories
 RUN mkdir -p /app/uploads/recipes /app/uploads/avatars /app/uploads/video-temp /app/bin && \
-    chown -R ${UID}:${GID} /app/uploads /app/bin
+  chown -R ${UID}:${GID} /app/uploads /app/bin
 
 # Download yt-dlp standalone binary during build (architecture-specific for Alpine/musl)
 ARG TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
-      YT_DLP_BINARY="yt-dlp_musllinux_aarch64"; \
-    else \
-      YT_DLP_BINARY="yt-dlp_musllinux"; \
-    fi && \
-    wget -q "https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/${YT_DLP_BINARY}" -O /app/bin/yt-dlp && \
-    chmod +x /app/bin/yt-dlp
+  YT_DLP_BINARY="yt-dlp_musllinux_aarch64"; \
+  else \
+  YT_DLP_BINARY="yt-dlp_musllinux"; \
+  fi && \
+  wget -q "https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/${YT_DLP_BINARY}" -O /app/bin/yt-dlp && \
+  chmod +x /app/bin/yt-dlp
 
 USER norish
 
