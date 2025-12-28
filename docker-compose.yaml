@@ -19,8 +19,10 @@ services:
       BETTER_AUTH_URL: '${BETTER_AUTH_URL}'
       # Base64-encoded Instagram cookies.txt content (optional, for video support)
       INSTAGRAM_COOKIES: '${INSTAGRAM_COOKIES}'
+      REDIS_URL: redis://redis:6379
     depends_on:
       - db
+      - redis
   db:
     image: 'postgres:17-alpine'
     container_name: norish-db
@@ -44,6 +46,12 @@ services:
       - '--headless'
     ports:
       - '3004:3000'
+  redis:
+    image: redis:8.4.0
+    container_name: norish-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
 volumes:
   db_data:
     external: true
