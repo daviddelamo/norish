@@ -1,0 +1,85 @@
+{
+    "common": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "add": "Add",
+        "close": "Close",
+        "back": "Back",
+        "next": "Next",
+        "loading": "Loading...",
+        "error": "Error",
+        "success": "Success",
+        "confirm": "Confirm",
+        "search": "Search",
+        "noResults": "No results found",
+        "required": "Required"
+    },
+    "nav": {
+        "home": "Home",
+        "recipes": "Recipes",
+        "calendar": "Calendar",
+        "groceries": "Groceries",
+        "settings": "Settings"
+    },
+    "settings": {
+        "title": "Settings",
+        "user": {
+            "title": "User Settings",
+            "profile": "Profile",
+            "apiTokens": "API Tokens",
+            "archiveImport": "Archive Import",
+            "dangerZone": "Danger Zone",
+            "language": "Language",
+            "languageDescription": "Choose your preferred language"
+        },
+        "admin": {
+            "title": "Admin Settings"
+        },
+        "household": {
+            "title": "Household Settings"
+        }
+    },
+    "recipes": {
+        "title": "Recipes",
+        "create": "Create Recipe",
+        "import": "Import Recipe",
+        "noRecipes": "No recipes yet",
+        "noRecipesDescription": "Start by creating or importing your first recipe",
+        "ingredients": "Ingredients",
+        "instructions": "Instructions",
+        "servings": "Servings",
+        "prepTime": "Prep Time",
+        "cookTime": "Cook Time",
+        "totalTime": "Total Time",
+        "tags": "Tags",
+        "source": "Source",
+        "measurementSystem": "Measurement System",
+        "metric": "Metric",
+        "us": "US"
+    },
+    "calendar": {
+        "title": "Calendar",
+        "today": "Today",
+        "week": "Week",
+        "month": "Month",
+        "noPlannedRecipes": "No recipes planned"
+    },
+    "groceries": {
+        "title": "Groceries",
+        "addItem": "Add Item",
+        "clearCompleted": "Clear Completed",
+        "noItems": "No grocery items"
+    },
+    "auth": {
+        "signIn": "Sign In",
+        "signOut": "Sign Out",
+        "signUp": "Sign Up"
+    },
+    "errors": {
+        "generic": "Something went wrong",
+        "notFound": "Not found",
+        "unauthorized": "Unauthorized"
+    }
+}

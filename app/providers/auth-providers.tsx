@@ -6,6 +6,7 @@ import { BaseProviders } from "./base-providers";
 import { TRPCProviderWrapper } from "./trpc-provider";
 
 import { ConnectionStatusOverlay } from "@/components/shared/connection-status-overlay";
+import { I18nProvider } from "@/context/i18n-context";
 
 export interface AuthProvidersProps {
   children: React.ReactNode;
@@ -16,8 +17,10 @@ export function AuthProviders({ children, themeProps }: AuthProvidersProps) {
   return (
     <BaseProviders themeProps={themeProps}>
       <TRPCProviderWrapper>
-        <ConnectionStatusOverlay />
-        {children}
+        <I18nProvider>
+          <ConnectionStatusOverlay />
+          {children}
+        </I18nProvider>
       </TRPCProviderWrapper>
     </BaseProviders>
   );

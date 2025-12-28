@@ -155,6 +155,7 @@ export async function getUserById(userId: string): Promise<User | null> {
       name: true,
       image: true,
       emailVerified: true,
+      language: true,
     },
   });
 
@@ -167,6 +168,7 @@ export async function getUserById(userId: string): Promise<User | null> {
     email: decrypt(user.email),
     name: user.name ? decrypt(user.name) : "",
     image: user.image ? decrypt(user.image) : null,
+    language: (user.language as "en" | "es") || "en",
   };
 }
 
@@ -180,6 +182,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
       name: true,
       image: true,
       emailVerified: true,
+      language: true,
     },
   });
 
@@ -192,6 +195,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     email: decrypt(user.email),
     name: user.name ? decrypt(user.name) : "",
     image: user.image ? decrypt(user.image) : null,
+    language: (user.language as "en" | "es") || "en",
   };
 }
 
@@ -272,6 +276,10 @@ export async function updateUserName(userId: string, name: string): Promise<void
   const encryptedName = encrypt(name);
 
   await db.update(users).set({ name: encryptedName }).where(eq(users.id, userId));
+}
+
+export async function updateUserLanguage(userId: string, language: "en" | "es"): Promise<void> {
+  await db.update(users).set({ language }).where(eq(users.id, userId));
 }
 
 export async function deleteUser(userId: string): Promise<void> {

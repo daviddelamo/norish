@@ -8,11 +8,13 @@ import { parseIngredientWithDefaults } from "@/lib/helpers";
 import { normalizeRecipeFromJson } from "@/lib/parser/normalize";
 import { getUnits, isAIEnabled } from "@/config/server-config-loader";
 import { aiLogger } from "@/server/logger";
+import type { Language } from "@/server/db/zodSchemas/user";
 
 async function buildExtractionPrompt(
   url: string | undefined,
   html: string,
-  allergies?: string[]
+  allergies?: string[],
+  language?: Language
 ): Promise<string> {
   const sanitized = extractSanitizedBody(html);
   const truncated = sanitized.slice(0, 50000);
@@ -37,7 +39,13 @@ ALLERGY DETECTION (STRICT):
       "\nALLERGY DETECTION: Skip allergy/dietary tag detection. Do not add any tags to the keywords array.";
   }
 
-  return `${prompt}${allergyInstruction}
+  // Add language instruction for non-English locales
+  const languageInstruction =
+    language && language !== "en"
+      ? `\n\nIMPORTANT: Generate all recipe content (title, ingredients, instructions, description) in ${language === "es" ? "Spanish" : language}.\n`
+      : "";
+
+  return `${prompt}${allergyInstruction}${languageInstruction}
 ${url ? `URL: ${url}\n` : ""}
 WEBPAGE TEXT:
 ${truncated}`;
@@ -46,7 +54,8 @@ ${truncated}`;
 export async function extractRecipeWithAI(
   html: string,
   url?: string,
-  allergies?: string[]
+  allergies?: string[],
+  language?: Language
 ): Promise<FullRecipeInsertDTO | null> {
   // Guard: AI must be enabled
   const aiEnabled = await isAIEnabled();
@@ -57,10 +66,10 @@ export async function extractRecipeWithAI(
     return null;
   }
 
-  aiLogger.info({ url }, "Starting AI recipe extraction");
+  aiLogger.info({ url, language }, "Starting AI recipe extraction");
 
   const provider = await getAIProvider();
-  const prompt = await buildExtractionPrompt(url, html, allergies);
+  const prompt = await buildExtractionPrompt(url, html, allergies, language);
 
   aiLogger.debug(
     { url, promptLength: prompt.length, prompt: prompt },

@@ -4,6 +4,7 @@ import { UserSettingsProvider } from "../context";
 
 import ProfileCard from "./profile-card";
 import AllergiesCard from "./allergies-card";
+import LanguageSelectorCard from "./language-selector-card";
 import ApiTokenCard from "./api-token-card";
 import ArchiveImportCard from "./archive-import-card";
 import DangerZoneCard from "./danger-zone-card";
@@ -13,6 +14,7 @@ function UserSettingsContent() {
     <div className="flex w-full flex-col gap-6">
       <ProfileCard />
       <AllergiesCard />
+      <LanguageSelectorCard />
       <ApiTokenCard />
       <ArchiveImportCard />
       <DangerZoneCard />

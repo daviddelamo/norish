@@ -1,0 +1,85 @@
+{
+    "common": {
+        "save": "Guardar",
+        "cancel": "Cancelar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "add": "Añadir",
+        "close": "Cerrar",
+        "back": "Atrás",
+        "next": "Siguiente",
+        "loading": "Cargando...",
+        "error": "Error",
+        "success": "Éxito",
+        "confirm": "Confirmar",
+        "search": "Buscar",
+        "noResults": "No se encontraron resultados",
+        "required": "Obligatorio"
+    },
+    "nav": {
+        "home": "Inicio",
+        "recipes": "Recetas",
+        "calendar": "Calendario",
+        "groceries": "Compras",
+        "settings": "Ajustes"
+    },
+    "settings": {
+        "title": "Ajustes",
+        "user": {
+            "title": "Ajustes de Usuario",
+            "profile": "Perfil",
+            "apiTokens": "Tokens API",
+            "archiveImport": "Importar Archivo",
+            "dangerZone": "Zona de Peligro",
+            "language": "Idioma",
+            "languageDescription": "Elige tu idioma preferido"
+        },
+        "admin": {
+            "title": "Ajustes de Administrador"
+        },
+        "household": {
+            "title": "Ajustes del Hogar"
+        }
+    },
+    "recipes": {
+        "title": "Recetas",
+        "create": "Crear Receta",
+        "import": "Importar Receta",
+        "noRecipes": "Aún no hay recetas",
+        "noRecipesDescription": "Comienza creando o importando tu primera receta",
+        "ingredients": "Ingredientes",
+        "instructions": "Instrucciones",
+        "servings": "Porciones",
+        "prepTime": "Tiempo de Preparación",
+        "cookTime": "Tiempo de Cocción",
+        "totalTime": "Tiempo Total",
+        "tags": "Etiquetas",
+        "source": "Fuente",
+        "measurementSystem": "Sistema de Medidas",
+        "metric": "Métrico",
+        "us": "Estadounidense"
+    },
+    "calendar": {
+        "title": "Calendario",
+        "today": "Hoy",
+        "week": "Semana",
+        "month": "Mes",
+        "noPlannedRecipes": "No hay recetas planificadas"
+    },
+    "groceries": {
+        "title": "Compras",
+        "addItem": "Añadir Artículo",
+        "clearCompleted": "Limpiar Completados",
+        "noItems": "No hay artículos"
+    },
+    "auth": {
+        "signIn": "Iniciar Sesión",
+        "signOut": "Cerrar Sesión",
+        "signUp": "Registrarse"
+    },
+    "errors": {
+        "generic": "Algo salió mal",
+        "notFound": "No encontrado",
+        "unauthorized": "No autorizado"
+    }
+}

@@ -34,6 +34,9 @@ export const users = pgTable(
     isServerOwner: boolean("isServerOwner").notNull().default(false),
     isServerAdmin: boolean("isServerAdmin").notNull().default(false),
 
+    // User preferences
+    language: text("language").notNull().default("en"),
+
     // BetterAuth timestamps
     createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updatedAt", { mode: "date" })
