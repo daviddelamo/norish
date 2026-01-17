@@ -1,16 +1,30 @@
+import crypto from "crypto";
+
 import JSZip from "jszip";
+
+import { saveImageBytes } from "../downloader";
+
+import { parseHumanDurationToMinutes } from "./parser-helpers";
 
 import { serverLogger as log } from "@/server/logger";
 import { inferSystemUsedFromParsed } from "@/lib/determine-recipe-system";
 import { parseIngredientWithDefaults } from "@/lib/helpers";
-import { getUnits } from "@/config/server-config-loader";
 import { FullRecipeInsertDTO } from "@/types";
 import { FullRecipeInsertSchema } from "@/server/db";
+import { getUnits } from "@/config/server-config-loader";
 
 export type MealieDatabase = {
   recipes: MealieRecipe[];
   recipes_ingredients: MealieIngredient[];
   recipe_instructions: MealieInstruction[];
+  ingredient_foods: MealieFood[];
+  ingredient_units: MealieUnit[];
+  tags: MealieTag[];
+  recipes_to_tags: MealieRecipeToTag[];
+  categories: MealieCategory[];
+  recipes_to_categories: MealieRecipeToCategory[];
+  users_to_recipes: MealieUserToRecipe[];
+  recipe_nutrition: MealieNutrition[];
 };
 
 export type MealieRecipe = {
@@ -71,8 +85,160 @@ export type MealieInstruction = {
   update_at?: string;
 };
 
+export type MealieFood = {
+  id: string;
+  name: string;
+  name_normalized?: string;
+  description?: string;
+  plural_name?: string | null;
+  group_id?: string;
+  label_id?: string | null;
+  on_hand?: boolean;
+  created_at?: string;
+  update_at?: string;
+};
+
+export type MealieUnit = {
+  id: string;
+  name: string;
+  name_normalized?: string;
+  description?: string;
+  abbreviation?: string;
+  plural_name?: string | null;
+  plural_abbreviation?: string;
+  fraction?: boolean;
+  use_abbreviation?: boolean;
+  group_id?: string;
+  created_at?: string;
+  update_at?: string;
+};
+
+export type MealieTag = {
+  id: string;
+  name: string;
+  slug?: string;
+  group_id?: string;
+  created_at?: string;
+  update_at?: string;
+};
+
+export type MealieRecipeToTag = {
+  recipe_id: string;
+  tag_id: string;
+};
+
+export type MealieCategory = {
+  id: string;
+  name: string;
+  slug?: string;
+  group_id?: string;
+  created_at?: string;
+  update_at?: string;
+};
+
+export type MealieRecipeToCategory = {
+  recipe_id: string;
+  category_id: string;
+};
+
+export type MealieUserToRecipe = {
+  id: string;
+  recipe_id: string;
+  user_id: string;
+  rating: number | null;
+  is_favorite?: boolean;
+  created_at?: string;
+  update_at?: string;
+};
+
+export type MealieNutrition = {
+  recipe_id: string;
+  calories?: string | null;
+  fat_content?: string | null;
+  protein_content?: string | null;
+  carbohydrate_content?: string | null;
+  fiber_content?: string | null;
+  sodium_content?: string | null;
+  sugar_content?: string | null;
+};
+
 /**
- * Parse Mealie database.json and extract recipes with their ingredients and instructions
+ * Lookup maps for resolving Mealie references
+ */
+export type MealieLookups = {
+  foods: Map<string, MealieFood>;
+  units: Map<string, MealieUnit>;
+  tags: Map<string, MealieTag>;
+  categories: Map<string, MealieCategory>;
+  recipeTags: Map<string, string[]>; // recipe_id -> tag_ids[]
+  recipeCategories: Map<string, string[]>; // recipe_id -> category_ids[]
+  recipeRatings: Map<string, number[]>; // recipe_id -> ratings[]
+  recipeNutrition: Map<string, MealieNutrition>; // recipe_id -> nutrition
+};
+
+/**
+ * Build lookup maps from the Mealie database for efficient resolution
+ */
+export function buildMealieLookups(database: MealieDatabase): MealieLookups {
+  const foods = new Map(database.ingredient_foods.map((f) => [f.id, f]));
+  const units = new Map(database.ingredient_units.map((u) => [u.id, u]));
+  const tags = new Map(database.tags.map((t) => [t.id, t]));
+  const categories = new Map(database.categories.map((c) => [c.id, c]));
+
+  // Build recipe -> tag_ids map
+  const recipeTags = new Map<string, string[]>();
+
+  for (const rt of database.recipes_to_tags) {
+    const existing = recipeTags.get(rt.recipe_id) || [];
+
+    existing.push(rt.tag_id);
+    recipeTags.set(rt.recipe_id, existing);
+  }
+
+  // Build recipe -> category_ids map
+  const recipeCategories = new Map<string, string[]>();
+
+  for (const rc of database.recipes_to_categories) {
+    const existing = recipeCategories.get(rc.recipe_id) || [];
+
+    existing.push(rc.category_id);
+    recipeCategories.set(rc.recipe_id, existing);
+  }
+
+  // Build recipe -> ratings[] map (from users_to_recipes)
+  const recipeRatings = new Map<string, number[]>();
+
+  for (const utr of database.users_to_recipes) {
+    if (utr.rating !== null && utr.rating > 0) {
+      const existing = recipeRatings.get(utr.recipe_id) || [];
+
+      existing.push(utr.rating);
+      recipeRatings.set(utr.recipe_id, existing);
+    }
+  }
+
+  // Build recipe -> nutrition map
+  const recipeNutrition = new Map<string, MealieNutrition>();
+
+  for (const nutr of database.recipe_nutrition) {
+    recipeNutrition.set(nutr.recipe_id, nutr);
+  }
+
+  return {
+    foods,
+    units,
+    tags,
+    categories,
+    recipeTags,
+    recipeCategories,
+    recipeRatings,
+    recipeNutrition,
+  };
+}
+
+/**
+ * Parse Mealie database.json and extract recipes with their ingredients, instructions,
+ * foods, units, tags, and categories
  */
 export async function parseMealieDatabase(databaseJson: string): Promise<MealieDatabase> {
   try {
@@ -82,6 +248,14 @@ export async function parseMealieDatabase(databaseJson: string): Promise<MealieD
       recipes: data.recipes || [],
       recipes_ingredients: data.recipes_ingredients || [],
       recipe_instructions: data.recipe_instructions || [],
+      ingredient_foods: data.ingredient_foods || [],
+      ingredient_units: data.ingredient_units || [],
+      tags: data.tags || [],
+      recipes_to_tags: data.recipes_to_tags || [],
+      categories: data.categories || [],
+      recipes_to_categories: data.recipes_to_categories || [],
+      users_to_recipes: data.users_to_recipes || [],
+      recipe_nutrition: data.recipe_nutrition || [],
     };
   } catch (e: any) {
     throw new Error(`Failed to parse database.json: ${e?.message || e}`);
@@ -136,53 +310,205 @@ async function extractMealieImage(zip: JSZip, recipeId: string): Promise<Buffer 
 }
 
 /**
- * Parse a single Mealie recipe and map to our Recipe shape
+ * Resolve ingredient name from Mealie ingredient data.
+ * Priority:
+ * 1. original_text (unparsed user input - most complete)
+ * 2. food_id lookup + note (parsed ingredients)
+ * 3. note alone (fallback)
+ *
+ * Returns null if ingredient cannot be resolved.
+ */
+function resolveIngredientName(
+  ing: MealieIngredient,
+  foodsMap: Map<string, MealieFood>
+): string | null {
+  // Priority 1: original_text is the complete unparsed input
+  if (ing.original_text && ing.original_text.trim()) {
+    return ing.original_text.trim();
+  }
+
+  // Priority 2: Resolve food_id to get the ingredient name
+  if (ing.food_id) {
+    const food = foodsMap.get(ing.food_id);
+
+    if (food && food.name && food.name.trim()) {
+      const foodName = food.name.trim();
+      const note = ing.note?.trim();
+
+      // Combine food name with note if present (e.g., "beetroot, greens removed")
+      if (note) {
+        return `${foodName}, ${note}`;
+      }
+
+      return foodName;
+    }
+  }
+
+  // Priority 3: note alone (some ingredients may only have notes)
+  if (ing.note && ing.note.trim()) {
+    return ing.note.trim();
+  }
+
+  // Cannot resolve ingredient name
+  return null;
+}
+
+/**
+ * Resolve unit name from Mealie ingredient data.
+ */
+function resolveUnitName(ing: MealieIngredient, unitsMap: Map<string, MealieUnit>): string | null {
+  if (!ing.unit_id) return null;
+
+  const unit = unitsMap.get(ing.unit_id);
+
+  if (!unit) return null;
+
+  // Prefer abbreviation if set to use it, otherwise use name
+  if (unit.use_abbreviation && unit.abbreviation) {
+    return unit.abbreviation;
+  }
+
+  return unit.name || null;
+}
+
+/**
+ * Parse a nutrition value string to a number.
+ * Handles values like "300", "300 kcal", "25g", "25 grams", etc.
+ */
+function parseNutritionValue(value: string | null | undefined): number | null {
+  if (value == null) return null;
+
+  const str = value.toString().trim();
+
+  if (!str) return null;
+
+  // Extract numeric portion (handles "300 kcal", "25g", "25 grams", etc.)
+  const match = str.match(/^[\d.,]+/);
+
+  if (match) {
+    const parsed = parseFloat(match[0].replace(",", "."));
+
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+/**
+ * Parse a single Mealie recipe and map to our Recipe shape.
+ * Supports both parsed ingredients (with food_id/unit_id) and unparsed (original_text/note).
+ * Throws error if the recipe has no valid ingredients or cannot be parsed.
  */
 export async function parseMealieRecipeToDTO(
   recipe: MealieRecipe,
   ingredients: MealieIngredient[],
   instructions: MealieInstruction[],
+  lookups: MealieLookups,
   imageBuffer?: Buffer
 ): Promise<FullRecipeInsertDTO> {
   const title = recipe.name?.trim();
 
   if (!title) throw new Error("Missing recipe name");
 
+  // Generate recipe ID upfront so images are saved to the correct folder
+  const recipeId = crypto.randomUUID();
+
+  // Load units for parsing unparsed ingredients
+  const units = await getUnits();
+
   // Handle image if present
   let image: string | undefined = undefined;
 
   if (imageBuffer && imageBuffer.length > 0) {
     try {
-      // Import saveImageBytes at the top to avoid dynamic import issues
-      const { saveImageBytes } = await import("@/lib/downloader");
-
-      image = await saveImageBytes(imageBuffer, title);
+      image = await saveImageBytes(imageBuffer, recipeId);
     } catch (err) {
       // Log but ignore image failure, proceed without image
       log.error({ err, title }, "Failed to save image for recipe");
     }
   }
 
-  // Parse ingredients using Norish's built-in parser
-  const units = await getUnits();
+  // Filter and sort ingredients for this recipe
   const recipeIngredients = ingredients
     .filter((ing) => ing.recipe_id === recipe.id)
     .sort((a, b) => (a.position || 0) - (b.position || 0));
 
-  const ingredientArray = [];
+  // Build ingredient array - resolve each ingredient
+  const ingredientArray: Array<{
+    name: string;
+    amount: number | null;
+    unit: string | null;
+  }> = [];
 
   for (const ing of recipeIngredients) {
-    // Use original_text if available (more structured), fallback to note
-    const rawText = ing.original_text || ing.note || "";
+    // Determine the raw text to parse from (priority: original_text > note)
+    const rawText = ing.original_text?.trim() || ing.note?.trim();
 
-    if (rawText.trim()) {
+    // Check if this is an unparsed ingredient:
+    // - No food_id (not parsed by Mealie)
+    // - Has raw text to parse
+    // - quantity is 0 or missing (meaning the quantity is embedded in the text)
+    const isUnparsed = !ing.food_id && rawText && (!ing.quantity || ing.quantity === 0);
+
+    if (isUnparsed) {
+      // Parse the text to extract amount, unit, and description
       const parsed = parseIngredientWithDefaults(rawText, units);
 
-      ingredientArray.push(...parsed);
+      if (parsed.length > 0 && parsed[0]) {
+        const p = parsed[0];
+
+        ingredientArray.push({
+          name: p.description || rawText,
+          amount: p.quantity != null ? p.quantity : null,
+          unit: p.unitOfMeasureID || null,
+        });
+      } else {
+        // Fallback: use the raw text as-is if parsing fails
+        ingredientArray.push({
+          name: rawText,
+          amount: null,
+          unit: null,
+        });
+      }
+
+      continue;
     }
+
+    // For parsed ingredients, use the resolved values from Mealie
+    const ingredientName = resolveIngredientName(ing, lookups.foods);
+
+    // Skip completely empty ingredients (no food_id, no original_text, empty note)
+    if (!ingredientName) {
+      log.warn({ title, ingredientId: ing.id, food_id: ing.food_id }, "Skipping empty ingredient");
+      continue;
+    }
+
+    const unitName = resolveUnitName(ing, lookups.units);
+
+    ingredientArray.push({
+      name: ingredientName,
+      amount: ing.quantity && ing.quantity > 0 ? ing.quantity : null,
+      unit: unitName,
+    });
   }
 
-  const systemUsed = inferSystemUsedFromParsed(ingredientArray);
+  // After filtering empty ingredients, if no ingredients remain, throw error
+  if (ingredientArray.length === 0) {
+    log.error({ title }, "Recipe has no valid ingredients after filtering");
+    throw new Error(`Recipe "${title}" has no valid ingredients after filtering empty ones`);
+  }
+
+  // Infer measurement system from ingredients
+  const ingredientsForDetection = ingredientArray.map((ing) => ({
+    quantity: ing.amount ?? null,
+    quantity2: null,
+    unitOfMeasure: ing.unit || "",
+    unitOfMeasureID: ing.unit || "",
+    description: ing.name,
+    isGroupHeader: false,
+  }));
+
+  const systemUsed = inferSystemUsedFromParsed(ingredientsForDetection as any);
 
   // Parse instructions
   const recipeInstructions = instructions
@@ -191,28 +517,91 @@ export async function parseMealieRecipeToDTO(
     .map((inst) => inst.text)
     .filter((text) => text && text.trim());
 
-  // Calculate times (Mealie stores in minutes, some fields may be null or strings)
-  const parseTime = (val: number | null | undefined): number | undefined => {
+  // Calculate times (Mealie stores in minutes, but some exports contain human-readable strings
+  // like "1 hour 45 minutes" or "30 mins" which need to be parsed properly)
+  const parseTime = (val: number | string | null | undefined): number | undefined => {
     if (val === null || val === undefined) return undefined;
-    const num = typeof val === "string" ? parseInt(val, 10) : val;
+
+    // Handle numeric values directly
+    if (typeof val === "number") {
+      return Number.isFinite(val) && val > 0 ? val : undefined;
+    }
+
+    // Handle string values - try human-readable parsing first (e.g., "1 hour 45 minutes")
+    // then fall back to parseInt for simple numeric strings (e.g., "30")
+    const humanParsed = parseHumanDurationToMinutes(val);
+
+    if (humanParsed !== undefined) {
+      return humanParsed;
+    }
+
+    // Fallback to parseInt for simple numeric strings
+    const num = parseInt(val, 10);
 
     return Number.isFinite(num) && num > 0 ? num : undefined;
   };
 
   const prepMinutes = parseTime(recipe.prep_time);
-  const cookMinutes = parseTime(recipe.cook_time);
-  const totalMinutes = parseTime(recipe.total_time) || parseTime(recipe.perform_time);
+  // cook_time + perform_time combined
+  const parsedCookTime = parseTime(recipe.cook_time);
+  const parsedPerformTime = parseTime(recipe.perform_time);
+  const cookMinutes =
+    parsedCookTime !== undefined || parsedPerformTime !== undefined
+      ? (parsedCookTime ?? 0) + (parsedPerformTime ?? 0)
+      : undefined;
+  // If total_time is not provided, calculate from prep + cook
+  const totalMinutes =
+    parseTime(recipe.total_time) ??
+    (prepMinutes !== undefined || cookMinutes !== undefined
+      ? (prepMinutes ?? 0) + (cookMinutes ?? 0)
+      : undefined);
 
-  // Normalize servings
+  // Normalize servings (must be an integer for the schema)
   let servings: number | undefined = undefined;
 
   if (recipe.recipe_servings && recipe.recipe_servings > 0) {
-    servings = recipe.recipe_servings;
+    servings = Math.round(recipe.recipe_servings);
   } else if (recipe.recipe_yield_quantity && recipe.recipe_yield_quantity > 0) {
-    servings = recipe.recipe_yield_quantity;
+    servings = Math.round(recipe.recipe_yield_quantity);
   }
 
+  // Resolve tags from recipes_to_tags
+  const tagIds = lookups.recipeTags.get(recipe.id) || [];
+  const resolvedTags = tagIds
+    .map((tagId) => lookups.tags.get(tagId))
+    .filter((tag): tag is MealieTag => tag !== undefined && !!tag.name?.trim())
+    .map((tag) => ({ name: tag.name.trim() }));
+
+  // Resolve categories as additional tags from recipes_to_categories
+  const categoryIds = lookups.recipeCategories.get(recipe.id) || [];
+  const resolvedCategories = categoryIds
+    .map((catId) => lookups.categories.get(catId))
+    .filter((cat): cat is MealieCategory => cat !== undefined && !!cat.name?.trim())
+    .map((cat) => ({ name: cat.name.trim() }));
+
+  // Combine tags and categories, removing duplicates by name
+  const allTags = [...resolvedTags, ...resolvedCategories];
+  const uniqueTagNames = new Set<string>();
+  const uniqueTags = allTags.filter((tag) => {
+    const lowerName = tag.name.toLowerCase();
+
+    if (uniqueTagNames.has(lowerName)) return false;
+    uniqueTagNames.add(lowerName);
+
+    return true;
+  });
+
+  // Extract nutrition data from lookups
+  const nutrition = lookups.recipeNutrition.get(recipe.id);
+  const caloriesRaw = nutrition ? parseNutritionValue(nutrition.calories) : null;
+  // Calories must be an integer for the schema
+  const calories = caloriesRaw != null ? Math.round(caloriesRaw) : null;
+  const fat = nutrition ? parseNutritionValue(nutrition.fat_content) : null;
+  const carbs = nutrition ? parseNutritionValue(nutrition.carbohydrate_content) : null;
+  const protein = nutrition ? parseNutritionValue(nutrition.protein_content) : null;
+
   const dto: FullRecipeInsertDTO = {
+    id: recipeId,
     name: title,
     url: recipe.org_url || undefined,
     image: image || undefined,
@@ -221,11 +610,15 @@ export async function parseMealieRecipeToDTO(
     prepMinutes: prepMinutes,
     cookMinutes: cookMinutes,
     totalMinutes: totalMinutes,
-    recipeIngredients: ingredientArray.map((line, i) => ({
+    calories: calories,
+    fat: fat != null ? fat.toString() : null,
+    carbs: carbs != null ? carbs.toString() : null,
+    protein: protein != null ? protein.toString() : null,
+    recipeIngredients: ingredientArray.map((ing, i) => ({
       ingredientId: null,
-      ingredientName: line.description,
-      amount: line.quantity != null ? line.quantity : null,
-      unit: line.unitOfMeasureID,
+      ingredientName: ing.name,
+      amount: ing.amount,
+      unit: ing.unit,
       systemUsed: systemUsed,
       order: i,
     })),
@@ -234,7 +627,7 @@ export async function parseMealieRecipeToDTO(
       order: i,
       systemUsed: systemUsed,
     })),
-    tags: [], // Mealie doesn't export tags in the provided schema
+    tags: uniqueTags,
     systemUsed,
   } as FullRecipeInsertDTO;
 
@@ -242,7 +635,7 @@ export async function parseMealieRecipeToDTO(
 
   if (!parsed.success) {
     log.error({ title, issues: parsed.error.issues }, "Validation failed for recipe");
-    throw new Error(`Schema validation failed: ${parsed.error.message}`);
+    throw new Error(`Schema validation failed for recipe "${title}": ${parsed.error.message}`);
   }
 
   return parsed.data;

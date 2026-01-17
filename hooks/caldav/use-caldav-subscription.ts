@@ -6,11 +6,7 @@ import type { CaldavSubscriptionEvents } from "@/server/trpc/routers/caldav/type
 import { useSubscription } from "@trpc/tanstack-react-query";
 import { addToast } from "@heroui/react";
 
-import {
-  useCaldavConfigQuery,
-  useCaldavSyncStatusQuery,
-  useCaldavSummaryQuery,
-} from "./use-caldav-query";
+import { useCaldavCacheHelpers } from "./use-caldav-cache";
 
 import { createClientLogger } from "@/lib/logger";
 import { useTRPC } from "@/app/providers/trpc-provider";
@@ -23,13 +19,15 @@ type SyncEventPayload = {
 };
 
 /**
- * Hook that subscribes to all CalDAV-related WebSocket events
+ * Hook that subscribes to all CalDAV-related WebSocket events.
+ *
+ * Uses internal cache helpers - no props required.
+ * Safe to call from context providers without causing recursion.
  */
 export function useCaldavSubscription() {
   const trpc = useTRPC();
-  const { setConfig } = useCaldavConfigQuery();
-  const { setStatuses, invalidate: invalidateSyncStatus } = useCaldavSyncStatusQuery();
-  const { invalidate: invalidateSummary } = useCaldavSummaryQuery();
+  const { setConfig, setStatuses, invalidateSyncStatus, invalidateSummary } =
+    useCaldavCacheHelpers();
 
   // Subscribe to all CalDAV sync events
   useSubscription(
@@ -85,7 +83,6 @@ export function useCaldavSubscription() {
             title: "CalDAV Sync Complete",
             description: `Synced ${payload.totalSynced} items${payload.totalFailed > 0 ? `, ${payload.totalFailed} failed` : ""}`,
             color: payload.totalFailed > 0 ? "warning" : "success",
-            timeout: 2000,
             shouldShowTimeoutProgress: true,
             radius: "full",
           });
@@ -103,11 +100,12 @@ export function useCaldavSubscription() {
 /**
  * Hook that subscribes only to item status updates.
  * More efficient if you only need status updates for the sync table.
+ *
+ * Uses internal cache helpers - no props required.
  */
 export function useCaldavItemStatusSubscription() {
   const trpc = useTRPC();
-  const { setStatuses, invalidate: _invalidateSyncStatus } = useCaldavSyncStatusQuery();
-  const { invalidate: invalidateSummary } = useCaldavSummaryQuery();
+  const { setStatuses, invalidateSummary } = useCaldavCacheHelpers();
 
   useSubscription(
     trpc.caldavSubscriptions.onItemStatusUpdated.subscriptionOptions(undefined, {
@@ -142,11 +140,12 @@ export function useCaldavItemStatusSubscription() {
 
 /**
  * Hook that subscribes to sync completion events.
+ *
+ * Uses internal cache helpers - no props required.
  */
 export function useCaldavSyncCompleteSubscription() {
   const trpc = useTRPC();
-  const { invalidate: invalidateSyncStatus } = useCaldavSyncStatusQuery();
-  const { invalidate: invalidateSummary } = useCaldavSummaryQuery();
+  const { invalidateSyncStatus, invalidateSummary } = useCaldavCacheHelpers();
 
   useSubscription(
     trpc.caldavSubscriptions.onInitialSyncComplete.subscriptionOptions(undefined, {
@@ -155,7 +154,6 @@ export function useCaldavSyncCompleteSubscription() {
           title: "CalDAV Sync Complete",
           description: `Synced ${data.totalSynced} items${data.totalFailed > 0 ? `, ${data.totalFailed} failed` : ""}`,
           color: data.totalFailed > 0 ? "warning" : "success",
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });

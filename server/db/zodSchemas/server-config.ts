@@ -18,6 +18,7 @@ export const ServerConfigKeys = {
   SCHEDULER_CLEANUP_MONTHS: "scheduler_cleanup_months",
   RECIPE_PERMISSION_POLICY: "recipe_permission_policy",
   PROMPTS: "prompts",
+  LOCALE_CONFIG: "locale_config",
 } as const;
 
 export type ServerConfigKey = (typeof ServerConfigKeys)[keyof typeof ServerConfigKeys];
@@ -25,6 +26,25 @@ export type ServerConfigKey = (typeof ServerConfigKeys)[keyof typeof ServerConfi
 // ============================================================================
 // Auth Provider Schemas
 // ============================================================================
+
+// ============================================================================
+// OIDC Claim Mapping Schema
+// ============================================================================
+
+export const OIDCClaimConfigSchema = z.object({
+  // Whether claim mapping is enabled (disabled by default for security)
+  enabled: z.boolean().default(false),
+  // Additional scopes to request (e.g., ["groups"] for Keycloak)
+  scopes: z.array(z.string()).default([]),
+  // Claim name that contains groups/roles
+  groupsClaim: z.string().default("groups"),
+  // Group name that grants admin role (case-insensitive)
+  adminGroup: z.string().default("norish_admin"),
+  // Prefix for household groups
+  householdPrefix: z.string().default("norish_household_"),
+});
+
+export type OIDCClaimConfig = z.infer<typeof OIDCClaimConfigSchema>;
 
 // Base schema with isOverridden for storage
 export const AuthProviderOIDCSchema = z.object({
@@ -34,9 +54,13 @@ export const AuthProviderOIDCSchema = z.object({
   clientSecret: z.string().optional(), // Optional on update, server preserves existing
   wellknown: z.url("Well-known URL must be valid").optional(),
   isOverridden: z.boolean().default(false), // True if admin edited, false means env-managed
+  claimConfig: OIDCClaimConfigSchema.optional(), // Claim-based role and household assignment
 });
 
 export type AuthProviderOIDC = z.infer<typeof AuthProviderOIDCSchema>;
+
+export const OIDCClaimConfigInputSchema = OIDCClaimConfigSchema;
+export type OIDCClaimConfigInput = z.infer<typeof OIDCClaimConfigInputSchema>;
 
 export const AuthProviderOIDCInputSchema = AuthProviderOIDCSchema.omit({ isOverridden: true });
 export type AuthProviderOIDCInput = z.infer<typeof AuthProviderOIDCInputSchema>;
@@ -82,6 +106,7 @@ export const PromptsConfigSchema = z.object({
   recipeExtraction: z.string(),
   unitConversion: z.string(),
   nutritionEstimation: z.string(),
+  autoTagging: z.string(),
   isOverridden: z.boolean().default(false),
 });
 
@@ -89,6 +114,24 @@ export type PromptsConfig = z.infer<typeof PromptsConfigSchema>;
 
 export const PromptsConfigInputSchema = PromptsConfigSchema.omit({ isOverridden: true });
 export type PromptsConfigInput = z.infer<typeof PromptsConfigInputSchema>;
+
+// ============================================================================
+// i18n Locale Configuration Schema
+// ============================================================================
+
+export const I18nLocaleEntrySchema = z.object({
+  name: z.string(),
+  enabled: z.boolean(),
+});
+
+export type I18nLocaleEntry = z.infer<typeof I18nLocaleEntrySchema>;
+
+export const I18nLocaleConfigSchema = z.object({
+  defaultLocale: z.string(),
+  locales: z.record(z.string(), I18nLocaleEntrySchema),
+});
+
+export type I18nLocaleConfig = z.infer<typeof I18nLocaleConfigSchema>;
 
 // ============================================================================
 // Units Schema
@@ -136,9 +179,30 @@ export type RecurrenceConfig = z.infer<typeof RecurrenceConfigSchema>;
 // AI Configuration Schema
 // ============================================================================
 
-export const AIProviderSchema = z.enum(["openai", "ollama", "lm-studio", "generic-openai"]);
+export const AIProviderSchema = z.enum([
+  "openai",
+  "ollama",
+  "lm-studio",
+  "generic-openai",
+  "perplexity",
+  "azure",
+  "mistral",
+  "anthropic",
+  "deepseek",
+  "google",
+  "groq",
+]);
 
 export type AIProvider = z.infer<typeof AIProviderSchema>;
+
+export const AutoTaggingModeSchema = z.enum([
+  "disabled",
+  "predefined",
+  "predefined_db",
+  "freeform",
+]);
+
+export type AutoTaggingMode = z.infer<typeof AutoTaggingModeSchema>;
 
 export const AIConfigSchema = z.object({
   enabled: z.boolean(),
@@ -151,6 +215,7 @@ export const AIConfigSchema = z.object({
   maxTokens: z.number().int().positive(),
   autoTagAllergies: z.boolean().default(true),
   alwaysUseAI: z.boolean().default(false),
+  autoTaggingMode: AutoTaggingModeSchema.default("disabled"),
 });
 
 export type AIConfig = z.infer<typeof AIConfigSchema>;
@@ -159,13 +224,69 @@ export type AIConfig = z.infer<typeof AIConfigSchema>;
 // Video Configuration Schema (includes transcription settings)
 // ============================================================================
 
-export const TranscriptionProviderSchema = z.enum(["openai", "generic-openai", "disabled"]);
+export const TranscriptionProviderSchema = z.enum([
+  "openai",
+  "groq",
+  "azure",
+  "generic-openai",
+  "ollama",
+  "disabled",
+]);
 
 export type TranscriptionProvider = z.infer<typeof TranscriptionProviderSchema>;
+
+/** All enabled (non-disabled) transcription providers. */
+export const TRANSCRIPTION_PROVIDERS_ENABLED = [
+  "openai",
+  "groq",
+  "azure",
+  "generic-openai",
+  "ollama",
+] as const satisfies readonly TranscriptionProvider[];
+
+/** Cloud providers that require an API key. */
+export const TRANSCRIPTION_PROVIDERS_CLOUD = [
+  "openai",
+  "groq",
+  "azure",
+] as const satisfies readonly TranscriptionProvider[];
+
+/** Providers that require an endpoint URL. */
+export const TRANSCRIPTION_PROVIDERS_NEED_ENDPOINT = [
+  "generic-openai",
+  "azure",
+  "ollama",
+] as const satisfies readonly TranscriptionProvider[];
+
+/** Providers that support dynamic model listing. */
+export const TRANSCRIPTION_PROVIDERS_WITH_MODEL_LISTING = [
+  "openai",
+  "groq",
+  "generic-openai",
+  "ollama",
+] as const satisfies readonly TranscriptionProvider[];
+
+/** Check if provider is a cloud provider (requires API key). */
+export function isCloudTranscriptionProvider(provider: TranscriptionProvider): boolean {
+  return (TRANSCRIPTION_PROVIDERS_CLOUD as readonly string[]).includes(provider);
+}
+
+/** Check if provider needs an endpoint URL. */
+export function transcriptionProviderNeedsEndpoint(provider: TranscriptionProvider): boolean {
+  return (TRANSCRIPTION_PROVIDERS_NEED_ENDPOINT as readonly string[]).includes(provider);
+}
+
+/** Check if provider supports dynamic model listing. */
+export function transcriptionProviderSupportsModelListing(
+  provider: TranscriptionProvider
+): boolean {
+  return (TRANSCRIPTION_PROVIDERS_WITH_MODEL_LISTING as readonly string[]).includes(provider);
+}
 
 export const VideoConfigSchema = z.object({
   enabled: z.boolean(),
   maxLengthSeconds: z.number().int().positive(),
+  maxVideoFileSize: z.number().int().positive(), // Max video file size in bytes
   ytDlpVersion: z.string().min(1),
   // Transcription settings (required for video processing)
   transcriptionProvider: TranscriptionProviderSchema,
@@ -278,6 +399,8 @@ export function getSchemaForConfigKey(key: ServerConfigKey): z.ZodType {
       return RecipePermissionPolicySchema;
     case ServerConfigKeys.PROMPTS:
       return PromptsConfigSchema;
+    case ServerConfigKeys.LOCALE_CONFIG:
+      return I18nLocaleConfigSchema;
     default:
       return z.any();
   }

@@ -1,41 +1,43 @@
 "use client";
 
 import type { RecipeDashboardDTO, FullRecipeDTO } from "@/types";
-import type { InfiniteData } from "@tanstack/react-query";
 
 import { useSubscription } from "@trpc/tanstack-react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { addToast, Button } from "@heroui/react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
-import { useRecipesQuery } from "./use-recipes-query";
-import { usePendingRecipesQuery } from "./use-pending-recipes-query";
+import { useRecipesCacheHelpers, type InfiniteRecipeData } from "./use-recipes-cache";
 
 import { useTRPC } from "@/app/providers/trpc-provider";
 import { createClientLogger } from "@/lib/logger";
 
 const log = createClientLogger("recipes-subscription");
 
-type InfiniteRecipeData = InfiniteData<{
-  recipes: RecipeDashboardDTO[];
-  total: number;
-  nextCursor: number | null;
-}>;
-
 /**
  * Hook that subscribes to all recipe-related WebSocket events
  * and updates the query cache accordingly.
  *
- * Also hydrates pending recipes from the server on mount.
+ * Uses useRecipesCacheHelpers internally to get cache manipulation functions
+ * WITHOUT creating query observers - this prevents the recursion issue.
  */
 export function useRecipesSubscription() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const { setAllRecipesData, invalidate, addPendingRecipe, removePendingRecipe } =
-    useRecipesQuery();
+  const t = useTranslations("recipes.toasts");
 
-  // Hydrate pending recipes from the server on mount
-  usePendingRecipesQuery();
+  // Get cache helpers - these don't create query observers, so no recursion
+  const {
+    setAllRecipesData,
+    invalidate,
+    addPendingRecipe,
+    removePendingRecipe,
+    addAutoTaggingRecipe,
+    removeAutoTaggingRecipe,
+    addAllergyDetectionRecipe,
+    removeAllergyDetectionRecipe,
+  } = useRecipesCacheHelpers();
 
   const addRecipeToList = (recipe: RecipeDashboardDTO) => {
     setAllRecipesData((prev: InfiniteRecipeData | undefined): InfiniteRecipeData | undefined => {
@@ -90,12 +92,10 @@ export function useRecipesSubscription() {
     });
   };
 
-  // Helper to remove a recipe from the list
   const removeRecipeFromList = (id: string) => {
     setAllRecipesData((prev: InfiniteRecipeData | undefined): InfiniteRecipeData | undefined => {
       if (!prev?.pages) return prev;
 
-      // Check if recipe exists in any page before modifying
       const recipeExists = prev.pages.some((page) => page.recipes.some((r) => r.id === id));
 
       if (!recipeExists) return prev;
@@ -142,31 +142,29 @@ export function useRecipesSubscription() {
           { recipeId: payload.recipe.id, pendingRecipeId: payload.pendingRecipeId },
           "[onImported] Received"
         );
-        // Remove pending skeleton - use pendingRecipeId if provided (duplicate case),
-        // otherwise use the recipe id
         const pendingId = payload.pendingRecipeId ?? payload.recipe.id;
 
         removePendingRecipe(pendingId);
         addRecipeToList(payload.recipe);
 
-        addToast({
-          severity: "success",
-          title: "Recipe imported",
-          description: "Open recipe",
-          timeout: 2000,
-          shouldShowTimeoutProgress: true,
-          radius: "full",
-          classNames: {
-            closeButton: "opacity-100 absolute right-4 top-1/2 -translate-y-1/2",
-          },
-          endContent: (
-            <Link href={`/recipes/${payload.recipe.id}`}>
-              <Button color="primary" radius="full" size="sm" variant="solid">
-                Open
-              </Button>
-            </Link>
-          ),
-        });
+        if (payload.toast === "imported") {
+          addToast({
+            severity: "success",
+            title: t("imported"),
+            shouldShowTimeoutProgress: true,
+            radius: "full",
+            classNames: {
+              closeButton: "opacity-100 absolute right-4 top-1/2 -translate-y-1/2",
+            },
+            endContent: (
+              <Link href={`/recipes/${payload.recipe.id}`}>
+                <Button color="primary" radius="full" size="sm" variant="solid">
+                  {t("open")}
+                </Button>
+              </Link>
+            ),
+          });
+        }
       },
       onError: (err) => log.error({ err }, "[onImported] Error"),
     })
@@ -178,11 +176,9 @@ export function useRecipesSubscription() {
       onData: (payload) => {
         log.info({ recipeId: payload.recipe.id }, "[onUpdated] Received");
         updateRecipeInList(payload.recipe);
-        // Also invalidate the single recipe query if it's cached
         queryClient.invalidateQueries({
           queryKey: [["recipes", "get"], { input: { id: payload.recipe.id }, type: "query" }],
         });
-
         queryClient.invalidateQueries({ queryKey: [["calendar", "listRecipes"]] });
       },
       onError: (err) => log.error({ err }, "[onUpdated] Error"),
@@ -195,7 +191,6 @@ export function useRecipesSubscription() {
       onData: (payload) => {
         log.info({ recipeId: payload.id }, "[onDeleted] Received");
         removeRecipeFromList(payload.id);
-        // Also invalidate the single recipe query if it's cached
         queryClient.invalidateQueries({
           queryKey: [["recipes", "get"], { input: { id: payload.id }, type: "query" }],
         });
@@ -210,16 +205,14 @@ export function useRecipesSubscription() {
       onData: (payload) => {
         log.info({ recipeId: payload.recipe.id }, "[onConverted] Received");
         updateRecipeInList(payload.recipe);
-        // Also invalidate the single recipe query if it's cached
         queryClient.invalidateQueries({
           queryKey: [["recipes", "get"], { input: { id: payload.recipe.id }, type: "query" }],
         });
 
         addToast({
           severity: "success",
-          title: "Measurements converted",
-          description: `Recipe converted to ${payload.recipe.systemUsed} units`,
-          timeout: 2000,
+          title: t("converted"),
+          description: t("convertedDescription", { system: payload.recipe.systemUsed }),
           shouldShowTimeoutProgress: true,
           radius: "full",
         });
@@ -233,18 +226,17 @@ export function useRecipesSubscription() {
     trpc.recipes.onFailed.subscriptionOptions(undefined, {
       onData: (payload) => {
         log.info({ reason: payload.reason, recipeId: payload.recipeId }, "[onFailed] Received");
-        // Remove from pending if it was a pending recipe
         if (payload.recipeId) {
           removePendingRecipe(payload.recipeId);
+          removeAutoTaggingRecipe(payload.recipeId);
+          removeAllergyDetectionRecipe(payload.recipeId);
         }
 
-        // Invalidate to get correct state
         invalidate();
 
         addToast({
           severity: "danger",
-          title: "Recipe operation failed",
-          timeout: 2000,
+          title: t("failed"),
           shouldShowTimeoutProgress: true,
           radius: "full",
           description: payload.reason,
@@ -257,12 +249,85 @@ export function useRecipesSubscription() {
     })
   );
 
-  // onRecipeBatchCreated - Bulk recipe creation (archive imports)
+  // onAutoTaggingStarted
+  useSubscription(
+    trpc.recipes.onAutoTaggingStarted.subscriptionOptions(undefined, {
+      onData: (payload) => {
+        log.info({ recipeId: payload.recipeId }, "[onAutoTaggingStarted] Received");
+        addAutoTaggingRecipe(payload.recipeId);
+      },
+      onError: (err) => log.error({ err }, "[onAutoTaggingStarted] Error"),
+    })
+  );
+
+  // onAllergyDetectionStarted
+  useSubscription(
+    trpc.recipes.onAllergyDetectionStarted.subscriptionOptions(undefined, {
+      onData: (payload) => {
+        log.info({ recipeId: payload.recipeId }, "[onAllergyDetectionStarted] Received");
+        addAllergyDetectionRecipe(payload.recipeId);
+      },
+      onError: (err) => log.error({ err }, "[onAllergyDetectionStarted] Error"),
+    })
+  );
+
+  // onAutoTaggingCompleted
+  useSubscription(
+    trpc.recipes.onAutoTaggingCompleted.subscriptionOptions(undefined, {
+      onData: (payload) => {
+        log.info({ recipeId: payload.recipeId }, "[onAutoTaggingCompleted] Received");
+        removeAutoTaggingRecipe(payload.recipeId);
+      },
+      onError: (err) => log.error({ err }, "[onAutoTaggingCompleted] Error"),
+    })
+  );
+
+  // onAllergyDetectionCompleted
+  useSubscription(
+    trpc.recipes.onAllergyDetectionCompleted.subscriptionOptions(undefined, {
+      onData: (payload) => {
+        log.info({ recipeId: payload.recipeId }, "[onAllergyDetectionCompleted] Received");
+        removeAllergyDetectionRecipe(payload.recipeId);
+      },
+      onError: (err) => log.error({ err }, "[onAllergyDetectionCompleted] Error"),
+    })
+  );
+
+  // onProcessingToast
+  useSubscription(
+    trpc.recipes.onProcessingToast.subscriptionOptions(undefined, {
+      onData: (payload) => {
+        log.info(
+          { recipeId: payload.recipeId, titleKey: payload.titleKey },
+          "[onProcessingToast] Received"
+        );
+        addToast({
+          severity: payload.severity,
+          title: t(payload.titleKey),
+          timeout: payload.severity === "success" ? 2000 : 3000,
+          shouldShowTimeoutProgress: true,
+          radius: "full",
+          classNames: {
+            closeButton: "opacity-100 absolute right-4 top-1/2 -translate-y-1/2",
+          },
+          endContent: (
+            <Link href={`/recipes/${payload.recipeId}`}>
+              <Button color="primary" radius="full" size="sm" variant="solid">
+                {t("open")}
+              </Button>
+            </Link>
+          ),
+        });
+      },
+      onError: (err) => log.error({ err }, "[onProcessingToast] Error"),
+    })
+  );
+
+  // onRecipeBatchCreated
   useSubscription(
     trpc.recipes.onRecipeBatchCreated.subscriptionOptions(undefined, {
       onData: (payload) => {
         log.info({ count: payload.recipes.length }, "[onRecipeBatchCreated] Received");
-        if (payload.recipes.length === 0) return;
 
         setAllRecipesData(
           (prev: InfiniteRecipeData | undefined): InfiniteRecipeData | undefined => {

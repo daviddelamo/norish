@@ -2,27 +2,31 @@
  * Paste Import Worker
  *
  * Processes pasted recipe text or pasted JSON-LD.
+ * Uses lazy worker pattern - starts on-demand and pauses when idle.
  */
 
-import type { PasteImportJobData } from "@/types";
+import type { PasteImportJobData, FullRecipeInsertDTO } from "@/types";
+import type { Job } from "bullmq";
 
-import { Worker, type Job } from "bullmq";
+import { QUEUE_NAMES, baseWorkerOptions, WORKER_CONCURRENCY, STALLED_INTERVAL } from "../config";
+import { createLazyWorker, stopLazyWorker } from "../lazy-worker-manager";
 
-import { redisConnection, QUEUE_NAMES } from "../config";
-
+import { getBullClient } from "@/server/redis/bullmq";
 import { createLogger } from "@/server/logger";
 import { emitByPolicy, type PolicyEmitContext } from "@/server/trpc/helpers";
 import { recipeEmitter } from "@/server/trpc/routers/recipes/emitter";
 import { getRecipePermissionPolicy, getAIConfig, isAIEnabled } from "@/config/server-config-loader";
+import { getQueues } from "@/server/queue/registry";
+import { addAutoTaggingJob } from "@/server/queue/auto-tagging/producer";
+import { addAllergyDetectionJob } from "@/server/queue/allergy-detection/producer";
 import { createRecipeWithRefs, dashboardRecipe, getAllergiesForUsers } from "@/server/db";
-import { extractRecipeNodesFromJsonLd } from "@/lib/parser/jsonld";
-import { normalizeRecipeFromJson } from "@/lib/parser/normalize";
+import { extractRecipeNodesFromJsonLd } from "@/server/parser/jsonld";
+import { normalizeRecipeFromJson } from "@/server/parser/normalize";
 import { extractRecipeWithAI } from "@/server/ai/recipe-parser";
 import { MAX_RECIPE_PASTE_CHARS } from "@/types/uploads";
+import { deleteRecipeImagesDir } from "@/server/downloader";
 
 const log = createLogger("worker:paste-import");
-
-let worker: Worker<PasteImportJobData> | null = null;
 
 function escapeHtml(text: string): string {
   return text
@@ -41,7 +45,7 @@ function looksLikeJson(text: string): boolean {
   return t.includes("@context") || t.includes("@graph") || t.includes('"@type"');
 }
 
-function hasStepsAndIngredients(parsed: any): boolean {
+function hasStepsAndIngredients(parsed: FullRecipeInsertDTO): boolean {
   return (
     !!parsed &&
     Array.isArray(parsed.recipeIngredients) &&
@@ -51,11 +55,17 @@ function hasStepsAndIngredients(parsed: any): boolean {
   );
 }
 
+interface ParseResult {
+  recipe: FullRecipeInsertDTO;
+  usedAI: boolean;
+}
+
 async function parseFromPastedText(
   text: string,
+  recipeId: string,
   allergies?: string[],
   forceAI?: boolean
-): Promise<any> {
+): Promise<ParseResult> {
   const trimmed = text.trim();
 
   if (!trimmed) throw new Error("No text provided");
@@ -71,10 +81,10 @@ async function parseFromPastedText(
     }
 
     const html = `<html><body><main><h1>Pasted recipe</h1><p>${escapeHtml(trimmed)}</p></main></body></html>`;
-    const ai = await extractRecipeWithAI(html, undefined, allergies);
+    const ai = await extractRecipeWithAI(html, recipeId, undefined, allergies);
 
-    if (ai && hasStepsAndIngredients(ai)) {
-      return ai;
+    if (ai.success && hasStepsAndIngredients(ai.data)) {
+      return { recipe: ai.data, usedAI: true };
     }
 
     throw new Error("Could not parse pasted recipe.");
@@ -85,12 +95,12 @@ async function parseFromPastedText(
     const nodes = extractRecipeNodesFromJsonLd(html);
 
     if (nodes.length > 0) {
-      const normalized = await normalizeRecipeFromJson(nodes[0]);
+      const normalized = await normalizeRecipeFromJson(nodes[0], recipeId);
 
       if (normalized) {
         normalized.url = null;
         if (hasStepsAndIngredients(normalized)) {
-          return normalized;
+          return { recipe: normalized, usedAI: false };
         }
       }
     }
@@ -101,10 +111,10 @@ async function parseFromPastedText(
   }
 
   const html = `<html><body><main><h1>Pasted recipe</h1><p>${escapeHtml(trimmed)}</p></main></body></html>`;
-  const ai = await extractRecipeWithAI(html, undefined, allergies);
+  const ai = await extractRecipeWithAI(html, recipeId, undefined, allergies);
 
-  if (ai && hasStepsAndIngredients(ai)) {
-    return ai;
+  if (ai.success && hasStepsAndIngredients(ai.data)) {
+    return { recipe: ai.data, usedAI: true };
   }
 
   throw new Error("Could not parse pasted recipe.");
@@ -140,9 +150,9 @@ async function processPasteImportJob(job: Job<PasteImportJobData>): Promise<void
     );
   }
 
-  const parsedRecipe = await parseFromPastedText(text, allergyNames, forceAI);
+  const parseResult = await parseFromPastedText(text, recipeId, allergyNames, forceAI);
 
-  const createdId = await createRecipeWithRefs(recipeId, userId, parsedRecipe);
+  const createdId = await createRecipeWithRefs(recipeId, userId, parseResult.recipe);
 
   if (!createdId) {
     throw new Error("Failed to save imported recipe");
@@ -151,12 +161,38 @@ async function processPasteImportJob(job: Job<PasteImportJobData>): Promise<void
   const dashboardDto = await dashboardRecipe(createdId);
 
   if (dashboardDto) {
-    log.info({ jobId: job.id, recipeId: createdId }, "Pasted recipe imported successfully");
+    log.info(
+      { jobId: job.id, recipeId: createdId, usedAI: parseResult.usedAI },
+      "Pasted recipe imported successfully"
+    );
 
+    // If AI was used, no processing will follow - show imported toast
+    // If AI was NOT used, auto-tagging/allergy detection will follow - no toast needed
     emitByPolicy(recipeEmitter, viewPolicy, ctx, "imported", {
       recipe: dashboardDto,
       pendingRecipeId: recipeId,
+      toast: parseResult.usedAI ? "imported" : undefined,
     });
+
+    // Trigger auto-tagging only if AI was NOT used for extraction
+    // (AI extraction already includes auto-tagging instructions in the prompt)
+    if (!parseResult.usedAI) {
+      const queues = getQueues();
+
+      await addAutoTaggingJob(queues.autoTagging, {
+        recipeId: createdId,
+        userId,
+        householdKey,
+      });
+
+      // Trigger allergy detection for structured imports
+      // (AI extraction already handles allergy detection inline)
+      await addAllergyDetectionJob(queues.allergyDetection, {
+        recipeId: createdId,
+        userId,
+        householdKey,
+      });
+    }
   }
 }
 
@@ -182,6 +218,8 @@ async function handleJobFailed(
     "Paste import job failed"
   );
 
+  await deleteRecipeImagesDir(recipeId);
+
   if (isFinalFailure) {
     const policy = await getRecipePermissionPolicy();
     const ctx: PolicyEmitContext = { userId, householdKey };
@@ -194,37 +232,20 @@ async function handleJobFailed(
   }
 }
 
-export function startPasteImportWorker(): void {
-  if (worker) {
-    log.warn("Paste import worker already running");
-
-    return;
-  }
-
-  worker = new Worker<PasteImportJobData>(QUEUE_NAMES.PASTE_IMPORT, processPasteImportJob, {
-    connection: redisConnection,
-    concurrency: 2,
-  });
-
-  worker.on("completed", (job) => {
-    log.debug({ jobId: job.id }, "Paste import job completed");
-  });
-
-  worker.on("failed", (job, error) => {
-    handleJobFailed(job, error);
-  });
-
-  worker.on("error", (error) => {
-    log.error({ error }, "Paste import worker error");
-  });
-
-  log.info("Paste import worker started");
+export async function startPasteImportWorker(): Promise<void> {
+  await createLazyWorker<PasteImportJobData>(
+    QUEUE_NAMES.PASTE_IMPORT,
+    processPasteImportJob,
+    {
+      connection: getBullClient(),
+      ...baseWorkerOptions,
+      stalledInterval: STALLED_INTERVAL[QUEUE_NAMES.PASTE_IMPORT],
+      concurrency: WORKER_CONCURRENCY[QUEUE_NAMES.PASTE_IMPORT],
+    },
+    handleJobFailed
+  );
 }
 
 export async function stopPasteImportWorker(): Promise<void> {
-  if (worker) {
-    await worker.close();
-    worker = null;
-    log.info("Paste import worker stopped");
-  }
+  await stopLazyWorker(QUEUE_NAMES.PASTE_IMPORT);
 }

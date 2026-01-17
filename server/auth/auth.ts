@@ -11,8 +11,15 @@ import {
   getCachedGitHubProvider,
   getCachedGoogleProvider,
   getCachedOIDCProvider,
+  getCachedOIDCClaimConfig,
   getCachedPasswordAuthEnabled,
 } from "./provider-cache";
+import {
+  processClaimsForUser,
+  mergeOIDCTokenClaims,
+  storeOIDCProfile,
+  getPendingOIDCProfile,
+} from "./claim-processor";
 
 import { getPublisherClient } from "@/server/redis/client";
 import { db } from "@/server/db/drizzle";
@@ -110,6 +117,11 @@ function buildOIDCProviders() {
   const oidcProvider = getCachedOIDCProvider();
 
   if (oidcProvider?.clientId && oidcProvider?.clientSecret && oidcProvider?.issuer) {
+    // Build scopes: base scopes + any additional configured scopes
+    const baseScopes = ["openid", "profile", "email"];
+    const additionalScopes = oidcProvider.claimConfig?.scopes ?? [];
+    const allScopes = [...new Set([...baseScopes, ...additionalScopes])];
+
     providers.push({
       providerId: "oidc",
       discoveryUrl:
@@ -117,8 +129,39 @@ function buildOIDCProviders() {
         new URL(".well-known/openid-configuration", oidcProvider.issuer).toString(),
       clientId: oidcProvider.clientId,
       clientSecret: oidcProvider.clientSecret,
-      scopes: ["openid", "profile", "email"],
+      scopes: allScopes,
       pkce: true,
+      // Store full profile for claim processing after session creation
+      // Merges claims from ID token and userinfo endpoint (ID token takes precedence for groups)
+      getUserInfo: async (tokens: { accessToken: string; idToken?: string }) => {
+        const discoveryUrl =
+          oidcProvider.wellknown ||
+          new URL(".well-known/openid-configuration", oidcProvider.issuer).toString();
+
+        const result = await mergeOIDCTokenClaims(tokens, discoveryUrl);
+
+        if (!result) {
+          return null;
+        }
+
+        const { profile, groupsSource } = result;
+        const sub = profile.sub as string;
+
+        // Store the merged profile in Redis for claim processing
+        await storeOIDCProfile(sub, profile);
+        authLogger.debug(
+          { sub, hasGroups: "groups" in profile, groupsSource },
+          "Stored merged OIDC profile in Redis for claim processing"
+        );
+
+        return {
+          id: sub,
+          email: (profile.email as string) || undefined,
+          name: (profile.name as string) || (profile.preferred_username as string) || undefined,
+          image: (profile.picture as string) || undefined,
+          emailVerified: (profile.email_verified as boolean) ?? false,
+        };
+      },
     });
   }
 
@@ -324,6 +367,55 @@ function createAuth() {
           before: async (account) => {
             return { data: account };
           },
+          after: async (account) => {
+            // Process OIDC claims after account is created/updated
+            // This runs on every OAuth login (account is updated with new tokens)
+            if (account.providerId === "oidc" && account.accountId) {
+              const profile = await getPendingOIDCProfile(account.accountId);
+
+              if (profile) {
+                authLogger.debug(
+                  { userId: account.userId, accountId: account.accountId },
+                  "Processing OIDC claims from account hook"
+                );
+                const claimConfig = getCachedOIDCClaimConfig();
+
+                try {
+                  await processClaimsForUser(account.userId, profile, claimConfig ?? undefined);
+                } catch (error) {
+                  authLogger.error(
+                    { error, userId: account.userId },
+                    "Failed to process OIDC claims"
+                  );
+                }
+              }
+            }
+          },
+        },
+        update: {
+          after: async (account) => {
+            // Also process on account update (subsequent logins update tokens)
+            if (account.providerId === "oidc" && account.accountId) {
+              const profile = await getPendingOIDCProfile(account.accountId);
+
+              if (profile) {
+                authLogger.debug(
+                  { userId: account.userId, accountId: account.accountId },
+                  "Processing OIDC claims from account update hook"
+                );
+                const claimConfig = getCachedOIDCClaimConfig();
+
+                try {
+                  await processClaimsForUser(account.userId, profile, claimConfig ?? undefined);
+                } catch (error) {
+                  authLogger.error(
+                    { error, userId: account.userId },
+                    "Failed to process OIDC claims"
+                  );
+                }
+              }
+            }
+          },
         },
       },
     },
@@ -334,10 +426,12 @@ function createAuth() {
 
       apiKey({
         enableSessionForAPIKeys: true,
-        apiKeyHeaders: ["x-api-key"],
         rateLimit: {
-          enabled: false,
+          enabled: true,
+          timeWindow: 1000 * 60 * 60 * 1,
+          maxRequests: 500,
         },
+        apiKeyHeaders: ["x-api-key", "bearer"],
       }),
 
       nextCookies(),

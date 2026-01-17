@@ -8,10 +8,32 @@ vi.mock("@/app/providers/trpc-provider", () => ({
   useTRPC: () => ({
     recipes: {
       list: {
+        queryKey: (params: unknown) => [["recipes", "list"], { input: params, type: "infinite" }],
         infiniteQueryOptions: () => ({
           queryKey: ["recipes", "list", {}],
           queryFn: async () => ({ recipes: [], total: 0, nextCursor: null }),
           getNextPageParam: () => null,
+        }),
+      },
+      getPending: {
+        queryKey: () => [["recipes", "getPending"], { type: "query" }],
+        queryOptions: () => ({
+          queryKey: [["recipes", "getPending"], { type: "query" }],
+          queryFn: async () => [],
+        }),
+      },
+      getPendingAutoTagging: {
+        queryKey: () => [["recipes", "getPendingAutoTagging"], { type: "query" }],
+        queryOptions: () => ({
+          queryKey: [["recipes", "getPendingAutoTagging"], { type: "query" }],
+          queryFn: async () => [],
+        }),
+      },
+      getPendingAllergyDetection: {
+        queryKey: () => [["recipes", "getPendingAllergyDetection"], { type: "query" }],
+        queryOptions: () => ({
+          queryKey: [["recipes", "getPendingAllergyDetection"], { type: "query" }],
+          queryFn: async () => [],
         }),
       },
       importFromUrl: { mutationOptions: vi.fn() },
@@ -22,6 +44,16 @@ vi.mock("@/app/providers/trpc-provider", () => ({
       delete: { mutationOptions: vi.fn() },
       convertMeasurements: { mutationOptions: vi.fn() },
     },
+  }),
+}));
+
+// Mock client logger
+vi.mock("@/lib/logger", () => ({
+  createClientLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
   }),
 }));
 

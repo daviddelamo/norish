@@ -34,11 +34,14 @@ import {
   type PermissionAction,
 } from "@/server/auth/permissions";
 import { getRecipePermissionPolicy } from "@/config/server-config-loader";
+import { getQueues } from "@/server/queue/registry";
 import {
   addImportJob,
   addImageImportJob,
   addPasteImportJob,
   addNutritionEstimationJob,
+  addAutoTaggingJob,
+  addAllergyDetectionJob,
 } from "@/server/queue";
 import { FilterMode, SortOrder } from "@/types";
 import { MAX_RECIPE_PASTE_CHARS } from "@/types/uploads";
@@ -121,7 +124,7 @@ async function assertRecipeAccess(
 
 // Procedures
 const list = authedProcedure.input(RecipeListInputSchema).query(async ({ ctx, input }) => {
-  const { cursor, limit, search, tags, filterMode, sortMode, minRating } = input;
+  const { cursor, limit, search, searchFields, tags, filterMode, sortMode, minRating } = input;
 
   log.debug({ userId: ctx.user.id, cursor, limit }, "Listing recipes");
 
@@ -136,6 +139,7 @@ const list = authedProcedure.input(RecipeListInputSchema).query(async ({ ctx, in
     limit,
     cursor,
     search,
+    searchFields,
     tags,
     filterMode as FilterMode,
     sortMode as SortOrder,
@@ -286,7 +290,8 @@ const importFromUrlProcedure = authedProcedure
     const recipeId = crypto.randomUUID();
 
     // Add job to queue - returns conflict status if duplicate in queue
-    const result = await addImportJob({
+    const queues = getQueues();
+    const result = await addImportJob(queues.recipeImport, {
       url,
       recipeId,
       userId: ctx.user.id,
@@ -298,7 +303,7 @@ const importFromUrlProcedure = authedProcedure
     if (result.status === "exists" || result.status === "duplicate") {
       throw new TRPCError({
         code: "CONFLICT",
-        message: "This recipe is already exist or is being imported",
+        message: "This recipe already exists or is being imported",
       });
     }
 
@@ -394,15 +399,15 @@ const convertMeasurements = authedProcedure
         // Convert with AI
         return import("@/server/ai/unit-converter")
           .then(({ convertRecipeDataWithAI }) => convertRecipeDataWithAI(recipe, targetSystem))
-          .then((converted) => {
-            if (!converted) {
+          .then((result) => {
+            if (!result.success) {
               throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
-                message: "Conversion failed, please try again.",
+                message: result.error ?? "Conversion failed, please try again.",
               });
             }
 
-            return { recipe, converted };
+            return { recipe, converted: result.data };
           });
       })
       .then((result) => {
@@ -494,7 +499,8 @@ const importFromImagesProcedure = authedProcedure
       "Processing image import request"
     );
 
-    const result = await addImageImportJob({
+    const queues = getQueues();
+    const result = await addImageImportJob(queues.imageImport, {
       recipeId,
       userId: ctx.user.id,
       householdKey: ctx.householdKey,
@@ -527,7 +533,8 @@ const importFromPasteProcedure = authedProcedure
       "Processing paste import request"
     );
 
-    const result = await addPasteImportJob({
+    const queues = getQueues();
+    const result = await addPasteImportJob(queues.pasteImport, {
       recipeId,
       userId: ctx.user.id,
       householdKey: ctx.householdKey,
@@ -579,7 +586,8 @@ const estimateNutrition = authedProcedure
     }
 
     // Add to queue for background processing
-    const result = await addNutritionEstimationJob({
+    const queues = getQueues();
+    const result = await addNutritionEstimationJob(queues.nutritionEstimation, {
       recipeId,
       userId: ctx.user.id,
       householdKey: ctx.householdKey,
@@ -606,6 +614,145 @@ const estimateNutrition = authedProcedure
     return { success: true };
   });
 
+const triggerAutoTag = authedProcedure
+  .input(z.object({ recipeId: z.uuid() }))
+  .mutation(async ({ ctx, input }) => {
+    const { recipeId } = input;
+
+    log.info({ userId: ctx.user.id, recipeId }, "Queueing auto-tagging for recipe");
+
+    const aiEnabled = await checkAIEnabled();
+
+    if (!aiEnabled) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "AI features are disabled",
+      });
+    }
+
+    const recipe = await getRecipeFull(recipeId);
+
+    if (!recipe) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Recipe not found",
+      });
+    }
+
+    if (recipe.recipeIngredients.length === 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Recipe has no ingredients to generate tags from",
+      });
+    }
+
+    // Add to queue for background processing
+    const queues = getQueues();
+    const result = await addAutoTaggingJob(queues.autoTagging, {
+      recipeId,
+      userId: ctx.user.id,
+      householdKey: ctx.householdKey,
+    });
+
+    if (result.status === "duplicate") {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "Auto-tagging is already in progress for this recipe",
+      });
+    }
+
+    if (result.status === "skipped") {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Auto-tagging is disabled",
+      });
+    }
+
+    const policy = await getRecipePermissionPolicy();
+
+    emitByPolicy(
+      recipeEmitter,
+      policy.view,
+      { userId: ctx.user.id, householdKey: ctx.householdKey },
+      "autoTaggingStarted",
+      { recipeId }
+    );
+
+    return { success: true };
+  });
+
+const triggerAllergyDetection = authedProcedure
+  .input(z.object({ recipeId: z.uuid() }))
+  .mutation(async ({ ctx, input }) => {
+    const { recipeId } = input;
+
+    log.info({ userId: ctx.user.id, recipeId }, "Queueing allergy detection for recipe");
+
+    const aiEnabled = await checkAIEnabled();
+
+    if (!aiEnabled) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "AI features are disabled",
+      });
+    }
+
+    const recipe = await getRecipeFull(recipeId);
+
+    if (!recipe) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Recipe not found",
+      });
+    }
+
+    if (recipe.recipeIngredients.length === 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Recipe has no ingredients to detect allergies from",
+      });
+    }
+
+    // Add to queue for background processing
+    const queues = getQueues();
+    const result = await addAllergyDetectionJob(queues.allergyDetection, {
+      recipeId,
+      userId: ctx.user.id,
+      householdKey: ctx.householdKey,
+    });
+
+    if (result.status === "duplicate") {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "Allergy detection is already in progress for this recipe",
+      });
+    }
+
+    if (result.status === "skipped") {
+      const reasonMessage =
+        result.reason === "no_allergies"
+          ? "No allergies configured for your household"
+          : "Allergy detection is disabled";
+
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: reasonMessage,
+      });
+    }
+
+    const policy = await getRecipePermissionPolicy();
+
+    emitByPolicy(
+      recipeEmitter,
+      policy.view,
+      { userId: ctx.user.id, householdKey: ctx.householdKey },
+      "allergyDetectionStarted",
+      { recipeId }
+    );
+
+    return { success: true };
+  });
+
 export const recipesProcedures = router({
   list,
   get,
@@ -617,6 +764,8 @@ export const recipesProcedures = router({
   importFromPaste: importFromPasteProcedure,
   convertMeasurements,
   estimateNutrition,
+  triggerAutoTag,
+  triggerAllergyDetection,
   reserveId,
   autocomplete,
 });

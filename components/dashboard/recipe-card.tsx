@@ -3,7 +3,8 @@
 import { ShoppingBagIcon, CalendarDaysIcon, TrashIcon } from "@heroicons/react/20/solid";
 import { Card, CardBody, Image } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import SwipeableRow, { SwipeableRowRef, SwipeAction } from "../shared/swipable-row";
 import DoubleTapContainer from "../shared/double-tap-container";
@@ -15,24 +16,33 @@ import { MiniCalendar, MiniGroceries } from "@/components/Panel/consumers";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
 import { RecipeDashboardDTO } from "@/types";
 import { formatMinutesHM } from "@/lib/helpers";
-import { useRecipesContext } from "@/context/recipes-context";
 import { useAppStore } from "@/store/useAppStore";
 import { usePermissionsContext } from "@/context/permissions-context";
-import { useFavoritesQuery, useFavoritesMutation } from "@/hooks/favorites";
 
-export default function RecipeCard({ recipe }: { recipe: RecipeDashboardDTO }) {
+type RecipeCardProps = {
+  recipe: RecipeDashboardDTO;
+  isFavorite: boolean;
+  allergies: string[];
+  onToggleFavorite: (recipeId: string) => void;
+  onDelete: (recipeId: string) => void;
+};
+
+function RecipeCardComponent({
+  recipe,
+  isFavorite: recipeIsFavorite,
+  allergies,
+  onToggleFavorite,
+  onDelete,
+}: RecipeCardProps) {
   const router = useRouter();
   const rowRef = useRef<SwipeableRowRef>(null);
-  const { mobileSearchOpen } = useAppStore((s) => s);
-  const { deleteRecipe } = useRecipesContext();
+  const mobileSearchOpen = useAppStore((s) => s.mobileSearchOpen);
   const { canDeleteRecipe } = usePermissionsContext();
-  const { isFavorite: checkFavorite } = useFavoritesQuery();
-  const { toggleFavorite } = useFavoritesMutation();
   const [open, setOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [groceriesOpen, setGroceriesOpen] = useState(false);
+  const t = useTranslations("recipes.card");
 
-  const isFavorite = checkFavorite(recipe.id);
   const averageRating = recipe.averageRating ?? null;
 
   const handleNavigate = useCallback(() => {
@@ -49,17 +59,20 @@ export default function RecipeCard({ recipe }: { recipe: RecipeDashboardDTO }) {
   const allTags = recipe.tags ?? [];
   const description = recipe.description?.trim() || "";
 
+  // Get thumbnail from the legacy image field
+  const thumbnailImage = recipe.image;
+
   function _canClick() {
     return !open && !mobileSearchOpen;
   }
 
   const handleToggleFavorite = useCallback(() => {
-    toggleFavorite(recipe.id);
-  }, [toggleFavorite, recipe.id]);
+    onToggleFavorite(recipe.id);
+  }, [onToggleFavorite, recipe.id]);
 
   const deleteRecipeButton = useCallback(() => {
-    deleteRecipe(recipe.id);
-  }, [deleteRecipe, recipe.id]);
+    onDelete(recipe.id);
+  }, [onDelete, recipe.id]);
 
   // Check if user can delete this recipe
   // Recipes without owner don not have restrictions
@@ -72,14 +85,14 @@ export default function RecipeCard({ recipe }: { recipe: RecipeDashboardDTO }) {
         icon: ShoppingBagIcon,
         color: "blue",
         onPress: () => setGroceriesOpen(true),
-        label: "View groceries",
+        label: t("viewGroceries"),
       },
       {
         key: "calendar",
         icon: CalendarDaysIcon,
         color: "yellow",
         onPress: () => setCalendarOpen(true),
-        label: "Add to calendar",
+        label: t("addToCalendar"),
       },
     ];
 
@@ -90,12 +103,12 @@ export default function RecipeCard({ recipe }: { recipe: RecipeDashboardDTO }) {
         color: "danger",
         onPress: deleteRecipeButton,
         primary: true,
-        label: "Delete recipe",
+        label: t("deleteRecipe"),
       });
     }
 
     return baseActions;
-  }, [showDeleteAction, deleteRecipeButton]);
+  }, [showDeleteAction, deleteRecipeButton, t]);
 
   return (
     <>
@@ -133,19 +146,19 @@ export default function RecipeCard({ recipe }: { recipe: RecipeDashboardDTO }) {
               >
                 {/* Image */}
                 <div className="pointer-events-none absolute inset-0 z-0">
-                  {recipe.image ? (
+                  {thumbnailImage ? (
                     <Image
                       removeWrapper
                       alt={recipe.name}
                       className={`h-full w-full object-cover transition-transform duration-300 ease-in-out ${open ? "scale-100" : "group-hover/row:scale-110"} `}
                       radius="none"
-                      src={recipe.image}
+                      src={thumbnailImage}
                     />
                   ) : (
                     <div
                       className={`bg-default-200 text-default-500 flex h-full w-full items-center justify-center transition-all duration-300 ease-in-out ${open ? "scale-100" : "group-hover/row:scale-105"} `}
                     >
-                      <span className="text-sm font-medium opacity-70">No image available</span>
+                      <span className="text-sm font-medium opacity-70">{t("noImage")}</span>
                     </div>
                   )}
                 </div>
@@ -153,7 +166,7 @@ export default function RecipeCard({ recipe }: { recipe: RecipeDashboardDTO }) {
                 {/* top meta data */}
                 <RecipeMetadata
                   averageRating={averageRating}
-                  isFavorite={isFavorite}
+                  isFavorite={recipeIsFavorite}
                   servings={servings}
                   timeLabel={timeLabel}
                   onOptionsPress={() => {
@@ -164,7 +177,7 @@ export default function RecipeCard({ recipe }: { recipe: RecipeDashboardDTO }) {
                 />
 
                 {/* bottom tags */}
-                {allTags.length > 0 && <RecipeTags tags={allTags} />}
+                {allTags.length > 0 && <RecipeTags allergies={allergies} tags={allTags} />}
               </DoubleTapContainer>
 
               {/* Body*/}
@@ -201,7 +214,46 @@ export default function RecipeCard({ recipe }: { recipe: RecipeDashboardDTO }) {
       <MiniCalendar open={calendarOpen} recipeId={recipe.id} onOpenChange={setCalendarOpen} />
 
       {/* Groceries panel */}
-      <MiniGroceries open={groceriesOpen} recipeId={recipe.id} onOpenChange={setGroceriesOpen} />
+      <MiniGroceries
+        initialServings={recipe.servings || 1}
+        open={groceriesOpen}
+        originalServings={recipe.servings || 1}
+        recipeId={recipe.id}
+        onOpenChange={setGroceriesOpen}
+      />
     </>
   );
 }
+
+// Memoize to prevent unnecessary re-renders during virtual list scroll
+// The component only needs to re-render when the recipe data or favorite status changes
+const RecipeCard = memo(RecipeCardComponent, (prevProps, nextProps) => {
+  // Check primitive props first (cheap)
+  if (prevProps.isFavorite !== nextProps.isFavorite) return false;
+  if (prevProps.allergies !== nextProps.allergies) return false;
+  // Functions are stable via useCallback in parent, but check identity anyway
+  if (prevProps.onToggleFavorite !== nextProps.onToggleFavorite) return false;
+  if (prevProps.onDelete !== nextProps.onDelete) return false;
+
+  const prev = prevProps.recipe;
+  const next = nextProps.recipe;
+
+  // Compare essential fields that would require a re-render
+  return (
+    prev.id === next.id &&
+    prev.name === next.name &&
+    prev.description === next.description &&
+    prev.image === next.image &&
+    prev.servings === next.servings &&
+    prev.prepMinutes === next.prepMinutes &&
+    prev.cookMinutes === next.cookMinutes &&
+    prev.totalMinutes === next.totalMinutes &&
+    prev.averageRating === next.averageRating &&
+    prev.updatedAt?.getTime() === next.updatedAt?.getTime() &&
+    prev.tags?.length === next.tags?.length
+  );
+});
+
+RecipeCard.displayName = "RecipeCard";
+
+export default RecipeCard;

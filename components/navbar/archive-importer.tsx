@@ -1,16 +1,19 @@
 "use client";
 import React, { useCallback, useRef, useState, useEffect } from "react";
 import { Progress } from "@heroui/react";
+import { useTranslations } from "next-intl";
 
 import { useArchiveImportMutation } from "@/hooks/archive";
 import { useArchiveImportContext } from "@/context/archive-import-context";
 
 export default function ArchiveImporter() {
+  const t = useTranslations("navbar.archiveImporter");
   // Use archive context for state
   const {
     current,
     imported,
     skipped,
+    skippedItems,
     total,
     errors: progressErrors,
     isImporting,
@@ -19,10 +22,8 @@ export default function ArchiveImporter() {
   const { startImport, isStarting } = useArchiveImportMutation();
   const [dragActive, setDragActive] = useState(false);
   const [localErrors, setLocalErrors] = useState<{ file: string; error: string }[]>([]);
+  const [showSkipped, setShowSkipped] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // eslint-disable-next-line no-console
-  console.log("[Archive Importer] Render:", { current, imported, skipped, total, isImporting });
 
   const uploadFile = useCallback(
     (file: File) => {
@@ -66,16 +67,17 @@ export default function ArchiveImporter() {
   // Detect completion: import was active, now finished, and we have results
   const isComplete = !isImporting && current > 0 && current === total;
 
-  // Auto-clear import state after completion (after 5 seconds)
+  // Auto-clear import state after completion
   useEffect(() => {
     if (isComplete) {
+      const timeout = 60000;
       const timer = setTimeout(() => {
         clearImport();
-      }, 5000);
+      }, timeout);
 
       return () => clearTimeout(timer);
     }
-  }, [isComplete, clearImport]);
+  }, [isComplete, skippedItems.length, clearImport]);
 
   // Combine local errors with progress errors
   const allErrors = [
@@ -87,7 +89,7 @@ export default function ArchiveImporter() {
   let status = "";
 
   if (isStarting) {
-    status = "Uploading file…";
+    status = t("uploadingFile");
   } else if (isImporting && total > 0) {
     const parts = [`${current} of ${total}`];
 
@@ -144,7 +146,7 @@ export default function ArchiveImporter() {
               className="text-primary focus-within:outline-primary hover:text-primary-400 relative cursor-pointer rounded-md bg-transparent font-semibold focus-within:outline-2 focus-within:outline-offset-2"
               htmlFor="archive-file-upload"
             >
-              <span>{isUploading ? "Uploading…" : "Upload a file"}</span>
+              <span>{isUploading ? t("uploading") : t("uploadFile")}</span>
               <input
                 key={isComplete ? "reset" : "active"}
                 ref={inputRef}
@@ -157,11 +159,9 @@ export default function ArchiveImporter() {
                 onChange={onInputChange}
               />
             </label>
-            <p className="pl-1">or drag and drop</p>
+            <p className="pl-1">{t("dragDrop")}</p>
           </div>
-          <p className="text-default-500 text-xs">
-            .melarecipes (Mela), .zip (Mealie or Tandoor export)
-          </p>
+          <p className="text-default-500 text-xs">{t("formats")}</p>
         </div>
       </div>
 
@@ -178,6 +178,30 @@ export default function ArchiveImporter() {
         )}
 
         {status && <div className="text-default-600 text-base">{status}</div>}
+
+        {/* Show skipped recipes with toggle */}
+        {isComplete && skippedItems.length > 0 && (
+          <div className="text-default-500 text-sm">
+            <button
+              className="hover:text-default-700 underline underline-offset-2"
+              type="button"
+              onClick={() => setShowSkipped(!showSkipped)}
+            >
+              {showSkipped ? "Hide" : "Show"} {skippedItems.length} skipped recipe
+              {skippedItems.length !== 1 ? "s" : ""}
+            </button>
+            {showSkipped && (
+              <ul className="mt-1 list-disc pl-4">
+                {skippedItems.map((s, i) => (
+                  <li key={i}>
+                    {s.file}: {s.reason}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         {allErrors.length > 0 && (
           <ul className="text-danger list-disc pl-4 text-base">
             {allErrors.map((e, i) => (

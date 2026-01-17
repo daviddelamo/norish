@@ -2,30 +2,33 @@
  * Recipe Import Worker
  *
  * Processes recipe import jobs from the queue.
- * Runs in-process with the main server.
+ * Uses lazy worker pattern - starts on-demand and pauses when idle.
  */
 
 import type { RecipeImportJobData } from "@/types";
+import type { Job } from "bullmq";
 
-import { Worker, Job } from "bullmq";
+import { QUEUE_NAMES, baseWorkerOptions, WORKER_CONCURRENCY, STALLED_INTERVAL } from "../config";
+import { createLazyWorker, stopLazyWorker } from "../lazy-worker-manager";
 
-import { redisConnection, QUEUE_NAMES } from "../config";
-
+import { getBullClient } from "@/server/redis/bullmq";
 import { createLogger } from "@/server/logger";
 import { emitByPolicy, type PolicyEmitContext } from "@/server/trpc/helpers";
 import { recipeEmitter } from "@/server/trpc/routers/recipes/emitter";
 import { getRecipePermissionPolicy, getAIConfig } from "@/config/server-config-loader";
+import { getQueues } from "@/server/queue/registry";
+import { addAutoTaggingJob } from "@/server/queue/auto-tagging/producer";
+import { addAllergyDetectionJob } from "@/server/queue/allergy-detection/producer";
 import {
   createRecipeWithRefs,
   recipeExistsByUrlForPolicy,
   dashboardRecipe,
   getAllergiesForUsers,
 } from "@/server/db";
-import { parseRecipeFromUrl } from "@/lib/parser";
+import { parseRecipeFromUrl } from "@/server/parser";
+import { deleteRecipeImagesDir } from "@/server/downloader";
 
 const log = createLogger("worker:recipe-import");
-
-let worker: Worker<RecipeImportJobData> | null = null;
 
 /**
  * Process a single recipe import job.
@@ -59,9 +62,11 @@ async function processImportJob(job: Job<RecipeImportJobData>): Promise<void> {
       );
 
       // Include pendingRecipeId so client can remove the skeleton
+      // Show imported toast since no processing will follow for existing recipes
       emitByPolicy(recipeEmitter, viewPolicy, ctx, "imported", {
         recipe: dashboardDto,
         pendingRecipeId: recipeId,
+        toast: "imported",
       });
     }
 
@@ -85,13 +90,14 @@ async function processImportJob(job: Job<RecipeImportJobData>): Promise<void> {
   }
 
   // Parse and create recipe
-  const parsedRecipe = await parseRecipeFromUrl(url, allergyNames, job.data.forceAI);
+  const parseResult = await parseRecipeFromUrl(url, recipeId, allergyNames, job.data.forceAI);
 
-  if (!parsedRecipe) {
+  log.debug({ parseResult }, "Recipe parse result");
+  if (!parseResult.recipe) {
     throw new Error("Failed to parse recipe from URL");
   }
 
-  const createdId = await createRecipeWithRefs(recipeId, userId, parsedRecipe);
+  const createdId = await createRecipeWithRefs(recipeId, userId, parseResult.recipe);
 
   if (!createdId) {
     throw new Error("Failed to save imported recipe");
@@ -100,12 +106,38 @@ async function processImportJob(job: Job<RecipeImportJobData>): Promise<void> {
   const dashboardDto = await dashboardRecipe(createdId);
 
   if (dashboardDto) {
-    log.info({ jobId: job.id, recipeId: createdId, url }, "Recipe imported successfully");
+    log.info(
+      { jobId: job.id, recipeId: createdId, url, usedAI: parseResult.usedAI },
+      "Recipe imported successfully"
+    );
 
+    // If AI was used, no processing will follow - show imported toast
+    // If AI was NOT used, auto-tagging/allergy detection will follow - no toast needed
     emitByPolicy(recipeEmitter, viewPolicy, ctx, "imported", {
       recipe: dashboardDto,
       pendingRecipeId: recipeId,
+      toast: parseResult.usedAI ? "imported" : undefined,
     });
+
+    // Trigger auto-tagging only if AI was NOT used for extraction
+    // (AI extraction already includes auto-tagging instructions in the prompt)
+    if (!parseResult.usedAI) {
+      const queues = getQueues();
+
+      await addAutoTaggingJob(queues.autoTagging, {
+        recipeId: createdId,
+        userId,
+        householdKey,
+      });
+
+      // Trigger allergy detection for structured imports
+      // (AI extraction already handles allergy detection inline)
+      await addAllergyDetectionJob(queues.allergyDetection, {
+        recipeId: createdId,
+        userId,
+        householdKey,
+      });
+    }
   }
 }
 
@@ -136,6 +168,8 @@ async function handleJobFailed(
     "Recipe import job failed"
   );
 
+  await deleteRecipeImagesDir(recipeId);
+
   if (isFinalFailure) {
     // Emit failed event to remove skeleton
     const policy = await getRecipePermissionPolicy();
@@ -150,40 +184,23 @@ async function handleJobFailed(
 }
 
 /**
- * Start the recipe import worker.
+ * Start the recipe import worker (lazy - starts on demand).
  * Call during server startup.
  */
-export function startRecipeImportWorker(): void {
-  if (worker) {
-    log.warn("Recipe import worker already running");
-
-    return;
-  }
-
-  worker = new Worker<RecipeImportJobData>(QUEUE_NAMES.RECIPE_IMPORT, processImportJob, {
-    connection: redisConnection,
-    concurrency: 5, // I am not sure if this is a good value
-  });
-
-  worker.on("completed", (job) => {
-    log.debug({ jobId: job.id }, "Recipe import job completed");
-  });
-
-  worker.on("failed", (job, error) => {
-    handleJobFailed(job, error);
-  });
-
-  worker.on("error", (error) => {
-    log.error({ error }, "Recipe import worker error");
-  });
-
-  log.info("Recipe import worker started");
+export async function startRecipeImportWorker(): Promise<void> {
+  await createLazyWorker<RecipeImportJobData>(
+    QUEUE_NAMES.RECIPE_IMPORT,
+    processImportJob,
+    {
+      connection: getBullClient(),
+      ...baseWorkerOptions,
+      stalledInterval: STALLED_INTERVAL[QUEUE_NAMES.RECIPE_IMPORT],
+      concurrency: WORKER_CONCURRENCY[QUEUE_NAMES.RECIPE_IMPORT],
+    },
+    handleJobFailed
+  );
 }
 
 export async function stopRecipeImportWorker(): Promise<void> {
-  if (worker) {
-    await worker.close();
-    worker = null;
-    log.info("Recipe import worker stopped");
-  }
+  await stopLazyWorker(QUEUE_NAMES.RECIPE_IMPORT);
 }

@@ -7,6 +7,8 @@ import { recipes } from "./recipes";
 import { tags } from "./tags";
 import { steps } from "./steps";
 import { stepImages } from "./step-images";
+import { recipeImages } from "./recipe-images";
+import { recipeVideos } from "./recipe-videos";
 import { households } from "./households";
 import { householdUsers } from "./household-users";
 import { users } from "./auth";
@@ -14,12 +16,15 @@ import { groceries } from "./groceries";
 import { serverConfig } from "./server-config";
 import { recipeRatings } from "./recipe-ratings";
 import { userAllergies } from "./user-allergies";
+import { stores, ingredientStorePreferences } from "./stores";
 
 export const recipesRelations = relations(recipes, ({ many }) => ({
   ingredients: many(recipeIngredients),
   recipeTags: many(recipeTags),
   steps: many(steps),
   ratings: many(recipeRatings),
+  images: many(recipeImages),
+  videos: many(recipeVideos),
 }));
 
 export const tagsRelations = relations(tags, ({ many }) => ({
@@ -68,6 +73,20 @@ export const stepImagesRelations = relations(stepImages, ({ one }) => ({
   }),
 }));
 
+export const recipeImagesRelations = relations(recipeImages, ({ one }) => ({
+  recipe: one(recipes, {
+    fields: [recipeImages.recipeId],
+    references: [recipes.id],
+  }),
+}));
+
+export const recipeVideosRelations = relations(recipeVideos, ({ one }) => ({
+  recipe: one(recipes, {
+    fields: [recipeVideos.recipeId],
+    references: [recipes.id],
+  }),
+}));
+
 export const householdsRelations = relations(households, ({ many }) => ({
   users: many(householdUsers),
 }));
@@ -92,7 +111,34 @@ export const groceriesRelations = relations(groceries, ({ one }) => ({
     fields: [groceries.recipeIngredientId],
     references: [recipeIngredients.id],
   }),
+  store: one(stores, {
+    fields: [groceries.storeId],
+    references: [stores.id],
+  }),
 }));
+
+export const storesRelations = relations(stores, ({ one, many }) => ({
+  user: one(users, {
+    fields: [stores.userId],
+    references: [users.id],
+  }),
+  groceries: many(groceries),
+  ingredientPreferences: many(ingredientStorePreferences),
+}));
+
+export const ingredientStorePreferencesRelations = relations(
+  ingredientStorePreferences,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [ingredientStorePreferences.userId],
+      references: [users.id],
+    }),
+    store: one(stores, {
+      fields: [ingredientStorePreferences.storeId],
+      references: [stores.id],
+    }),
+  })
+);
 
 export const serverConfigRelations = relations(serverConfig, ({ one }) => ({
   updatedByUser: one(users, {

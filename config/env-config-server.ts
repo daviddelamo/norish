@@ -80,6 +80,27 @@ const ServerConfigSchema = z.object({
   OIDC_CLIENT_ID: z.string().optional(),
   OIDC_CLIENT_SECRET: z.string().optional(),
   OIDC_WELLKNOWN: z.string().optional(),
+  // OIDC Claim Mapping
+  OIDC_CLAIM_MAPPING_ENABLED: z
+    .string()
+    .transform((val) => val === "true" || val === "1")
+    .pipe(z.boolean())
+    .default(false),
+  OIDC_SCOPES: z
+    .string()
+    .optional()
+    .transform((val) =>
+      val
+        ? val
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+        : []
+    )
+    .pipe(z.array(z.string())),
+  OIDC_GROUPS_CLAIM: z.string().default("groups"),
+  OIDC_ADMIN_GROUP: z.string().default("norish_admin"),
+  OIDC_HOUSEHOLD_GROUP_PREFIX: z.string().default("norish_household_"),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
@@ -134,8 +155,31 @@ const ServerConfigSchema = z.object({
   // Platform-specific cookies for video processing (base64-encoded Netscape cookies.txt content)
   INSTAGRAM_COOKIES: z.string().optional(),
 
+  // File Size Limits (in bytes)
+  MAX_AVATAR_FILE_SIZE: z.coerce.number().default(5 * 1024 * 1024), // 5MB
+  MAX_IMAGE_FILE_SIZE: z.coerce.number().default(10 * 1024 * 1024), // 10MB
+  MAX_VIDEO_FILE_SIZE: z.coerce.number().default(100 * 1024 * 1024), // 100MB
+
   // Redis Configuration
   REDIS_URL: z.string().url().default("redis://localhost:6379"),
+
+  // Internationalization
+  // If invalid locale is specified, falls back to 'en'
+  DEFAULT_LOCALE: z.string().default("en"),
+  // If not set, all available locales are enabled
+  // Can be overridden by admin UI settings stored in database
+  ENABLED_LOCALES: z
+    .string()
+    .optional()
+    .transform((val) =>
+      val
+        ? val
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+        : []
+    )
+    .pipe(z.array(z.string())),
 });
 
 export type ServerConfig = z.infer<typeof ServerConfigSchema>;

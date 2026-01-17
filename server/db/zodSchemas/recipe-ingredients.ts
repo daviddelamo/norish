@@ -17,11 +17,9 @@ export const RecipeIngredientsInsertBaseSchema = createInsertSchema(recipeIngred
 
 export const RecipeIngredientsUpdateBaseSchema = createUpdateSchema(recipeIngredients);
 
-export const RecipeIngredientsWithoutIdSchema = RecipeIngredientsSelectBaseSchema.omit({
-  id: true,
+export const RecipeIngredientsWithIdSchema = RecipeIngredientsSelectBaseSchema.omit({
   updatedAt: true,
   createdAt: true,
-  ingredientId: true,
   recipeId: true,
 }).extend({
   ingredientName: z.string(),
@@ -36,18 +34,21 @@ export const RecipeIngredientSelectWithNameSchema = RecipeIngredientsSelectBaseS
   order: z.coerce.number(),
 }).omit({ recipeId: true });
 
-export const RecipeIngredientInputSchema = RecipeIngredientsInsertBaseSchema.partial({
+export const RecipeIngredientInputBaseSchema = RecipeIngredientsInsertBaseSchema.partial({
   ingredientId: true,
   recipeId: true,
   systemUsed: true,
-})
-  .extend({
-    amount: z.coerce.number().nullable(),
-    ingredientName: z.string().trim().min(1).optional(),
-    ingredientId: z.string().nullable(),
-    order: z.coerce.number(),
-  })
-  .refine((val) => Boolean(val.ingredientId || val.ingredientName), {
+}).extend({
+  amount: z.coerce.number().nullable(),
+  ingredientName: z.string().trim().min(1).optional(),
+  ingredientId: z.string().nullable(),
+  order: z.coerce.number(),
+});
+
+export const RecipeIngredientInputSchema = RecipeIngredientInputBaseSchema.refine(
+  (val) => Boolean(val.ingredientId || val.ingredientName),
+  {
     message: "ingredientId or ingredientName is required",
     path: ["ingredientId"],
-  });
+  }
+);

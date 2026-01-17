@@ -5,6 +5,7 @@ import NextLink from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 import { siteConfig } from "@/config/site";
 import NavbarUserMenu from "@/components/navbar/navbar-user-menu";
@@ -12,7 +13,15 @@ import MobileNav from "@/components/navbar/mobile-nav";
 import logo from "@/public/norish-logo.png";
 import { useAutoHide } from "@/hooks/auto-hide";
 
+// Map hrefs to translation keys
+const navLabelKeys: Record<string, "home" | "calendar" | "groceries"> = {
+  "/": "home",
+  "/groceries": "groceries",
+  "/calendar": "calendar",
+};
+
 export const Navbar = () => {
+  const t = useTranslations("navbar.nav");
   const pathname = usePathname();
   const { isVisible, onHoverStart, onHoverEnd } = useAutoHide();
 
@@ -42,7 +51,17 @@ export const Navbar = () => {
           {/* Left */}
           <NavbarContent justify="start">
             <NavbarBrand className="max-w-fit gap-3">
-              <NextLink aria-label="Go to home" className="flex items-center" href="/">
+              <NextLink
+                aria-label="Go to home"
+                className="flex items-center"
+                href="/"
+                onClick={(e) => {
+                  if (pathname === "/") {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }
+                }}
+              >
                 <Image priority alt="Norish logo" height={30} src={logo} width={120} />
               </NextLink>
             </NavbarBrand>
@@ -64,7 +83,7 @@ export const Navbar = () => {
                       }`}
                       href={item.href}
                     >
-                      {item.label}
+                      {t(navLabelKeys[item.href] ?? "home")}
                     </NextLink>
                   </NavbarItem>
                 );

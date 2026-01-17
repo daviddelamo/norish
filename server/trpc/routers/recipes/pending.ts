@@ -1,4 +1,11 @@
-import type { RecipeImportJobData, PendingRecipeDTO, NutritionEstimationJobData } from "@/types";
+import type {
+  RecipeImportJobData,
+  PendingRecipeDTO,
+  NutritionEstimationJobData,
+  AutoTaggingJobData,
+  AllergyDetectionJobData,
+} from "@/types";
+import type { Job } from "bullmq";
 
 import { z } from "zod";
 
@@ -6,18 +13,19 @@ import { router } from "../../trpc";
 import { authedProcedure } from "../../middleware";
 
 import { trpcLogger as log } from "@/server/logger";
-import { recipeImportQueue, nutritionEstimationQueue } from "@/server/queue";
+import { getQueues } from "@/server/queue/registry";
 import { getRecipePermissionPolicy } from "@/config/server-config-loader";
 
 const getPending = authedProcedure.query(async ({ ctx }) => {
   log.debug({ userId: ctx.user.id }, "Fetching pending recipe imports");
 
   const policy = await getRecipePermissionPolicy();
+  const queues = getQueues();
 
-  const jobs = await recipeImportQueue.getJobs(["waiting", "active", "delayed"]);
+  const jobs = await queues.recipeImport.getJobs(["waiting", "active", "delayed"]);
 
-  const filteredJobs = jobs.filter((job) => {
-    const data = job.data as RecipeImportJobData;
+  const filteredJobs = jobs.filter((job: Job<RecipeImportJobData>) => {
+    const data = job.data;
 
     switch (policy.view) {
       case "everyone":
@@ -32,7 +40,7 @@ const getPending = authedProcedure.query(async ({ ctx }) => {
     }
   });
 
-  const pendingRecipes: PendingRecipeDTO[] = filteredJobs.map((job) => ({
+  const pendingRecipes: PendingRecipeDTO[] = filteredJobs.map((job: Job<RecipeImportJobData>) => ({
     recipeId: job.data.recipeId,
     url: job.data.url,
     addedAt: job.timestamp,
@@ -49,12 +57,11 @@ const getPending = authedProcedure.query(async ({ ctx }) => {
 const isNutritionEstimating = authedProcedure
   .input(z.object({ recipeId: z.uuid() }))
   .query(async ({ ctx, input }) => {
-    const jobs = await nutritionEstimationQueue.getJobs(["waiting", "active", "delayed"]);
+    const queues = getQueues();
+    const jobs = await queues.nutritionEstimation.getJobs(["waiting", "active", "delayed"]);
 
-    const isEstimating = jobs.some((job) => {
-      const data = job.data as NutritionEstimationJobData;
-
-      return data.recipeId === input.recipeId;
+    const isEstimating = jobs.some((job: Job<NutritionEstimationJobData>) => {
+      return job.data.recipeId === input.recipeId;
     });
 
     log.debug(
@@ -65,7 +72,101 @@ const isNutritionEstimating = authedProcedure
     return isEstimating;
   });
 
+/**
+ * Get all recipe IDs that have pending auto-tagging jobs.
+ * Used to hydrate the auto-tagging state on page load.
+ */
+const getPendingAutoTagging = authedProcedure.query(async ({ ctx }) => {
+  log.debug({ userId: ctx.user.id }, "Fetching pending auto-tagging jobs");
+
+  const queues = getQueues();
+  const jobs = await queues.autoTagging.getJobs(["waiting", "active", "delayed"]);
+
+  // Auto-tagging jobs are per-recipe and user-scoped
+  const recipeIds = jobs
+    .filter(
+      (job: Job<AutoTaggingJobData>) =>
+        job.data.userId === ctx.user.id || job.data.householdKey === ctx.householdKey
+    )
+    .map((job: Job<AutoTaggingJobData>) => job.data.recipeId);
+
+  log.debug({ userId: ctx.user.id, count: recipeIds.length }, "Found pending auto-tagging jobs");
+
+  return recipeIds;
+});
+
+/**
+ * Check if a specific recipe has a pending auto-tagging job.
+ */
+const isAutoTagging = authedProcedure
+  .input(z.object({ recipeId: z.uuid() }))
+  .query(async ({ ctx, input }) => {
+    const queues = getQueues();
+    const jobs = await queues.autoTagging.getJobs(["waiting", "active", "delayed"]);
+
+    const isActive = jobs.some(
+      (job: Job<AutoTaggingJobData>) => job.data.recipeId === input.recipeId
+    );
+
+    log.debug(
+      { userId: ctx.user.id, recipeId: input.recipeId, isActive },
+      "Checked auto-tagging status"
+    );
+
+    return isActive;
+  });
+
+/**
+ * Get all recipe IDs that have pending allergy detection jobs.
+ * Used to hydrate the allergy detection state on page load.
+ */
+const getPendingAllergyDetection = authedProcedure.query(async ({ ctx }) => {
+  log.debug({ userId: ctx.user.id }, "Fetching pending allergy detection jobs");
+
+  const queues = getQueues();
+  const jobs = await queues.allergyDetection.getJobs(["waiting", "active", "delayed"]);
+
+  // Allergy detection jobs are per-recipe and user-scoped
+  const recipeIds = jobs
+    .filter((job: Job<AllergyDetectionJobData>) => {
+      return job.data.userId === ctx.user.id || job.data.householdKey === ctx.householdKey;
+    })
+    .map((job: Job<AllergyDetectionJobData>) => job.data.recipeId);
+
+  log.debug(
+    { userId: ctx.user.id, count: recipeIds.length },
+    "Found pending allergy detection jobs"
+  );
+
+  return recipeIds;
+});
+
+/**
+ * Check if a specific recipe has a pending allergy detection job.
+ */
+const isAllergyDetecting = authedProcedure
+  .input(z.object({ recipeId: z.uuid() }))
+  .query(async ({ ctx, input }) => {
+    const queues = getQueues();
+    const jobs = await queues.allergyDetection.getJobs(["waiting", "active", "delayed"]);
+
+    const isActive = jobs.some((job: Job<AllergyDetectionJobData>) => {
+      return job.data.recipeId === input.recipeId;
+    });
+
+    log.debug(
+      { userId: ctx.user.id, recipeId: input.recipeId, isActive },
+      "Checked allergy detection status"
+    );
+
+    return isActive;
+  });
+
 export const pendingProcedures = router({
   getPending,
   isNutritionEstimating,
+  getPendingAutoTagging,
+  isAutoTagging,
+  getPendingAllergyDetection,
+  isAllergyDetecting,
 });

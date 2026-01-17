@@ -6,12 +6,22 @@
 
 // @vitest-environment node
 
+import type { Queue } from "bullmq";
+import type { RecipeImportJobData } from "@/types";
+
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock BullMQ
 const mockAdd = vi.fn();
 const mockGetJob = vi.fn();
 const mockClose = vi.fn();
+
+// Create a mock queue instance for tests - typed to match Queue interface
+const mockQueue: Pick<Queue<RecipeImportJobData>, "add" | "getJob" | "close"> = {
+  add: mockAdd,
+  getJob: mockGetJob,
+  close: mockClose,
+};
 
 vi.mock("bullmq", () => {
   return {
@@ -39,6 +49,7 @@ vi.mock("@/config/env-config-server", () => ({
     MASTER_KEY: "QmFzZTY0RW5jb2RlZE1hc3RlcktleU1pbjMyQ2hhcnM=",
     REDIS_URL: "redis://localhost:6379",
     UPLOADS_DIR: "/tmp/uploads",
+    YT_DLP_BIN_DIR: "/tmp/bin",
   },
 }));
 
@@ -73,6 +84,30 @@ vi.mock("@/server/queue/config", () => ({
     removeOnComplete: true,
     removeOnFail: true,
   },
+  autoTaggingJobOptions: {
+    attempts: 3,
+    backoff: { type: "exponential", delay: 2000 },
+    removeOnComplete: true,
+    removeOnFail: true,
+  },
+  allergyDetectionJobOptions: {
+    attempts: 3,
+    backoff: { type: "exponential", delay: 2000 },
+    removeOnComplete: true,
+    removeOnFail: true,
+  },
+  imageImportJobOptions: {
+    attempts: 3,
+    backoff: { type: "exponential", delay: 2000 },
+    removeOnComplete: true,
+    removeOnFail: true,
+  },
+  pasteImportJobOptions: {
+    attempts: 3,
+    backoff: { type: "exponential", delay: 2000 },
+    removeOnComplete: true,
+    removeOnFail: true,
+  },
   QUEUE_NAMES: {
     RECIPE_IMPORT: "recipe-import",
     IMAGE_IMPORT: "image-recipe-import",
@@ -80,17 +115,23 @@ vi.mock("@/server/queue/config", () => ({
     CALDAV_SYNC: "caldav-sync",
     SCHEDULED_TASKS: "scheduled-tasks",
     NUTRITION_ESTIMATION: "nutrition-estimation",
+    AUTO_TAGGING: "auto-tagging",
+    ALLERGY_DETECTION: "allergy-detection",
   },
 }));
 
 // Mock logger
+const mockLogger = {
+  info: vi.fn(),
+  debug: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  child: vi.fn(() => mockLogger),
+};
+
 vi.mock("@/server/logger", () => ({
-  createLogger: vi.fn(() => ({
-    info: vi.fn(),
-    debug: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  })),
+  createLogger: vi.fn(() => mockLogger),
+  parserLogger: mockLogger,
 }));
 
 // Mock DB functions
@@ -209,9 +250,9 @@ describe("Recipe Import Queue", () => {
         getState: vi.fn().mockResolvedValue("waiting"),
       });
 
-      const { isJobInQueue, recipeImportQueue } = await import("@/server/queue");
+      const { isJobInQueue } = await import("@/server/queue");
 
-      const result = await isJobInQueue(recipeImportQueue, "test-job-id");
+      const result = await isJobInQueue(mockQueue as any, "test-job-id");
 
       expect(result).toBe(true);
     });
@@ -221,9 +262,9 @@ describe("Recipe Import Queue", () => {
         getState: vi.fn().mockResolvedValue("active"),
       });
 
-      const { isJobInQueue, recipeImportQueue } = await import("@/server/queue");
+      const { isJobInQueue } = await import("@/server/queue");
 
-      const result = await isJobInQueue(recipeImportQueue, "test-job-id");
+      const result = await isJobInQueue(mockQueue as any, "test-job-id");
 
       expect(result).toBe(true);
     });
@@ -233,9 +274,9 @@ describe("Recipe Import Queue", () => {
         getState: vi.fn().mockResolvedValue("delayed"),
       });
 
-      const { isJobInQueue, recipeImportQueue } = await import("@/server/queue");
+      const { isJobInQueue } = await import("@/server/queue");
 
-      const result = await isJobInQueue(recipeImportQueue, "test-job-id");
+      const result = await isJobInQueue(mockQueue as any, "test-job-id");
 
       expect(result).toBe(true);
     });
@@ -245,9 +286,9 @@ describe("Recipe Import Queue", () => {
         getState: vi.fn().mockResolvedValue("completed"),
       });
 
-      const { isJobInQueue, recipeImportQueue } = await import("@/server/queue");
+      const { isJobInQueue } = await import("@/server/queue");
 
-      const result = await isJobInQueue(recipeImportQueue, "test-job-id");
+      const result = await isJobInQueue(mockQueue as any, "test-job-id");
 
       expect(result).toBe(false);
     });
@@ -257,9 +298,9 @@ describe("Recipe Import Queue", () => {
         getState: vi.fn().mockResolvedValue("failed"),
       });
 
-      const { isJobInQueue, recipeImportQueue } = await import("@/server/queue");
+      const { isJobInQueue } = await import("@/server/queue");
 
-      const result = await isJobInQueue(recipeImportQueue, "test-job-id");
+      const result = await isJobInQueue(mockQueue as any, "test-job-id");
 
       expect(result).toBe(false);
     });
@@ -267,9 +308,9 @@ describe("Recipe Import Queue", () => {
     it("returns false when job does not exist", async () => {
       mockGetJob.mockResolvedValue(null);
 
-      const { isJobInQueue, recipeImportQueue } = await import("@/server/queue");
+      const { isJobInQueue } = await import("@/server/queue");
 
-      const result = await isJobInQueue(recipeImportQueue, "nonexistent-job-id");
+      const result = await isJobInQueue(mockQueue as any, "nonexistent-job-id");
 
       expect(result).toBe(false);
     });
@@ -291,7 +332,7 @@ describe("Recipe Import Queue", () => {
     it("adds job successfully when no duplicate exists", async () => {
       const { addImportJob } = await import("@/server/queue");
 
-      const result = await addImportJob({
+      const result = await addImportJob(mockQueue as any, {
         url: "https://example.com/recipe",
         recipeId: "recipe-123",
         userId: "user-123",
@@ -319,7 +360,7 @@ describe("Recipe Import Queue", () => {
 
       const { addImportJob } = await import("@/server/queue");
 
-      const result = await addImportJob({
+      const result = await addImportJob(mockQueue as any, {
         url: "https://example.com/recipe",
         recipeId: "recipe-123",
         userId: "user-123",
@@ -343,7 +384,7 @@ describe("Recipe Import Queue", () => {
       const { addImportJob } = await import("@/server/queue");
 
       // First household
-      const result1 = await addImportJob({
+      const result1 = await addImportJob(mockQueue as any, {
         url: "https://example.com/recipe",
         recipeId: "recipe-1",
         userId: "user-1",
@@ -358,7 +399,7 @@ describe("Recipe Import Queue", () => {
       mockAdd.mockResolvedValueOnce({ id: "job-2" });
 
       // Different household - should succeed
-      const result2 = await addImportJob({
+      const result2 = await addImportJob(mockQueue as any, {
         url: "https://example.com/recipe",
         recipeId: "recipe-2",
         userId: "user-2",
@@ -382,7 +423,7 @@ describe("Recipe Import Queue", () => {
       const { addImportJob } = await import("@/server/queue");
 
       // First user
-      const result1 = await addImportJob({
+      const result1 = await addImportJob(mockQueue as any, {
         url: "https://example.com/recipe",
         recipeId: "recipe-1",
         userId: "user-1",
@@ -397,7 +438,7 @@ describe("Recipe Import Queue", () => {
       mockAdd.mockResolvedValueOnce({ id: "job-2" });
 
       // Different user - should succeed
-      const result2 = await addImportJob({
+      const result2 = await addImportJob(mockQueue as any, {
         url: "https://example.com/recipe",
         recipeId: "recipe-2",
         userId: "user-2",
@@ -418,7 +459,7 @@ describe("Recipe Import Queue", () => {
       const { addImportJob } = await import("@/server/queue");
 
       // Should succeed because completed jobs don't block new imports
-      const result = await addImportJob({
+      const result = await addImportJob(mockQueue as any, {
         url: "https://example.com/recipe",
         recipeId: "recipe-123",
         userId: "user-123",
@@ -439,7 +480,7 @@ describe("Recipe Import Queue", () => {
       const { addImportJob } = await import("@/server/queue");
 
       // Should succeed because failed jobs don't block new imports
-      const result = await addImportJob({
+      const result = await addImportJob(mockQueue as any, {
         url: "https://example.com/recipe",
         recipeId: "recipe-123",
         userId: "user-123",
@@ -470,7 +511,7 @@ describe("Recipe Import Queue", () => {
         const { addImportJob } = await import("@/server/queue");
 
         // Different user, different household, same URL
-        const result = await addImportJob({
+        const result = await addImportJob(mockQueue as any, {
           url: "https://example.com/recipe",
           recipeId: "recipe-999",
           userId: "different-user",
@@ -499,7 +540,7 @@ describe("Recipe Import Queue", () => {
         const { addImportJob } = await import("@/server/queue");
 
         // Same household, different user
-        const result = await addImportJob({
+        const result = await addImportJob(mockQueue as any, {
           url: "https://example.com/recipe",
           recipeId: "recipe-2",
           userId: "user-2",
@@ -528,7 +569,7 @@ describe("Recipe Import Queue", () => {
         const { addImportJob } = await import("@/server/queue");
 
         // Same user
-        const result = await addImportJob({
+        const result = await addImportJob(mockQueue as any, {
           url: "https://example.com/recipe",
           recipeId: "recipe-2",
           userId: "user-1", // Same user

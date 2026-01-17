@@ -2,8 +2,8 @@
 
 import { AdminSettingsProvider, useAdminSettingsContext } from "../context";
 
-import RegistrationCard from "./registration-card";
-import AuthProvidersCard from "./auth-providers-card";
+import GeneralCard from "./general-card";
+import { AuthProvidersCard } from "./auth-providers";
 import ContentDetectionCard from "./content-detection-card";
 import SystemCard from "./system-card";
 import AIProcessingCard from "./ai-processing-card";
@@ -20,7 +20,7 @@ function AdminSettingsContent() {
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <RegistrationCard />
+      <GeneralCard />
       <PermissionPolicyCard />
       <AuthProvidersCard />
       <ContentDetectionCard />

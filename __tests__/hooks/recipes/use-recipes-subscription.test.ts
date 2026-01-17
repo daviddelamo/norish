@@ -11,6 +11,7 @@ vi.mock("@/app/providers/trpc-provider", () => ({
   useTRPC: () => ({
     recipes: {
       list: {
+        queryKey: () => [["recipes", "list"], { input: {}, type: "query" }],
         infiniteQueryOptions: () => ({
           queryKey: ["recipes", "list", {}],
           queryFn: async () => ({ recipes: [], total: 0, nextCursor: null }),
@@ -18,8 +19,23 @@ vi.mock("@/app/providers/trpc-provider", () => ({
         }),
       },
       getPending: {
+        queryKey: () => [["recipes", "getPending"], { type: "query" }],
         queryOptions: () => ({
           queryKey: ["recipes", "getPending"],
+          queryFn: async () => [],
+        }),
+      },
+      getPendingAutoTagging: {
+        queryKey: () => [["recipes", "getPendingAutoTagging"], { type: "query" }],
+        queryOptions: () => ({
+          queryKey: ["recipes", "getPendingAutoTagging"],
+          queryFn: async () => [],
+        }),
+      },
+      getPendingAllergyDetection: {
+        queryKey: () => [["recipes", "getPendingAllergyDetection"], { type: "query" }],
+        queryOptions: () => ({
+          queryKey: ["recipes", "getPendingAllergyDetection"],
           queryFn: async () => [],
         }),
       },
@@ -79,6 +95,41 @@ vi.mock("@/app/providers/trpc-provider", () => ({
           return { enabled: true };
         }),
       },
+      onAutoTaggingStarted: {
+        subscriptionOptions: vi.fn((_, options) => {
+          subscriptionCallbacks.onAutoTaggingStarted = options?.onData;
+
+          return { enabled: true };
+        }),
+      },
+      onAutoTaggingCompleted: {
+        subscriptionOptions: vi.fn((_, options) => {
+          subscriptionCallbacks.onAutoTaggingCompleted = options?.onData;
+
+          return { enabled: true };
+        }),
+      },
+      onAllergyDetectionStarted: {
+        subscriptionOptions: vi.fn((_, options) => {
+          subscriptionCallbacks.onAllergyDetectionStarted = options?.onData;
+
+          return { enabled: true };
+        }),
+      },
+      onAllergyDetectionCompleted: {
+        subscriptionOptions: vi.fn((_, options) => {
+          subscriptionCallbacks.onAllergyDetectionCompleted = options?.onData;
+
+          return { enabled: true };
+        }),
+      },
+      onProcessingToast: {
+        subscriptionOptions: vi.fn((_, options) => {
+          subscriptionCallbacks.onProcessingToast = options?.onData;
+
+          return { enabled: true };
+        }),
+      },
     },
   }),
 }));
@@ -95,6 +146,22 @@ vi.mock("@trpc/tanstack-react-query", () => ({
 // Mock HeroUI toast
 vi.mock("@heroui/react", () => ({
   addToast: vi.fn(),
+  Button: () => null,
+}));
+
+// Mock next-intl
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
+// Mock client logger
+vi.mock("@/lib/logger", () => ({
+  createClientLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
 }));
 
 describe("useRecipesSubscription", () => {

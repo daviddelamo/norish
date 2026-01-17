@@ -19,6 +19,7 @@ type UserSettingsContextType = {
   // Actions
   updateName: (name: string) => void;
   updateImage: (file: File) => Promise<void>;
+  deleteImage: () => Promise<void>;
   generateApiKey: (name?: string) => Promise<{ key: string; metadata: ApiKeyMetadataDto }>;
   deleteApiKey: (keyId: string) => void;
   toggleApiKey: (keyId: string, enabled: boolean) => void;
@@ -28,6 +29,7 @@ type UserSettingsContextType = {
   // Loading states
   isUpdatingName: boolean;
   isUploadingAvatar: boolean;
+  isDeletingAvatar: boolean;
   isDeletingAccount: boolean;
   isUpdatingAllergies: boolean;
 };
@@ -45,7 +47,6 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
         addToast({
           title: "Name cannot be empty",
           color: "danger",
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });
@@ -63,7 +64,6 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
               title: "Failed to update profile",
               description: result.error,
               color: "danger",
-              timeout: 2000,
               shouldShowTimeoutProgress: true,
               radius: "full",
             });
@@ -74,7 +74,6 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
             title: "Failed to update profile",
             description: (error as Error).message,
             color: "danger",
-            timeout: 2000,
             shouldShowTimeoutProgress: true,
             radius: "full",
           });
@@ -95,7 +94,6 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
             title: "Failed to upload image",
             description: result.error,
             color: "danger",
-            timeout: 2000,
             shouldShowTimeoutProgress: true,
             radius: "full",
           });
@@ -106,7 +104,6 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
           title: "Failed to upload image",
           description: (error as Error).message,
           color: "danger",
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });
@@ -129,7 +126,6 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
           title: "Failed to generate API key",
           description: errorMsg,
           color: "danger",
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });
@@ -146,7 +142,6 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
           title: "Failed to delete API key",
           description: (error as Error).message,
           color: "danger",
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });
@@ -162,7 +157,6 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
           title: `Failed to ${enabled ? "enable" : "disable"} API key`,
           description: (error as Error).message,
           color: "danger",
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });
@@ -182,7 +176,6 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
             title: "Failed to delete account",
             description: result.error,
             color: "danger",
-            timeout: 2000,
             shouldShowTimeoutProgress: true,
             radius: "full",
           });
@@ -193,7 +186,6 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
           title: "Failed to delete account",
           description: (error as Error).message,
           color: "danger",
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });
@@ -209,7 +201,6 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
           title: "Failed to update allergies",
           description: (error as Error).message,
           color: "danger",
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });
@@ -217,6 +208,34 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
     },
     [mutations]
   );
+
+  const deleteImage = useCallback(async () => {
+    try {
+      const result = await mutations.deleteAvatar();
+
+      if (result.success && result.user) {
+        setUser(result.user);
+      } else if (result.error) {
+        addToast({
+          title: "Failed to delete image",
+          description: result.error,
+          color: "danger",
+          shouldShowTimeoutProgress: true,
+          radius: "full",
+        });
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      addToast({
+        title: "Failed to delete image",
+        description: (error as Error).message,
+        color: "danger",
+        shouldShowTimeoutProgress: true,
+        radius: "full",
+      });
+      throw error;
+    }
+  }, [mutations, setUser]);
 
   return (
     <UserSettingsContext.Provider
@@ -227,6 +246,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
         isLoading,
         updateName,
         updateImage,
+        deleteImage,
         generateApiKey,
         deleteApiKey,
         toggleApiKey,
@@ -234,6 +254,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
         updateAllergies,
         isUpdatingName: mutations.isUpdatingName,
         isUploadingAvatar: mutations.isUploadingAvatar,
+        isDeletingAvatar: mutations.isDeletingAvatar,
         isDeletingAccount: mutations.isDeletingAccount,
         isUpdatingAllergies: mutations.isUpdatingAllergies,
       }}

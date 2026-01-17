@@ -1,35 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CheckIcon } from "@heroicons/react/20/solid";
 
 import { useRecipeContextRequired } from "../context";
 
+import { formatAmount } from "@/lib/format-amount";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
-import { RecipeIngredientsDto } from "@/types/dto/recipe-ingredient";
-
-// Format amount as a clean decimal (e.g., 2.5, 0.25)
-function formatAmount(n: number | null | string): string {
-  if (n == null || n === "") return "";
-
-  const num = typeof n === "string" ? parseFloat(n) : n;
-
-  if (isNaN(num)) return String(n);
-  if (Number.isInteger(num)) return String(num);
-
-  // Remove trailing zeros (e.g., 2.50 -> 2.5)
-  return num.toFixed(2).replace(/\.?0+$/, "");
-}
+import { useAmountDisplayPreference } from "@/hooks/use-amount-display-preference";
 
 export default function IngredientsList() {
   const { adjustedIngredients, recipe } = useRecipeContextRequired();
-  const [display, setDisplay] = useState<RecipeIngredientsDto[]>(recipe.recipeIngredients);
   const [checked, setChecked] = useState<Set<number>>(() => new Set());
+  const { mode } = useAmountDisplayPreference();
 
-  useEffect(() => {
-    if (adjustedIngredients?.length > 0) setDisplay(adjustedIngredients);
-    else setDisplay(recipe.recipeIngredients);
-  }, [adjustedIngredients, recipe.recipeIngredients]);
+  // Use adjustedIngredients directly, fall back to recipe ingredients only if empty
+  const display = adjustedIngredients?.length > 0 ? adjustedIngredients : recipe.recipeIngredients;
 
   const toggle = (idx: number) => {
     setChecked((prev) => {
@@ -69,7 +55,7 @@ export default function IngredientsList() {
             );
           }
 
-          const amount = formatAmount(it.amount);
+          const amount = formatAmount(it.amount, mode);
           const unit = it.unit || "";
           const isChecked = checked.has(idx);
 
@@ -119,7 +105,7 @@ export default function IngredientsList() {
                     </span>
                   )}
                   <span
-                    className={`text-base ${isChecked ? "text-default-400 line-through" : "text-default-700 dark:text-default-300"}`}
+                    className={`text-base ${isChecked ? "text-default-400 line-through" : "text-base"}`}
                   >
                     <SmartMarkdownRenderer disableLinks={isChecked} text={it.ingredientName} />
                   </span>

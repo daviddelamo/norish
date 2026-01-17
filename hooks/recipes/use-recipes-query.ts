@@ -1,15 +1,21 @@
 "use client";
 
-import type { RecipeDashboardDTO } from "@/types";
+import type { RecipeDashboardDTO, SearchField } from "@/types";
 import type { InfiniteData, QueryKey } from "@tanstack/react-query";
 
-import { useQueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useCallback } from "react";
+
+import { usePendingRecipesQuery } from "./use-pending-recipes-query";
+import { useAutoTaggingQuery } from "./use-auto-tagging-query";
+import { useAllergyDetectionQuery } from "./use-allergy-detection-query";
+import { useRecipesCacheHelpers } from "./use-recipes-cache";
 
 import { useTRPC } from "@/app/providers/trpc-provider";
 
 export type RecipeFilters = {
   search?: string;
+  searchFields?: SearchField[];
   tags?: string[];
   filterMode?: "AND" | "OR";
   sortMode?: "titleAsc" | "titleDesc" | "dateAsc" | "dateDesc";
@@ -22,8 +28,6 @@ type InfiniteRecipeData = InfiniteData<{
   nextCursor: number | null;
 }>;
 
-const PENDING_RECIPES_KEY = ["recipes", "pending"];
-
 export type RecipesQueryResult = {
   recipes: RecipeDashboardDTO[];
   total: number;
@@ -33,9 +37,15 @@ export type RecipesQueryResult = {
   error: unknown;
   queryKey: QueryKey;
   pendingRecipeIds: Set<string>;
+  autoTaggingRecipeIds: Set<string>;
+  allergyDetectionRecipeIds: Set<string>;
   loadMore: () => void;
   addPendingRecipe: (id: string) => void;
   removePendingRecipe: (id: string) => void;
+  addAutoTaggingRecipe: (id: string) => void;
+  removeAutoTaggingRecipe: (id: string) => void;
+  addAllergyDetectionRecipe: (id: string) => void;
+  removeAllergyDetectionRecipe: (id: string) => void;
   setRecipesData: (
     updater: (prev: InfiniteRecipeData | undefined) => InfiniteRecipeData | undefined
   ) => void;
@@ -49,24 +59,32 @@ export function useRecipesQuery(filters: RecipeFilters = {}): RecipesQueryResult
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  const { search, tags, filterMode = "OR", sortMode = "dateDesc", minRating } = filters;
+  const {
+    search,
+    searchFields,
+    tags,
+    filterMode = "OR",
+    sortMode = "dateDesc",
+    minRating,
+  } = filters;
 
-  // Use pending recipes from the query cache (shared across all hook instances)
-  // Store as array to ensure React Query re-renders on changes
-  const pendingQuery = useQuery({
-    queryKey: PENDING_RECIPES_KEY,
-    queryFn: () => [] as string[],
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
+  // Use the dedicated hooks for reading pending state
+  const { pendingRecipeIds } = usePendingRecipesQuery();
+  const { autoTaggingRecipeIds } = useAutoTaggingQuery();
+  const { allergyDetectionRecipeIds } = useAllergyDetectionQuery();
 
-  const pendingRecipeIds = useMemo(() => new Set(pendingQuery.data ?? []), [pendingQuery.data]);
+  // Get cache helpers for mutations (add/remove)
+  const {
+    addPendingRecipe,
+    removePendingRecipe,
+    addAutoTaggingRecipe,
+    removeAutoTaggingRecipe,
+    addAllergyDetectionRecipe,
+    removeAllergyDetectionRecipe,
+  } = useRecipesCacheHelpers();
 
   const infiniteQueryOptions = trpc.recipes.list.infiniteQueryOptions(
-    { limit: 100, search, tags, filterMode, sortMode, minRating },
+    { limit: 100, search, searchFields, tags, filterMode, sortMode, minRating },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
     }
@@ -74,6 +92,10 @@ export function useRecipesQuery(filters: RecipeFilters = {}): RecipesQueryResult
 
   // The actual query key used by the infinite query
   const queryKey = infiniteQueryOptions.queryKey;
+
+  // Get base key for partial matching (to update all recipe lists regardless of filters)
+  const recipesBaseKey = trpc.recipes.list.queryKey({});
+  const recipesPath = useMemo(() => [recipesBaseKey[0]], [recipesBaseKey]);
 
   const { data, error, isLoading, isFetching, hasNextPage, fetchNextPage } =
     useInfiniteQuery(infiniteQueryOptions);
@@ -93,30 +115,6 @@ export function useRecipesQuery(filters: RecipeFilters = {}): RecipesQueryResult
     }
   }, [hasMore, isFetching, fetchNextPage]);
 
-  const addPendingRecipe = useCallback(
-    (recipeId: string) => {
-      queryClient.setQueryData<string[]>(PENDING_RECIPES_KEY, (prev) => {
-        const arr = prev ?? [];
-
-        if (arr.includes(recipeId)) return arr;
-
-        return [...arr, recipeId];
-      });
-    },
-    [queryClient]
-  );
-
-  const removePendingRecipe = useCallback(
-    (recipeId: string) => {
-      queryClient.setQueryData<string[]>(PENDING_RECIPES_KEY, (prev) => {
-        const arr = prev ?? [];
-
-        return arr.filter((id) => id !== recipeId);
-      });
-    },
-    [queryClient]
-  );
-
   const setRecipesData = useCallback(
     (updater: (prev: InfiniteRecipeData | undefined) => InfiniteRecipeData | undefined) => {
       // Update only the current query (with current filters)
@@ -130,20 +128,20 @@ export function useRecipesQuery(filters: RecipeFilters = {}): RecipesQueryResult
       // Update ALL recipe list queries (regardless of filters)
       // tRPC query keys are structured as [["procedure", "path"], { input, type }]
       const queries = queryClient.getQueriesData<InfiniteRecipeData>({
-        queryKey: [["recipes", "list"]],
+        queryKey: recipesPath,
       });
 
       for (const [key] of queries) {
         queryClient.setQueryData<InfiniteRecipeData>(key, updater);
       }
     },
-    [queryClient]
+    [queryClient, recipesPath]
   );
 
   const invalidate = useCallback(() => {
     // Invalidate using a partial key match for all recipe lists
-    queryClient.invalidateQueries({ queryKey: [["recipes", "list"]] });
-  }, [queryClient]);
+    queryClient.invalidateQueries({ queryKey: recipesPath });
+  }, [queryClient, recipesPath]);
 
   return {
     recipes,
@@ -154,9 +152,15 @@ export function useRecipesQuery(filters: RecipeFilters = {}): RecipesQueryResult
     error,
     queryKey,
     pendingRecipeIds,
+    autoTaggingRecipeIds,
+    allergyDetectionRecipeIds,
     loadMore,
     addPendingRecipe,
     removePendingRecipe,
+    addAutoTaggingRecipe,
+    removeAutoTaggingRecipe,
+    addAllergyDetectionRecipe,
+    removeAllergyDetectionRecipe,
     setRecipesData,
     setAllRecipesData,
     invalidate,

@@ -3,7 +3,7 @@
 import { useSubscription } from "@trpc/tanstack-react-query";
 import { addToast } from "@heroui/react";
 
-import { useGroceriesQuery } from "./use-groceries-query";
+import { useGroceriesCacheHelpers } from "./use-groceries-cache";
 
 import { useTRPC } from "@/app/providers/trpc-provider";
 
@@ -11,10 +11,12 @@ import { useTRPC } from "@/app/providers/trpc-provider";
  * Hook that subscribes to all grocery-related WebSocket events
  * and updates the query cache accordingly.
  *
+ * Uses internal cache helpers - no props required.
+ * Safe to call from context providers without causing recursion.
  */
 export function useGroceriesSubscription() {
   const trpc = useTRPC();
-  const { setGroceriesData, invalidate } = useGroceriesQuery();
+  const { setGroceriesData, invalidate } = useGroceriesCacheHelpers();
 
   // onCreated
   useSubscription(
@@ -89,7 +91,7 @@ export function useGroceriesSubscription() {
             ? prev.recurringGroceries.map((r) => (r.id === newRecurring.id ? newRecurring : r))
             : [newRecurring, ...prev.recurringGroceries];
 
-          return { groceries, recurringGroceries };
+          return { ...prev, groceries, recurringGroceries };
         });
       },
     })
@@ -105,6 +107,7 @@ export function useGroceriesSubscription() {
           const { recurringGrocery: updatedRecurring, grocery: updatedGrocery } = payload;
 
           return {
+            ...prev,
             groceries: prev.groceries.map((g) => (g.id === updatedGrocery.id ? updatedGrocery : g)),
             recurringGroceries: prev.recurringGroceries.map((r) =>
               r.id === updatedRecurring.id ? updatedRecurring : r
@@ -123,6 +126,7 @@ export function useGroceriesSubscription() {
           if (!prev) return prev;
 
           return {
+            ...prev,
             groceries: prev.groceries.filter(
               (g) => g.recurringGroceryId !== payload.recurringGroceryId
             ),
@@ -142,7 +146,6 @@ export function useGroceriesSubscription() {
         addToast({
           severity: "danger",
           title: payload.reason,
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });

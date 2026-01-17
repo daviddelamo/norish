@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockGetConfig = vi.fn();
@@ -168,6 +169,14 @@ describe("Auth Provider Sync Logic", () => {
             clientSecret: "test-client-secret",
             wellknown: "https://auth.example.com/custom/.well-known/openid-configuration",
             isOverridden: false,
+            // Include claimConfig with default values to match env config
+            claimConfig: {
+              enabled: undefined,
+              scopes: undefined,
+              groupsClaim: undefined,
+              adminGroup: undefined,
+              householdPrefix: undefined,
+            },
           });
         }
 

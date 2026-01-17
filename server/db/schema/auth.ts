@@ -36,6 +36,7 @@ export const users = pgTable(
 
     // User preferences
     language: text("language").notNull().default("en"),
+    locale: text("locale"), // User's preferred language (e.g., 'en', 'de')
 
     // BetterAuth timestamps
     createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),

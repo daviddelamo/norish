@@ -1,7 +1,9 @@
 import { runMigrations } from "./server/startup/migrations";
 import { seedServerConfig } from "./server/startup/seed-config";
+import { migrateGalleryImages } from "./server/startup/migrate-gallery-images";
 import { initializeVideoProcessing } from "./server/startup/video-processing";
 import { createServer } from "./server/startup/http-server";
+import { registerShutdownHandlers } from "./server/startup/shutdown";
 import { initCaldavSync } from "./server/caldav/event-listener";
 import { startWorkers } from "./server/queue/start-workers";
 
@@ -25,6 +27,9 @@ async function main() {
   await seedServerConfig();
   log.info("-".repeat(50));
 
+  await migrateGalleryImages();
+  log.info("-".repeat(50));
+
   await initializeVideoProcessing();
   log.info("-".repeat(50));
 
@@ -36,6 +41,8 @@ async function main() {
   log.info("-".repeat(50));
 
   const { server, hostname, port } = await createServer();
+
+  registerShutdownHandlers(server);
 
   server.listen(port, hostname, () => {
     log.info("-".repeat(50));

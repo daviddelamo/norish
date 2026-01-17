@@ -2,7 +2,16 @@ import { eq, ilike, inArray, and, asc, desc, sql, or } from "drizzle-orm";
 import z from "zod";
 
 import { db } from "../drizzle";
-import { recipes, recipeIngredients, steps as stepsTable } from "../schema";
+import {
+  recipes,
+  recipeIngredients,
+  steps as stepsTable,
+  ingredients,
+  recipeTags,
+  tags,
+  recipeImages,
+  recipeVideos,
+} from "../schema";
 import {
   RecipeDashboardSchema,
   FullRecipeInsertSchema,
@@ -15,7 +24,7 @@ import { createManyRecipeStepsTx } from "./steps";
 import { attachTagsToRecipeByInputTx } from "./tags";
 
 import { stripHtmlTags } from "@/lib/helpers";
-import { deleteRecipeStepImagesDir } from "@/lib/downloader";
+import { deleteRecipeImagesDir } from "@/server/downloader";
 import {
   RecipeDashboardDTO,
   FilterMode,
@@ -26,6 +35,7 @@ import {
   MeasurementSystem,
   RecipeIngredientsDto,
   FullRecipeUpdateDTO,
+  SearchField,
 } from "@/types";
 import { StepDto, StepInsertDto } from "@/types/dto/steps";
 import { getRecipePermissionPolicy } from "@/config/server-config-loader";
@@ -42,7 +52,7 @@ export async function GetTotalRecipeCount(): Promise<number> {
 }
 
 export async function deleteRecipeById(id: string): Promise<void> {
-  await deleteRecipeStepImagesDir(id);
+  await deleteRecipeImagesDir(id);
   await db.delete(recipes).where(eq(recipes.id, id));
 }
 
@@ -230,6 +240,7 @@ export async function listRecipes(
   limit: number,
   offset: number = 0,
   search?: string,
+  searchFields: SearchField[] = ["title", "ingredients"],
   tagNames?: string[],
   filterMode: FilterMode = "OR",
   sortMode: SortOrder = "dateDesc",
@@ -244,8 +255,93 @@ export async function listRecipes(
     whereConditions.push(policyCondition);
   }
 
-  if (search) {
-    whereConditions.push(ilike(recipes.name, `%${search}%`));
+  // Build full-text search with weighted ranking
+  // Priority: title (A) > tags (B) > ingredients (C) > description/steps (D)
+  let searchRank: ReturnType<typeof sql<number>> | null = null;
+
+  if (search && searchFields.length > 0) {
+    // Convert search terms to tsquery format with prefix matching
+    // Each term gets :* suffix for partial word matching (e.g., "om" matches "oma")
+    // Sanitize terms to remove PostgreSQL tsquery special characters: & | ! ( ) : * \ ' "
+    const sanitizeTsqueryTerm = (term: string): string =>
+      term.replace(/[&|!():<>*\\'"]/g, "").trim();
+
+    const searchTerms = search
+      .trim()
+      .split(/\s+/)
+      .map(sanitizeTsqueryTerm)
+      .filter((t) => t.length > 0)
+      .map((t) => `${t}:*`)
+      .join(" | ");
+
+    // Skip search if all terms were filtered out (e.g., search was only special characters)
+    if (!searchTerms) {
+      // Fall through without adding search conditions
+    } else {
+      // Build weighted tsvector components based on selected fields
+      const tsvectorParts: ReturnType<typeof sql>[] = [];
+
+      for (const field of searchFields) {
+        switch (field) {
+          case "title":
+            // Weight A (highest) for title
+            tsvectorParts.push(
+              sql`setweight(to_tsvector('simple', coalesce(${recipes.name}, '')), 'A')`
+            );
+            break;
+          case "tags":
+            // Weight B for tags - aggregate from related table
+            tsvectorParts.push(
+              sql`setweight(to_tsvector('simple', coalesce((
+              SELECT string_agg(t.name, ' ')
+              FROM ${recipeTags} rt
+              INNER JOIN ${tags} t ON rt.tag_id = t.id
+              WHERE rt.recipe_id = ${recipes.id}
+            ), '')), 'B')`
+            );
+            break;
+          case "ingredients":
+            // Weight C for ingredients - aggregate from related table
+            tsvectorParts.push(
+              sql`setweight(to_tsvector('simple', coalesce((
+              SELECT string_agg(i.name, ' ')
+              FROM ${recipeIngredients} ri
+              INNER JOIN ${ingredients} i ON ri.ingredient_id = i.id
+              WHERE ri.recipe_id = ${recipes.id}
+            ), '')), 'C')`
+            );
+            break;
+          case "description":
+            // Weight D for description
+            tsvectorParts.push(
+              sql`setweight(to_tsvector('simple', coalesce(${recipes.description}, '')), 'D')`
+            );
+            break;
+          case "steps":
+            // Weight D for steps - aggregate from related table
+            tsvectorParts.push(
+              sql`setweight(to_tsvector('simple', coalesce((
+              SELECT string_agg(s.step, ' ')
+              FROM ${stepsTable} s
+              WHERE s.recipe_id = ${recipes.id}
+            ), '')), 'D')`
+            );
+            break;
+        }
+      }
+
+      if (tsvectorParts.length > 0) {
+        // Combine all tsvector parts with ||
+        const combinedTsvector = sql.join(tsvectorParts, sql` || `);
+        const tsQuery = sql`to_tsquery('simple', ${searchTerms})`;
+
+        // Add search condition using @@ operator
+        whereConditions.push(sql`(${combinedTsvector}) @@ ${tsQuery}`);
+
+        // Build rank expression for ordering
+        searchRank = sql<number>`ts_rank(${combinedTsvector}, ${tsQuery})`;
+      }
+    }
   }
 
   let tagFilteredIds: string[] | undefined;
@@ -292,7 +388,10 @@ export async function listRecipes(
     dateAsc: asc(recipes.createdAt),
     dateDesc: desc(recipes.createdAt),
   };
-  const orderBy = sortMap[sortMode as keyof typeof sortMap] ?? desc(recipes.createdAt);
+  const baseOrderBy = sortMap[sortMode as keyof typeof sortMap] ?? desc(recipes.createdAt);
+
+  // When searching, order by relevance rank first (descending), then by the selected sort
+  const orderBy = searchRank ? [desc(searchRank), baseOrderBy] : baseOrderBy;
 
   const [rows, totalCount] = await Promise.all([
     db.query.recipes.findMany({
@@ -313,6 +412,7 @@ export async function listRecipes(
       with: {
         recipeTags: {
           with: { tag: { columns: { id: true, name: true } } },
+          orderBy: (rt, { asc }) => [asc(rt.order)],
         },
         ratings: {
           columns: { rating: true },
@@ -400,6 +500,7 @@ export async function dashboardRecipe(id: string): Promise<RecipeDashboardDTO | 
         with: {
           tag: { columns: { id: true, name: true } },
         },
+        orderBy: (rt, { asc }) => [asc(rt.order)],
       },
       ratings: {
         columns: { rating: true },
@@ -450,8 +551,9 @@ export async function createRecipeWithRefs(
 ): Promise<string | null> {
   const parsed = FullRecipeInsertSchema.safeParse(input);
 
+  dbLogger.debug({ parsed }, "Parsed full recipe insert");
   if (!parsed.success) {
-    throw new Error("Invalid FullRecipeInsertDTO");
+    throw new Error("Could not parse recipe data.");
   }
 
   const payload = parsed.data;
@@ -524,6 +626,30 @@ export async function createRecipeWithRefs(
       );
     }
 
+    // Insert gallery images if provided
+    if (payload.images && payload.images.length > 0) {
+      await tx.insert(recipeImages).values(
+        payload.images.map((img) => ({
+          recipeId: rid,
+          image: img.image,
+          order: String(img.order ?? 0),
+        }))
+      );
+    }
+
+    // Insert videos if provided
+    if (payload.videos && payload.videos.length > 0) {
+      await tx.insert(recipeVideos).values(
+        payload.videos.map((v) => ({
+          recipeId: rid,
+          video: v.video,
+          thumbnail: v.thumbnail ?? null,
+          duration: v.duration != null ? String(v.duration) : null,
+          order: String(v.order ?? 0),
+        }))
+      );
+    }
+
     return rid;
   });
 
@@ -563,9 +689,11 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
       recipeTags: {
         columns: {},
         with: { tag: { columns: { id: true, name: true } } },
+        orderBy: (rt, { asc }) => [asc(rt.order)],
       },
       ingredients: {
         columns: {
+          id: true,
           ingredientId: true,
           amount: true,
           unit: true,
@@ -581,6 +709,14 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
             columns: { id: true, image: true, order: true },
           },
         },
+      },
+      images: {
+        columns: { id: true, image: true, order: true },
+        orderBy: (images, { asc }) => [asc(images.order)],
+      },
+      videos: {
+        columns: { id: true, video: true, thumbnail: true, duration: true, order: true },
+        orderBy: (videos, { asc }) => [asc(videos.order)],
       },
     },
   });
@@ -632,6 +768,7 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
       .filter(nonEmpty)
       .map((name: string) => ({ name })),
     recipeIngredients: ((full.ingredients as any) ?? []).map((ri: any) => ({
+      id: ri.id,
       ingredientId: ri.ingredientId,
       amount: ri.amount ? Number(ri.amount) : null,
       unit: ri.unit ?? null,
@@ -640,6 +777,18 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
       order: ri.order,
     })),
     author,
+    images: (full.images ?? []).map((img: any) => ({
+      id: img.id,
+      image: img.image,
+      order: Number(img.order) || 0,
+    })),
+    videos: (full.videos ?? []).map((vid: any) => ({
+      id: vid.id,
+      video: vid.video,
+      thumbnail: vid.thumbnail ?? null,
+      duration: vid.duration ?? null,
+      order: Number(vid.order) || 0,
+    })),
   };
 
   const parsed = FullRecipeSchema.safeParse(dto);
@@ -764,6 +913,42 @@ export async function updateRecipeWithRefs(
         );
       }
     }
+
+    // Replace images if provided
+    if (payload.images !== undefined) {
+      // Delete existing images for this recipe
+      await tx.delete(recipeImages).where(eq(recipeImages.recipeId, recipeId));
+
+      // Add new ones
+      if (payload.images.length > 0) {
+        await tx.insert(recipeImages).values(
+          payload.images.map((img) => ({
+            recipeId,
+            image: img.image,
+            order: String(img.order ?? 0),
+          }))
+        );
+      }
+    }
+
+    // Replace videos if provided
+    if (payload.videos !== undefined) {
+      // Delete existing videos for this recipe
+      await tx.delete(recipeVideos).where(eq(recipeVideos.recipeId, recipeId));
+
+      // Add new ones
+      if (payload.videos.length > 0) {
+        await tx.insert(recipeVideos).values(
+          payload.videos.map((v) => ({
+            recipeId,
+            video: v.video,
+            thumbnail: v.thumbnail ?? null,
+            duration: v.duration != null ? String(v.duration) : null,
+            order: String(v.order ?? 0),
+          }))
+        );
+      }
+    }
   });
 }
 
@@ -790,4 +975,300 @@ export async function searchRecipesByName(
     .limit(limit);
 
   return rows.map((r) => ({ id: r.id, name: r.name, image: r.image }));
+}
+
+// --- Recipe Images Management ---
+
+export interface RecipeImageInput {
+  image: string;
+  order: number;
+}
+
+/**
+ * Add images to a recipe
+ */
+export async function addRecipeImages(
+  recipeId: string,
+  images: RecipeImageInput[]
+): Promise<{ id: string; image: string; order: number }[]> {
+  if (!images.length) return [];
+
+  const inserted = await db
+    .insert(recipeImages)
+    .values(
+      images.map((img) => ({
+        recipeId,
+        image: img.image,
+        order: String(img.order),
+      }))
+    )
+    .returning({ id: recipeImages.id, image: recipeImages.image, order: recipeImages.order });
+
+  return inserted.map((row) => ({
+    id: row.id,
+    image: row.image,
+    order: Number(row.order) || 0,
+  }));
+}
+
+/**
+ * Delete a recipe image by ID
+ */
+export async function deleteRecipeImageById(imageId: string): Promise<void> {
+  await db.delete(recipeImages).where(eq(recipeImages.id, imageId));
+}
+
+/**
+ * Get all images for a recipe
+ */
+export async function getRecipeImages(
+  recipeId: string
+): Promise<{ id: string; image: string; order: number }[]> {
+  const rows = await db
+    .select({ id: recipeImages.id, image: recipeImages.image, order: recipeImages.order })
+    .from(recipeImages)
+    .where(eq(recipeImages.recipeId, recipeId))
+    .orderBy(asc(recipeImages.order));
+
+  return rows.map((row) => ({
+    id: row.id,
+    image: row.image,
+    order: Number(row.order) || 0,
+  }));
+}
+
+/**
+ * Update order of recipe images
+ */
+export async function updateRecipeImageOrder(imageId: string, newOrder: number): Promise<void> {
+  await db
+    .update(recipeImages)
+    .set({ order: String(newOrder) })
+    .where(eq(recipeImages.id, imageId));
+}
+
+/**
+ * Get recipe image by ID (for permission checking)
+ */
+export async function getRecipeImageById(
+  imageId: string
+): Promise<{ id: string; recipeId: string; image: string } | null> {
+  const [row] = await db
+    .select({ id: recipeImages.id, recipeId: recipeImages.recipeId, image: recipeImages.image })
+    .from(recipeImages)
+    .where(eq(recipeImages.id, imageId))
+    .limit(1);
+
+  return row ?? null;
+}
+
+/**
+ * Replace all images for a recipe (used during update)
+ */
+export async function replaceRecipeImages(
+  recipeId: string,
+  images: RecipeImageInput[]
+): Promise<{ id: string; image: string; order: number }[]> {
+  return db.transaction(async (tx) => {
+    // Delete existing images
+    await tx.delete(recipeImages).where(eq(recipeImages.recipeId, recipeId));
+
+    if (!images.length) return [];
+
+    // Insert new images
+    const inserted = await tx
+      .insert(recipeImages)
+      .values(
+        images.map((img) => ({
+          recipeId,
+          image: img.image,
+          order: String(img.order),
+        }))
+      )
+      .returning({ id: recipeImages.id, image: recipeImages.image, order: recipeImages.order });
+
+    return inserted.map((row) => ({
+      id: row.id,
+      image: row.image,
+      order: Number(row.order) || 0,
+    }));
+  });
+}
+
+/**
+ * Count images for a recipe
+ */
+export async function countRecipeImages(recipeId: string): Promise<number> {
+  const [result] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(recipeImages)
+    .where(eq(recipeImages.recipeId, recipeId));
+
+  return Number(result?.count ?? 0);
+}
+
+// --- Recipe Videos Management ---
+
+export interface RecipeVideoInput {
+  video: string;
+  thumbnail?: string | null;
+  duration?: number | null;
+  order: number;
+}
+
+/**
+ * Count videos for a recipe
+ */
+export async function countRecipeVideos(recipeId: string): Promise<number> {
+  const [result] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(recipeVideos)
+    .where(eq(recipeVideos.recipeId, recipeId));
+
+  return Number(result?.count ?? 0);
+}
+
+/**
+ * Add videos to a recipe
+ */
+export async function addRecipeVideos(
+  recipeId: string,
+  videos: RecipeVideoInput[]
+): Promise<
+  { id: string; video: string; thumbnail: string | null; duration: number | null; order: number }[]
+> {
+  if (!videos.length) return [];
+
+  const inserted = await db
+    .insert(recipeVideos)
+    .values(
+      videos.map((v) => ({
+        recipeId,
+        video: v.video,
+        thumbnail: v.thumbnail ?? null,
+        duration: v.duration != null ? String(v.duration) : null,
+        order: String(v.order),
+      }))
+    )
+    .returning({
+      id: recipeVideos.id,
+      video: recipeVideos.video,
+      thumbnail: recipeVideos.thumbnail,
+      duration: recipeVideos.duration,
+      order: recipeVideos.order,
+    });
+
+  return inserted.map((row) => ({
+    id: row.id,
+    video: row.video,
+    thumbnail: row.thumbnail,
+    duration: row.duration != null ? Number(row.duration) : null,
+    order: Number(row.order) || 0,
+  }));
+}
+
+/**
+ * Delete a recipe video by ID
+ */
+export async function deleteRecipeVideoById(videoId: string): Promise<void> {
+  await db.delete(recipeVideos).where(eq(recipeVideos.id, videoId));
+}
+
+/**
+ * Get all videos for a recipe
+ */
+export async function getRecipeVideos(
+  recipeId: string
+): Promise<
+  { id: string; video: string; thumbnail: string | null; duration: number | null; order: number }[]
+> {
+  const rows = await db
+    .select({
+      id: recipeVideos.id,
+      video: recipeVideos.video,
+      thumbnail: recipeVideos.thumbnail,
+      duration: recipeVideos.duration,
+      order: recipeVideos.order,
+    })
+    .from(recipeVideos)
+    .where(eq(recipeVideos.recipeId, recipeId))
+    .orderBy(asc(recipeVideos.order));
+
+  return rows.map((row) => ({
+    id: row.id,
+    video: row.video,
+    thumbnail: row.thumbnail,
+    duration: row.duration != null ? Number(row.duration) : null,
+    order: Number(row.order) || 0,
+  }));
+}
+
+/**
+ * Update order of recipe video
+ */
+export async function updateRecipeVideoOrder(videoId: string, newOrder: number): Promise<void> {
+  await db
+    .update(recipeVideos)
+    .set({ order: String(newOrder) })
+    .where(eq(recipeVideos.id, videoId));
+}
+
+/**
+ * Get recipe video by ID (for permission checking)
+ */
+export async function getRecipeVideoById(
+  videoId: string
+): Promise<{ id: string; recipeId: string; video: string } | null> {
+  const [row] = await db
+    .select({ id: recipeVideos.id, recipeId: recipeVideos.recipeId, video: recipeVideos.video })
+    .from(recipeVideos)
+    .where(eq(recipeVideos.id, videoId))
+    .limit(1);
+
+  return row ?? null;
+}
+
+/**
+ * Replace all videos for a recipe (used during update)
+ */
+export async function replaceRecipeVideos(
+  recipeId: string,
+  videos: RecipeVideoInput[]
+): Promise<
+  { id: string; video: string; thumbnail: string | null; duration: number | null; order: number }[]
+> {
+  return db.transaction(async (tx) => {
+    // Delete existing videos
+    await tx.delete(recipeVideos).where(eq(recipeVideos.recipeId, recipeId));
+
+    if (!videos.length) return [];
+
+    // Insert new videos
+    const inserted = await tx
+      .insert(recipeVideos)
+      .values(
+        videos.map((v) => ({
+          recipeId,
+          video: v.video,
+          thumbnail: v.thumbnail ?? null,
+          duration: v.duration != null ? String(v.duration) : null,
+          order: String(v.order),
+        }))
+      )
+      .returning({
+        id: recipeVideos.id,
+        video: recipeVideos.video,
+        thumbnail: recipeVideos.thumbnail,
+        duration: recipeVideos.duration,
+        order: recipeVideos.order,
+      });
+
+    return inserted.map((row) => ({
+      id: row.id,
+      video: row.video,
+      thumbnail: row.thumbnail,
+      duration: row.duration != null ? Number(row.duration) : null,
+      order: Number(row.order) || 0,
+    }));
+  });
 }

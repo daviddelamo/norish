@@ -2,15 +2,22 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { useConnectionStatus } from "@/app/providers/trpc-provider";
 
 export function ConnectionStatusOverlay() {
-  const { isConnected } = useConnectionStatus();
+  const t = useTranslations("common.connection");
+  const { status, isConnected } = useConnectionStatus();
   const [show, setShow] = useState(false);
 
-  // Show overlay whenever we're not connected - simple as that
-  const shouldShowOverlay = !isConnected;
+  // Show overlay when:
+  // - "connecting" = actively trying to establish connection
+  // - "disconnected" = lost connection, attempting to reconnect
+  // Don't show when:
+  // - "idle" = WebSocket not needed yet (lazy mode, no subscriptions active)
+  // - "connected" = all good
+  const shouldShowOverlay = status === "connecting" || status === "disconnected";
 
   // Small delay to avoid flashing on quick reconnects, but not so long it feels laggy
   useEffect(() => {
@@ -30,7 +37,7 @@ export function ConnectionStatusOverlay() {
       {show && (
         <motion.div
           animate={{ opacity: 1 }}
-          className="bg-background/80 fixed inset-0 z-[9999] flex flex-col items-center justify-center backdrop-blur-sm"
+          className="bg-background/80 fixed inset-0 z-[99999] flex flex-col items-center justify-center backdrop-blur-sm"
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
         >
@@ -44,12 +51,10 @@ export function ConnectionStatusOverlay() {
             </div>
             <div className="text-center">
               <h3 className="text-lg font-semibold">
-                {!isConnected ? "Connecting to Norish..." : "Syncing please wait..."}
+                {!isConnected ? t("connecting") : t("syncing")}
               </h3>
               <p className="text-default-500 text-sm">
-                {!isConnected
-                  ? "Please check your internet connection"
-                  : "Just a moment while we get the latest updates"}
+                {!isConnected ? t("checkInternet") : t("gettingUpdates")}
               </p>
             </div>
           </div>

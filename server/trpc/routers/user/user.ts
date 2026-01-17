@@ -10,7 +10,7 @@ import { emitConnectionInvalidation } from "../../connection-manager";
 import { UpdateNameInputSchema } from "./types";
 
 import { trpcLogger as log } from "@/server/logger";
-import { IMAGE_MIME_TO_EXTENSION, MAX_AVATAR_SIZE } from "@/types";
+import { IMAGE_MIME_TO_EXTENSION } from "@/types";
 import {
   updateUserName,
   updateUserAvatar,
@@ -22,6 +22,8 @@ import {
   updateUserAllergies,
   getAllergiesForUsers,
   updateUserLanguage,
+  getUserLocale,
+  updateUserLocale,
 } from "@/server/db";
 import { householdEmitter } from "@/server/trpc/routers/households/emitter";
 import { SERVER_CONFIG } from "@/config/env-config-server";
@@ -125,7 +127,7 @@ const uploadAvatar = authedProcedure
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // Validate file size
-    if (buffer.length > MAX_AVATAR_SIZE) {
+    if (buffer.length > SERVER_CONFIG.MAX_AVATAR_FILE_SIZE) {
       return { success: false, error: "File too large. Maximum size is 5MB." };
     }
 
@@ -288,6 +290,32 @@ const setAllergies = authedProcedure
     return { success: true, allergies: input.allergies };
   });
 
+/**
+ * Get current user's locale preference
+ */
+const getLocale = authedProcedure.query(async ({ ctx }) => {
+  log.debug({ userId: ctx.user.id }, "Getting user locale");
+
+  const locale = await getUserLocale(ctx.user.id);
+
+  return { locale };
+});
+
+/**
+ * Update user's locale preference
+ */
+const setLocale = authedProcedure
+  .input(z.object({ locale: z.string().nullable() }))
+  .mutation(async ({ ctx, input }) => {
+    log.debug({ userId: ctx.user.id, locale: input.locale }, "Updating user locale");
+
+    await updateUserLocale(ctx.user.id, input.locale);
+
+    log.info({ userId: ctx.user.id, locale: input.locale }, "User locale updated");
+
+    return { success: true, locale: input.locale };
+  });
+
 export const userProcedures = router({
   get,
   updateName,
@@ -297,4 +325,6 @@ export const userProcedures = router({
   deleteAccount,
   getAllergies,
   setAllergies,
+  getLocale,
+  setLocale,
 });

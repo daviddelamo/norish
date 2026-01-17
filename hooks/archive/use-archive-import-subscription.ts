@@ -3,7 +3,7 @@
 import { useSubscription } from "@trpc/tanstack-react-query";
 import { addToast } from "@heroui/react";
 
-import { useArchiveImportQuery } from "./use-archive-import-query";
+import { useArchiveImportCacheHelpers } from "./use-archive-cache";
 
 import { createClientLogger } from "@/lib/logger";
 import { useTRPC } from "@/app/providers/trpc-provider";
@@ -14,10 +14,12 @@ const log = createClientLogger("ArchiveImportSubscription");
  * Hook for subscribing to archive import progress events.
  * Updates import state in query cache. Recipe additions are handled separately
  * via recipeBatchCreated subscription in useRecipesQuery.
+ *
+ * Uses cache helpers instead of query hook to avoid duplicate observers.
  */
 export function useArchiveImportSubscription(): void {
   const trpc = useTRPC();
-  const { setImportState } = useArchiveImportQuery();
+  const { setImportState } = useArchiveImportCacheHelpers();
 
   // Subscribe to progress events (user-scoped)
   useSubscription(
@@ -32,6 +34,7 @@ export function useArchiveImportSubscription(): void {
               total: payload.total,
               imported: payload.imported,
               skipped: payload.current - payload.imported - payload.errors.length,
+              skippedItems: [], // Will be populated on completion
               isImporting: true,
               errors: payload.errors,
             };
@@ -68,6 +71,7 @@ export function useArchiveImportSubscription(): void {
             total: total,
             imported: payload.imported,
             skipped: payload.skipped,
+            skippedItems: payload.skippedItems,
             isImporting: false,
             errors: payload.errors,
           };
@@ -93,7 +97,6 @@ export function useArchiveImportSubscription(): void {
           severity: hasErrors ? "warning" : "success",
           title: "Recipe import complete",
           description,
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });

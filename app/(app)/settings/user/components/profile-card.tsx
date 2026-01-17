@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardBody, CardHeader, Input, Button, Avatar } from "@heroui/react";
-import { UserCircleIcon } from "@heroicons/react/24/outline";
+import { UserCircleIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { useRef } from "react";
+import { useTranslations } from "next-intl";
 
 import { useUserSettingsContext } from "../context";
 
 export default function ProfileCard() {
-  const { user, updateName, updateImage } = useUserSettingsContext();
+  const t = useTranslations("settings.user.profile");
+  const { user, updateName, updateImage, deleteImage, isDeletingAvatar } = useUserSettingsContext();
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -61,12 +63,19 @@ export default function ProfileCard() {
     });
   };
 
+  const handleDeleteImage = async () => {
+    setImagePreview(null);
+    await deleteImage();
+  };
+
+  const hasImage = imagePreview || user?.image;
+
   return (
     <Card>
       <CardHeader>
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <UserCircleIcon className="h-5 w-5" />
-          Profile
+          {t("title")}
         </h2>
       </CardHeader>
       <CardBody className="gap-4">
@@ -86,13 +95,33 @@ export default function ProfileCard() {
               type="file"
               onChange={handleImageSelect}
             />
+            {hasImage && (
+              <Button
+                isIconOnly
+                aria-label={t("deleteAvatar")}
+                className="absolute -right-1 -bottom-1 h-7 w-7 min-w-0"
+                color="danger"
+                isLoading={isDeletingAvatar}
+                radius="full"
+                size="sm"
+                variant="flat"
+                onPress={handleDeleteImage}
+              >
+                <TrashIcon className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
           <div className="flex flex-1 flex-col gap-2">
-            <Input label="Name" placeholder="Your name" value={name} onValueChange={setName} />
-            <p className="text-default-500 text-xs">Click your avatar to change picture</p>
+            <Input
+              label={t("nameLabel")}
+              placeholder={t("namePlaceholder")}
+              value={name}
+              onValueChange={setName}
+            />
+            <p className="text-default-500 text-xs">{t("avatarHint")}</p>
           </div>
         </div>
-        <Input isDisabled isReadOnly label="Email" value={user?.email || ""} />
+        <Input isDisabled isReadOnly label={t("emailLabel")} value={user?.email || ""} />
         <div className="flex justify-end">
           <Button
             color="primary"
@@ -100,7 +129,7 @@ export default function ProfileCard() {
             isLoading={saving}
             onPress={handleSaveProfile}
           >
-            Save Changes
+            {t("saveChanges")}
           </Button>
         </div>
       </CardBody>

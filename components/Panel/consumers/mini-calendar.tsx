@@ -2,8 +2,9 @@
 
 import { PlusIcon } from "@heroicons/react/16/solid";
 import { Dropdown, DropdownTrigger, Button, DropdownMenu, DropdownItem } from "@heroui/react";
-import { useMemo, useRef, useCallback, memo } from "react";
-import { Virtuoso } from "react-virtuoso";
+import { useMemo, useRef, useCallback, memo, useEffect, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Slot } from "@/types";
 import DayTimelineSkeleton from "@/components/skeleton/day-timeline-skeleton";
@@ -12,6 +13,8 @@ import { useRecipeQuery } from "@/hooks/recipes";
 import { MealIcon } from "@/lib/meal-icon";
 import Panel from "@/components/Panel/Panel";
 import { useCalendarQuery, useCalendarMutations, useCalendarSubscription } from "@/hooks/calendar";
+
+const ESTIMATED_DAY_HEIGHT = 140; // Approximate height of a day row
 
 type MiniCalendarProps = {
   open: boolean;
@@ -28,6 +31,9 @@ const DayRow = memo(function DayRow({
   weekdayLong,
   monthLong,
   onPlan,
+  slotLabels,
+  noItemsLabel,
+  addItemLabel,
 }: {
   date: Date;
   dateKeyStr: string;
@@ -36,6 +42,9 @@ const DayRow = memo(function DayRow({
   weekdayLong: Intl.DateTimeFormat;
   monthLong: Intl.DateTimeFormat;
   onPlan: (dayKey: string, slot: Slot) => void;
+  slotLabels: Record<Slot, string>;
+  noItemsLabel: string;
+  addItemLabel: string;
 }) {
   return (
     <div className="divide-default-200 divide-y">
@@ -62,7 +71,7 @@ const DayRow = memo(function DayRow({
             <DropdownTrigger>
               <Button
                 isIconOnly
-                aria-label="Add"
+                aria-label={addItemLabel}
                 className="min-w-0 bg-transparent p-1 shadow-none data-[hover=true]:bg-transparent"
                 radius="none"
                 size="sm"
@@ -75,10 +84,10 @@ const DayRow = memo(function DayRow({
               aria-label="Choose slot"
               onAction={(slot) => onPlan(dateKeyStr, slot as Slot)}
             >
-              <DropdownItem key="Breakfast">Breakfast</DropdownItem>
-              <DropdownItem key="Lunch">Lunch</DropdownItem>
-              <DropdownItem key="Dinner">Dinner</DropdownItem>
-              <DropdownItem key="Snack">Snack</DropdownItem>
+              <DropdownItem key="Breakfast">{slotLabels.Breakfast}</DropdownItem>
+              <DropdownItem key="Lunch">{slotLabels.Lunch}</DropdownItem>
+              <DropdownItem key="Dinner">{slotLabels.Dinner}</DropdownItem>
+              <DropdownItem key="Snack">{slotLabels.Snack}</DropdownItem>
             </DropdownMenu>
           </Dropdown>
         </div>
@@ -87,7 +96,7 @@ const DayRow = memo(function DayRow({
 
         <div className="flex w-full flex-col">
           {items.length === 0 ? (
-            <span className="text-default-400 text-xs">No items</span>
+            <span className="text-default-400 text-xs">{noItemsLabel}</span>
           ) : (
             items.map((it, i) => (
               <div key={i} className="flex w-full items-center justify-between px-2 py-1.5">
@@ -116,6 +125,10 @@ function MiniCalendarContent({
   recipeId: string;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("calendar.panel");
+  const tSlots = useTranslations("common.slots");
+  const tTimeline = useTranslations("calendar.timeline");
+  const locale = useLocale();
   const today = useMemo(() => new Date(), []);
   const rangeStart = useMemo(() => startOfMonth(addMonths(today, -1)), [today]);
   const rangeEnd = useMemo(() => endOfMonth(addMonths(today, 1)), [today]);
@@ -127,21 +140,61 @@ function MiniCalendarContent({
   const { calendarData, isLoading } = useCalendarQuery(startISO, endISO);
   const { createPlannedRecipe } = useCalendarMutations(startISO, endISO);
 
-  useCalendarSubscription(startISO, endISO);
+  useCalendarSubscription();
 
   const allDays = useMemo(() => eachDayOfInterval(rangeStart, rangeEnd), [rangeStart, rangeEnd]);
 
-  const weekdayLong = useMemo(() => new Intl.DateTimeFormat(undefined, { weekday: "long" }), []);
-  const monthLong = useMemo(() => new Intl.DateTimeFormat(undefined, { month: "long" }), []);
+  const weekdayLong = useMemo(() => new Intl.DateTimeFormat(locale, { weekday: "long" }), [locale]);
+  const monthLong = useMemo(() => new Intl.DateTimeFormat(locale, { month: "long" }), [locale]);
   const todayKey = useMemo(() => dateKey(today), [today]);
   const todayIndex = useMemo(
     () => allDays.findIndex((d) => dateKey(d) === todayKey),
     [allDays, todayKey]
   );
 
-  const virtuosoRef = useRef<any>(null);
+  const parentRef = useRef<HTMLDivElement>(null);
+  const [hasScrolledToToday, setHasScrolledToToday] = useState(false);
+
+  // Calculate initial offset to start at today
+  const initialOffset = todayIndex >= 0 ? todayIndex * ESTIMATED_DAY_HEIGHT : 0;
+
+  const virtualizer = useVirtualizer({
+    count: allDays.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ESTIMATED_DAY_HEIGHT,
+    overscan: 3,
+    getItemKey: (index) => dateKey(allDays[index]),
+    initialOffset,
+  });
+
+  // Scroll to today after first render
+  useEffect(() => {
+    if (hasScrolledToToday || todayIndex < 0 || !parentRef.current) return;
+
+    const timeoutId = setTimeout(() => {
+      virtualizer.scrollToIndex(todayIndex, { align: "start" });
+      setHasScrolledToToday(true);
+    }, 50);
+
+    return () => clearTimeout(timeoutId);
+  }, [todayIndex, hasScrolledToToday, virtualizer]);
+
+  const virtualItems = virtualizer.getVirtualItems();
 
   const slotOrder: Record<Slot, number> = { Breakfast: 0, Lunch: 1, Dinner: 2, Snack: 3 };
+
+  const slotLabels: Record<Slot, string> = useMemo(
+    () => ({
+      Breakfast: tSlots("breakfast"),
+      Lunch: tSlots("lunch"),
+      Dinner: tSlots("dinner"),
+      Snack: tSlots("snack"),
+    }),
+    [tSlots]
+  );
+
+  const noItemsLabel = tTimeline("noItems");
+  const addItemLabel = tTimeline("addItem");
 
   const handlePlan = useCallback(
     (dayKey: string, slot: Slot) => {
@@ -160,44 +213,68 @@ function MiniCalendarContent({
   if (allDays.length === 0) {
     return (
       <div className="text-default-500 flex items-center justify-center p-4 text-sm">
-        No days available.
+        {t("noDaysAvailable")}
       </div>
     );
   }
 
   return (
-    <Virtuoso
-      ref={virtuosoRef}
-      data={allDays}
-      initialTopMostItemIndex={Math.max(todayIndex, 0)}
-      itemContent={(_, d) => {
-        const key = dateKey(d);
-        const items = (calendarData[key] ?? []).sort(
-          (a, b) => slotOrder[a.slot] - slotOrder[b.slot]
-        );
-        const isToday = key === todayKey;
+    <div className="relative min-h-0 flex-1">
+      <div ref={parentRef} className="absolute inset-0 overflow-auto">
+        <div
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: "100%",
+            position: "relative",
+          }}
+        >
+          {virtualItems.map((virtualItem) => {
+            const d = allDays[virtualItem.index];
+            const key = dateKey(d);
+            const items = (calendarData[key] ?? []).sort(
+              (a, b) => slotOrder[a.slot] - slotOrder[b.slot]
+            );
+            const isToday = key === todayKey;
 
-        return (
-          <DayRow
-            key={key}
-            date={d}
-            dateKeyStr={key}
-            isToday={isToday}
-            items={items}
-            monthLong={monthLong}
-            weekdayLong={weekdayLong}
-            onPlan={handlePlan}
-          />
-        );
-      }}
-      style={{ height: "100%" }}
-    />
+            return (
+              <div
+                key={virtualItem.key}
+                ref={virtualizer.measureElement}
+                data-index={virtualItem.index}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
+                <DayRow
+                  addItemLabel={addItemLabel}
+                  date={d}
+                  dateKeyStr={key}
+                  isToday={isToday}
+                  items={items}
+                  monthLong={monthLong}
+                  noItemsLabel={noItemsLabel}
+                  slotLabels={slotLabels}
+                  weekdayLong={weekdayLong}
+                  onPlan={handlePlan}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default function MiniCalendar({ open, onOpenChange, recipeId }: MiniCalendarProps) {
+  const t = useTranslations("calendar.panel");
+
   return (
-    <Panel open={open} title="Add to Calendar" onOpenChange={onOpenChange}>
+    <Panel open={open} title={t("addToCalendar")} onOpenChange={onOpenChange}>
       <div className="flex min-h-0 flex-1 flex-col">
         {open && <MiniCalendarContent recipeId={recipeId} onOpenChange={onOpenChange} />}
       </div>

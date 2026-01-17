@@ -3,20 +3,24 @@
 import type { HouseholdAdminSettingsDto } from "@/types/dto/household";
 
 import { useSubscription } from "@trpc/tanstack-react-query";
-import { useQueryClient } from "@tanstack/react-query";
 import { addToast } from "@heroui/react";
 
-import { useHouseholdQuery } from "./use-household-query";
+import { useHouseholdCacheHelpers } from "./use-household-cache";
 
 import { useTRPC } from "@/app/providers/trpc-provider";
+import { useUser } from "@/hooks/use-user";
 
 /**
- * Hook that subscribes to all household-related WebSocket events
+ * Hook that subscribes to all household-related WebSocket events.
+ *
+ * Uses internal cache helpers and useUser for current user ID.
+ * No props required.
  */
 export function useHouseholdSubscription() {
   const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const { setHouseholdData, invalidate, currentUserId } = useHouseholdQuery();
+  const { user } = useUser();
+  const currentUserId = user?.id;
+  const { setHouseholdData, invalidate, invalidateCalendar } = useHouseholdCacheHelpers();
 
   // onCreated user-scoped: when current user creates or joins a household
   useSubscription(
@@ -38,7 +42,6 @@ export function useHouseholdSubscription() {
           title: "Removed from household",
           description: "You have been removed from the household by an admin.",
           color: "warning",
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });
@@ -60,7 +63,6 @@ export function useHouseholdSubscription() {
           title: "Household Error",
           description: payload.reason,
           color: "danger",
-          timeout: 2000,
           shouldShowTimeoutProgress: true,
           radius: "full",
         });
@@ -219,7 +221,7 @@ export function useHouseholdSubscription() {
         });
 
         // Invalidate calendar to recompute allergy warnings
-        queryClient.invalidateQueries({ queryKey: [["calendar", "listRecipes"]] });
+        invalidateCalendar();
       },
     })
   );

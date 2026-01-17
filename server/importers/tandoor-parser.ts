@@ -1,8 +1,10 @@
+import crypto from "crypto";
+
 import JSZip from "jszip";
 import { z } from "zod";
 
 import { inferSystemUsedFromParsed } from "@/lib/determine-recipe-system";
-import { saveImageBytes } from "@/lib/downloader";
+import { saveImageBytes } from "@/server/downloader";
 import { FullRecipeInsertDTO } from "@/types";
 import { FullRecipeInsertSchema } from "@/server/db";
 
@@ -101,12 +103,15 @@ export async function parseTandoorRecipeToDTO(
     throw new Error("Missing recipe name");
   }
 
+  // Generate recipe ID upfront so images are saved to the correct folder
+  const recipeId = crypto.randomUUID();
+
   // Save image if present
   let image: string | undefined = undefined;
 
   if (imageBuffer) {
     try {
-      image = await saveImageBytes(imageBuffer, name);
+      image = await saveImageBytes(imageBuffer, recipeId);
     } catch {
       // Ignore image failure, proceed without image
     }
@@ -179,6 +184,7 @@ export async function parseTandoorRecipeToDTO(
 
   // Build DTO
   const dto: FullRecipeInsertDTO = {
+    id: recipeId,
     name: name,
     url: validated.source_url || undefined,
     image: image || undefined,

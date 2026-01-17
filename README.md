@@ -18,13 +18,13 @@
 
 The vision for Norish is a shared recipe app, to be shared with friends to make one big recipe catalogue.
 
-The name is derived of our dog named: Nora, and dish. As a coincidence this can also be pronounced as Nourish. If you look hard enough you can find a picture of Nora.
+The name is derived from our dog named: Nora, and dish. As a coincidence this can also be pronounced as Nourish. If you look hard enough you can find a picture of Nora.
 
 ---
 
 # Why
 
-Norish was built solely because me and my girlfriend like to cook and keep track of our recipes. Sadly we could not get used to the aesthetic of Tandoor or Mealie. Both are great alternatives providing a more rich featureset than Norish. I have not tried tandoor or mealie enough to know their exact feature set but. I believe Noris is different in the sense that the instance is fully-realtime in theory.
+Norish was built solely because me and my girlfriend like to cook and keep track of our recipes. Sadly we could not get used to the aesthetic of Tandoor or Mealie. Both are great alternatives providing a more rich featureset than Norish. I have not tried tandoor or mealie enough to know their exact feature set but, I believe Norish is different in the sense that the instance is fully-realtime in theory.
 
 This was one of the only requirements my girlfriend had as we do groceries together and this way we can keep track of who picked what grocery items.
 
@@ -50,9 +50,9 @@ On my _todolist_ are still in order of current priority:
 - **Allergy warning** show allergy warnings for planned recipes. Can auto detect allergies based on ingredients. _(auto detection requires OpenAI provider)_
 - **Unit conversion** Convert units from metric to US or vice versa, note: AI has to be enabled and setup for this.
 - **Recurring groceries** Groceries can be marked as recurring this can be done using NLP or the interface
-  - Currently we support: daily, weekly on day, monthly, montly on day. Every _x_ weeks on day.
+  - Currently we support: daily, weekly on day, monthly, monthly on day. Every _x_ weeks on day.
 - **Real-time sync** of recipes, grocery lists and meal plans
-- **Households** Share grocery lists, and meal plan(calendar)
+- **Households** Share grocery lists, and meal plan (calendar)
 - **CalDav sync** Sync your recipes with any caldav provider(only tested with radicale)
 - **Mobile-first design** for use in the kitchen
 - **Light & dark mode** support
@@ -61,11 +61,11 @@ On my _todolist_ are still in order of current priority:
 - **Admin Settings UI** for server owners to manage configuration without editing files
 - **Permission policies** for controlling who can view/edit/delete recipes (everyone, household, or owner only)
   - Default view: Everyone
-  - Defaul Edit: household
+  - Default Edit: household
   - Default Remove: household
 - **Local AI** In theory Norish supports local AI providers - however I have not tested this. Although I am looking to buy a machine that is capable.
 
-_Note: All AI related features seem to be rather slow for me using the OpenAI API. I am not sure why this is your results may vary._
+_Note: All AI related features seem to be rather slow for me using the OpenAI API. I am not sure why this is; your results may vary._
 
 ---
 
@@ -103,7 +103,7 @@ services:
       # FIRST USER SETUP
       # ─────────────────────────────────────────────────────────────────────────
       # On first startup, configure ONE auth provider below to create your admin account.
-      # After first login, use Settings → Admin to configure additional providers,
+      # After first login, use Settings => Admin to configure additional providers,
       # AI settings, video parsing, and all other options.
 
       # Option 1= Password auth - basic auth with email/password
@@ -126,6 +126,22 @@ services:
       # Option 4: Google OAuth (uncomment and remove OIDC above)
       # GOOGLE_CLIENT_ID: <google-client-id>
       # GOOGLE_CLIENT_SECRET: <google-client-secret>
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "--connect-timeout",
+          "15",
+          "--silent",
+          "--show-error",
+          "--fail",
+          "http://localhost:3000/api/health",
+        ]
+      interval: 1m
+      timeout: 15s
+      retries: 3
+      start_period: 1m
     depends_on:
       - db
       - redis
@@ -201,6 +217,30 @@ Server owners and admins can configure the following via the **Settings => Admin
 - Test providers before saving, reveal/hide secrets, delete providers
 - **Note:** Auth provider changes require a server restart to take effect (use the Restart Server button)
 
+### OIDC Claim Mapping
+
+Automatically assign server admin roles and household memberships based on OIDC claims/groups.
+
+**Security Warning**: This feature is disabled by default. Enabling claim mapping allows your identity provider to control admin privileges and household membership. Only enable this if you fully trust your OIDC provider and have properly configured the group claims.
+
+- **Admin Role Assignment**: Users with the configured admin group (default: `norish_admin`) are granted server admin privileges. This is synced on every login - removing the group revokes admin on next login.
+- **Household Auto-Join**: Users with a household group (default prefix: `norish_household_<your_household_name>`) are automatically joined to that household on first login. If the household doesn't exist, it's created with the user as admin.
+
+| Setting                       | Description                                          | Default                                  |
+| ----------------------------- | ---------------------------------------------------- | ---------------------------------------- |
+| `OIDC_CLAIM_MAPPING_ENABLED`  | Enable claim-based role/household assignment         | `false`                                  |
+| `OIDC_SCOPES`                 | Additional OAuth scopes to request (comma-separated) | (empty)                                  |
+| `OIDC_GROUPS_CLAIM`           | Claim name containing user groups                    | `groups`                                 |
+| `OIDC_ADMIN_GROUP`            | Group name that grants admin role                    | `norish_admin`                           |
+| `OIDC_HOUSEHOLD_GROUP_PREFIX` | Prefix for household group names                     | `norish_household_<your_household_name>` |
+
+**Example**: With claim mapping enabled and default settings, a user with groups `["norish_admin", "norish_household_smiths"]` would:
+
+1. Be granted server admin privileges
+2. Be automatically joined to (or create) a household named "smiths"
+
+Configure via environment variables or in **Settings => Admin => Authentication Providers => OIDC => Claim Mapping**.
+
 ### Content Detection
 
 - **Units** - Custom unit definitions for ingredient parsing
@@ -244,6 +284,8 @@ Only a few environment variables are required. All other settings are managed vi
 | `NEXT_PUBLIC_LOG_LEVEL` | Log level                               | `info`         |
 | `TRUSTED_ORIGINS`       | Comma seperated list of trusted origins | `empty`        |
 | `YT_DLP_BIN_DIR`        | Custom folder path for `yt-dlp`         | `/app/bin`     |
+| `DEFAULT_LOCALE`        | Instance default locale                 | `en`           |
+| `ENABLED_LOCALES`       | Comma-separated list of enabled locales | (all enabled)  |
 
 ### First-Time Auth Provider
 

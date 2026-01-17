@@ -1,3 +1,5 @@
+import type { I18nLocaleConfig } from "@/server/db/zodSchemas/server-config";
+
 import { setConfig, configExists, getConfig, deleteConfig } from "../db/repositories/server-config";
 import {
   ServerConfigKeys,
@@ -10,6 +12,7 @@ import {
 } from "../db/zodSchemas/server-config";
 
 import { SERVER_CONFIG } from "@/config/env-config-server";
+import { DEFAULT_LOCALE_CONFIG, buildLocaleConfigFromEnv } from "@/config/server-config-loader";
 import { setAuthProviderCache } from "@/server/auth/provider-cache";
 import { serverLogger } from "@/server/logger";
 import defaultUnits from "@/config/units.default.json";
@@ -102,6 +105,7 @@ const REQUIRED_CONFIGS: ConfigDefinition[] = [
     getDefaultValue: () => ({
       enabled: SERVER_CONFIG.VIDEO_PARSING_ENABLED,
       maxLengthSeconds: SERVER_CONFIG.VIDEO_MAX_LENGTH_SECONDS,
+      maxVideoFileSize: SERVER_CONFIG.MAX_VIDEO_FILE_SIZE,
       ytDlpVersion: SERVER_CONFIG.YT_DLP_VERSION,
       transcriptionProvider: SERVER_CONFIG.TRANSCRIPTION_PROVIDER,
       transcriptionEndpoint: SERVER_CONFIG.TRANSCRIPTION_ENDPOINT || undefined,
@@ -123,6 +127,12 @@ const REQUIRED_CONFIGS: ConfigDefinition[] = [
     sensitive: false,
     description: "AI prompts for recipe extraction and unit conversion",
   },
+  {
+    key: ServerConfigKeys.LOCALE_CONFIG,
+    getDefaultValue: () => buildLocaleConfigFromEnv(),
+    sensitive: false,
+    description: `Locale config (${Object.keys(DEFAULT_LOCALE_CONFIG.locales).length} locales)`,
+  },
 ];
 
 /**
@@ -141,6 +151,7 @@ export async function seedServerConfig(): Promise<void> {
 
   await importEnvAuthProvidersIfMissing();
   await syncPrompts();
+  await syncLocales();
   if (seededCount === 0) {
     serverLogger.info("All server configuration keys present");
   } else {
@@ -215,7 +226,7 @@ async function importEnvAuthProvidersIfMissing(): Promise<void> {
 }
 
 /**
- * Check if two config objects differ
+ * Check if two config objects differ (deep comparison)
  * Treats undefined and missing keys as equivalent
  */
 function configsDiffer<T extends Record<string, unknown>>(
@@ -224,17 +235,13 @@ function configsDiffer<T extends Record<string, unknown>>(
 ): boolean {
   if (!stored) return true;
 
-  // Compare each key in the env config
-  for (const key of Object.keys(env) as (keyof T)[]) {
-    const envVal = env[key];
-    const storedVal = stored[key];
+  // Use JSON serialization for deep comparison (handles nested objects)
+  // JSON.stringify ignores undefined values, so we need to handle them consistently
+  const normalizeForComparison = (obj: Record<string, unknown>): string => {
+    return JSON.stringify(obj, (_, value) => (value === undefined ? null : value));
+  };
 
-    // Treat undefined and missing as equivalent
-    if (envVal === undefined && storedVal === undefined) continue;
-    if (envVal !== storedVal) return true;
-  }
-
-  return false;
+  return normalizeForComparison(stored) !== normalizeForComparison(env);
 }
 
 /**
@@ -267,6 +274,13 @@ async function syncOIDCProvider(): Promise<void> {
     clientSecret: SERVER_CONFIG.OIDC_CLIENT_SECRET!,
     wellknown: SERVER_CONFIG.OIDC_WELLKNOWN || undefined,
     isOverridden: false,
+    claimConfig: {
+      enabled: SERVER_CONFIG.OIDC_CLAIM_MAPPING_ENABLED,
+      scopes: SERVER_CONFIG.OIDC_SCOPES,
+      groupsClaim: SERVER_CONFIG.OIDC_GROUPS_CLAIM,
+      adminGroup: SERVER_CONFIG.OIDC_ADMIN_GROUP,
+      householdPrefix: SERVER_CONFIG.OIDC_HOUSEHOLD_GROUP_PREFIX,
+    },
   };
 
   serverLogger.debug(
@@ -274,6 +288,7 @@ async function syncOIDCProvider(): Promise<void> {
       name: envConfig.name,
       issuer: envConfig.issuer,
       wellknown: envConfig.wellknown ?? "(auto-derived from issuer)",
+      claimConfig: envConfig.claimConfig,
     },
     "OIDC env config loaded"
   );
@@ -447,6 +462,40 @@ async function syncPrompts(): Promise<void> {
 }
 
 /**
+ * Add any new locales from DEFAULT_LOCALE_CONFIG to the DB config.
+ * Preserves existing locale settings (enabled/disabled state).
+ * Respects ENABLED_LOCALES env var when adding new locales.
+ */
+async function syncLocales(): Promise<void> {
+  const existing = await getConfig<I18nLocaleConfig>(ServerConfigKeys.LOCALE_CONFIG);
+
+  if (!existing) {
+    return;
+  }
+
+  const envEnabledLocales = SERVER_CONFIG.ENABLED_LOCALES;
+  const hasEnvFilter = envEnabledLocales.length > 0;
+
+  const newLocales: string[] = [];
+
+  for (const [locale, entry] of Object.entries(DEFAULT_LOCALE_CONFIG.locales)) {
+    if (!existing.locales[locale]) {
+      newLocales.push(locale);
+      // If ENABLED_LOCALES env is set, only enable if locale is in that list
+      // Otherwise use the default enabled state
+      const enabled = hasEnvFilter ? envEnabledLocales.includes(locale) : entry.enabled;
+
+      existing.locales[locale] = { ...entry, enabled };
+    }
+  }
+
+  if (newLocales.length > 0) {
+    await setConfig(ServerConfigKeys.LOCALE_CONFIG, existing, null, false);
+    serverLogger.info({ locales: newLocales }, "Added new locales to config");
+  }
+}
+
+/**
  * Load default values from .default.json files
  * Used for "Restore to defaults" functionality
  */
@@ -474,6 +523,7 @@ export function getDefaultConfigValue(key: ServerConfigKey): unknown {
       return {
         enabled: false,
         maxLengthSeconds: 120,
+        maxVideoFileSize: SERVER_CONFIG.MAX_VIDEO_FILE_SIZE,
         ytDlpVersion: "2025.11.12",
         transcriptionProvider: "disabled",
         transcriptionModel: "whisper-1",
@@ -482,6 +532,8 @@ export function getDefaultConfigValue(key: ServerConfigKey): unknown {
       return DEFAULT_RECIPE_PERMISSION_POLICY;
     case ServerConfigKeys.PROMPTS:
       return { ...loadDefaultPrompts(), isOverridden: false };
+    case ServerConfigKeys.LOCALE_CONFIG:
+      return DEFAULT_LOCALE_CONFIG;
     default:
       return null;
   }

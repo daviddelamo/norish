@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
@@ -180,6 +181,7 @@ describe("admin procedures", () => {
         maxTokens: 4096,
         autoTagAllergies: true,
         alwaysUseAI: false,
+        autoTaggingMode: "disabled" as const,
       };
 
       // Current config has enabled: false
@@ -229,6 +231,7 @@ describe("admin procedures", () => {
         maxTokens: 4096,
         autoTagAllergies: true,
         alwaysUseAI: false,
+        autoTaggingMode: "disabled" as const,
       };
 
       // Current config also has enabled: false
