@@ -12,13 +12,13 @@ const languages = [
 ] as const;
 
 export default function LanguageSelectorCard() {
-    const { language, setLanguage, t, isLoading } = useI18n();
+    const { locale, setLocale, t, isLoading } = useI18n();
 
     const handleLanguageChange = async (keys: Selection) => {
         if (keys === "all" || keys.size === 0) return;
         const selectedKey = Array.from(keys)[0] as "en" | "es";
-        if (selectedKey && selectedKey !== language) {
-            await setLanguage(selectedKey);
+        if (selectedKey && selectedKey !== locale) {
+            await setLocale(selectedKey);
         }
     };
 
@@ -33,7 +33,7 @@ export default function LanguageSelectorCard() {
                     aria-label={t("settings.user.language")}
                     className="max-w-xs"
                     isDisabled={isLoading}
-                    selectedKeys={new Set([language])}
+                    selectedKeys={new Set([locale])}
                     onSelectionChange={handleLanguageChange}
                 >
                     {languages.map((lang) => (

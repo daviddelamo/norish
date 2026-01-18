@@ -21,7 +21,6 @@ import {
   getUserAllergies,
   updateUserAllergies,
   getAllergiesForUsers,
-  updateUserLanguage,
   getUserLocale,
   updateUserLocale,
 } from "@/server/db";
@@ -44,7 +43,7 @@ const get = authedProcedure.query(async ({ ctx }) => {
       email: ctx.user.email,
       name: ctx.user.name,
       image: ctx.user.image,
-      language: ctx.user.language,
+      locale: ctx.user.locale,
     },
     apiKeys: apiKeys.map((k) => ({
       id: k.id,
@@ -80,24 +79,7 @@ const updateName = authedProcedure.input(UpdateNameInputSchema).mutation(async (
   };
 });
 
-/**
- * Update user language preference
- */
-const updateLanguage = authedProcedure
-  .input(z.object({ language: z.enum(["en", "es"]) }))
-  .mutation(async ({ ctx, input }) => {
-    log.debug({ userId: ctx.user.id, language: input.language }, "Updating user language");
 
-    await updateUserLanguage(ctx.user.id, input.language);
-
-    return {
-      success: true,
-      user: {
-        ...ctx.user,
-        language: input.language,
-      },
-    };
-  });
 
 /**
  * Upload user avatar (FormData input)
@@ -319,7 +301,6 @@ const setLocale = authedProcedure
 export const userProcedures = router({
   get,
   updateName,
-  updateLanguage,
   uploadAvatar,
   deleteAvatar,
   deleteAccount,

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { Language } from "@/server/db/zodSchemas/user";
+import type { Locale } from "@/server/db/zodSchemas/user";
 
 import { createContext, useContext, useMemo, useCallback, useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -10,8 +10,8 @@ import { getTranslation, formatNumber, formatQuantity, type TranslationPath } fr
 import { useTRPC } from "@/app/providers/trpc-provider";
 
 type I18nContextType = {
-    language: Language;
-    setLanguage: (language: Language) => Promise<void>;
+    locale: Locale;
+    setLocale: (locale: Locale) => Promise<void>;
     t: (path: TranslationPath) => string;
     formatNumber: (value: number, decimals?: number) => string;
     formatQuantity: (value: number | null | undefined) => string;
@@ -22,63 +22,65 @@ const I18nContext = createContext<I18nContextType | null>(null);
 
 interface I18nProviderProps {
     children: ReactNode;
-    initialLanguage?: Language;
+    initialLocale?: Locale;
 }
 
-export function I18nProvider({ children, initialLanguage = "en" }: I18nProviderProps) {
-    const [language, setLanguageState] = useState<Language>(initialLanguage);
+export function I18nProvider({ children, initialLocale = "en" }: I18nProviderProps) {
+    const [locale, setLocaleState] = useState<Locale>(initialLocale);
     const [isLoading, setIsLoading] = useState(false);
 
     const trpc = useTRPC();
-    const updateLanguageMutation = useMutation(trpc.user.updateLanguage.mutationOptions());
+    const updateLocaleMutation = useMutation(trpc.user.setLocale.mutationOptions());
 
     // Sync language from user data when available
     const { data: userData } = useQuery(trpc.user.get.queryOptions());
 
     useEffect(() => {
-        if (userData?.user?.language) {
-            setLanguageState(userData.user.language);
+        // Cast to Locale if valid, otherwise ignore
+        const userLocale = userData?.user?.locale as Locale | undefined;
+        if (userLocale && (userLocale === "en" || userLocale === "es")) {
+            setLocaleState(userLocale);
         }
-    }, [userData?.user?.language]);
+    }, [userData?.user?.locale]);
 
-    const setLanguage = useCallback(
-        async (newLanguage: Language) => {
+    const setLocale = useCallback(
+        async (newLocale: Locale) => {
             setIsLoading(true);
             try {
-                await updateLanguageMutation.mutateAsync({ language: newLanguage });
-                setLanguageState(newLanguage);
+                await updateLocaleMutation.mutateAsync({ locale: newLocale });
+                setLocaleState(newLocale);
             } finally {
                 setIsLoading(false);
             }
         },
-        [updateLanguageMutation]
+        [updateLocaleMutation]
     );
 
     const t = useCallback(
-        (path: TranslationPath): string => getTranslation(language, path),
-        [language]
+        (path: TranslationPath): string => getTranslation(locale, path),
+        [locale]
     );
 
     const formatNum = useCallback(
-        (value: number, decimals?: number): string => formatNumber(value, language, decimals),
-        [language]
+        (value: number, decimals?: number): string => formatNumber(value, locale, decimals),
+        [locale]
     );
 
     const formatQty = useCallback(
-        (value: number | null | undefined): string => formatQuantity(value, language),
-        [language]
+        (value: number | null | undefined): string => formatQuantity(value, locale),
+        [locale]
     );
 
     const value = useMemo(
         () => ({
-            language,
-            setLanguage,
+            locale,
+            setLocale,
             t,
             formatNumber: formatNum,
             formatQuantity: formatQty,
             isLoading,
         }),
-        [language, setLanguage, t, formatNum, formatQty, isLoading]
+        [locale, setLocale, t, formatNum, formatQty, isLoading]
     );
 
     return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
@@ -96,11 +98,11 @@ export function useI18n() {
 
 // Convenience hooks
 export function useTranslation() {
-    const { t, language } = useI18n();
-    return { t, language };
+    const { t, locale } = useI18n();
+    return { t, locale };
 }
 
 export function useFormatNumber() {
-    const { formatNumber, formatQuantity, language } = useI18n();
-    return { formatNumber, formatQuantity, language };
+    const { formatNumber, formatQuantity, locale } = useI18n();
+    return { formatNumber, formatQuantity, locale };
 }

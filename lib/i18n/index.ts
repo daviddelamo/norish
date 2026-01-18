@@ -1,4 +1,4 @@
-import type { Language } from "@/server/db/zodSchemas/user";
+import type { Locale } from "@/server/db/zodSchemas/user";
 
 import en from "./translations/en.json";
 import es from "./translations/es.json";
@@ -6,7 +6,7 @@ import es from "./translations/es.json";
 export type TranslationKeys = typeof en;
 export type TranslationPath = string;
 
-const translations: Record<Language, TranslationKeys> = {
+const translations: Record<Locale, TranslationKeys> = {
     en,
     es,
 };
@@ -15,9 +15,11 @@ const translations: Record<Language, TranslationKeys> = {
  * Get a nested translation value by dot-notation path
  * @example getTranslation("en", "common.save") => "Save"
  */
-export function getTranslation(language: Language, path: TranslationPath): string {
+export function getTranslation(locale: Locale, path: TranslationPath): string {
+    // Default to 'en' if locale is null/undefined or not supported
+    const effectiveLocale = (locale && translations[locale]) ? locale : "en";
     const keys = path.split(".");
-    let value: any = translations[language];
+    let value: any = translations[effectiveLocale];
 
     for (const key of keys) {
         if (value === undefined || value === null) {
@@ -30,10 +32,10 @@ export function getTranslation(language: Language, path: TranslationPath): strin
 }
 
 /**
- * Create a translator function bound to a specific language
+ * Create a translator function bound to a specific locale
  */
-export function createTranslator(language: Language) {
-    return (path: TranslationPath): string => getTranslation(language, path);
+export function createTranslator(locale: Locale) {
+    return (path: TranslationPath): string => getTranslation(locale, path);
 }
 
 /**
@@ -41,10 +43,10 @@ export function createTranslator(language: Language) {
  * Spanish uses comma as decimal separator: 1.234,56
  * English uses period as decimal separator: 1,234.56
  */
-export function formatNumber(value: number, language: Language, decimals?: number): string {
-    const locale = language === "es" ? "es-ES" : "en-US";
+export function formatNumber(value: number, locale: Locale, decimals?: number): string {
+    const localeCode = locale === "es" ? "es-ES" : "en-US";
 
-    return new Intl.NumberFormat(locale, {
+    return new Intl.NumberFormat(localeCode, {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals ?? 2,
     }).format(value);
@@ -54,18 +56,18 @@ export function formatNumber(value: number, language: Language, decimals?: numbe
  * Format a quantity for display (e.g., ingredient amounts)
  * Removes unnecessary decimal places for whole numbers
  */
-export function formatQuantity(value: number | null | undefined, language: Language): string {
+export function formatQuantity(value: number | null | undefined, locale: Locale): string {
     if (value === null || value === undefined) {
         return "";
     }
 
     // If it's a whole number, don't show decimals
     if (Number.isInteger(value)) {
-        return formatNumber(value, language, 0);
+        return formatNumber(value, locale, 0);
     }
 
     // Otherwise show up to 2 decimal places
-    return formatNumber(value, language);
+    return formatNumber(value, locale);
 }
 
-export { type Language };
+export { type Locale };

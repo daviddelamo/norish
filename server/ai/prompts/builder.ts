@@ -33,9 +33,9 @@ export interface RecipeExtractionPromptOptions {
   additionalContext?: string;
 
   /**
-   * Target language for extraction.
+   * Target locale for extraction (e.g., 'en', 'es').
    */
-  language?: string;
+  locale?: string;
 }
 
 export interface AutoTaggingPromptOptions {
@@ -175,7 +175,7 @@ export async function buildRecipeExtractionPrompt(
   content: string,
   options: RecipeExtractionPromptOptions = {}
 ): Promise<string> {
-  const { url, allergies, strictAllergyDetection = true, additionalContext, language } = options;
+  const { url, allergies, strictAllergyDetection = true, additionalContext, locale } = options;
 
   const basePrompt = await loadPrompt("recipe-extraction");
   const allergyInstruction = buildAllergyInstruction(allergies, { strict: strictAllergyDetection });
@@ -183,8 +183,8 @@ export async function buildRecipeExtractionPrompt(
 
   // Add language instruction for non-English locales
   const languageInstruction =
-    language && language !== "en"
-      ? `\n\nIMPORTANT: Generate all recipe content (title, ingredients, instructions, description) in ${language === "es" ? "Spanish" : language}.\n`
+    locale && locale !== "en"
+      ? `\n\nIMPORTANT: Generate all recipe content (title, ingredients, instructions, description) in ${locale === "es" ? "Spanish" : locale}.\n`
       : "";
 
   const parts = [

@@ -21,6 +21,12 @@ import path from "path";
 import { config } from "dotenv";
 import { z } from "zod";
 
+import { fileURLToPath } from "url";
+
+// ESM compatibility for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const envFile = process.env.NODE_ENV === "production" ? ".env.production" : ".env.local";
 
 let envPath = path.resolve(process.cwd(), envFile);

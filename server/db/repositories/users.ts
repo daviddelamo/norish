@@ -155,7 +155,7 @@ export async function getUserById(userId: string): Promise<User | null> {
       name: true,
       image: true,
       emailVerified: true,
-      language: true,
+      locale: true,
     },
   });
 
@@ -168,7 +168,7 @@ export async function getUserById(userId: string): Promise<User | null> {
     email: decrypt(user.email),
     name: user.name ? decrypt(user.name) : "",
     image: user.image ? decrypt(user.image) : null,
-    language: (user.language as "en" | "es") || "en",
+    locale: user.locale,
   };
 }
 
@@ -182,7 +182,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
       name: true,
       image: true,
       emailVerified: true,
-      language: true,
+      locale: true,
     },
   });
 
@@ -195,7 +195,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     email: decrypt(user.email),
     name: user.name ? decrypt(user.name) : "",
     image: user.image ? decrypt(user.image) : null,
-    language: (user.language as "en" | "es") || "en",
+    locale: user.locale,
   };
 }
 
@@ -278,9 +278,7 @@ export async function updateUserName(userId: string, name: string): Promise<void
   await db.update(users).set({ name: encryptedName }).where(eq(users.id, userId));
 }
 
-export async function updateUserLanguage(userId: string, language: "en" | "es"): Promise<void> {
-  await db.update(users).set({ language }).where(eq(users.id, userId));
-}
+
 
 export async function deleteUser(userId: string): Promise<void> {
   await db.delete(users).where(eq(users.id, userId));

@@ -15,7 +15,9 @@ import {
 
 import { isAIEnabled } from "@/config/server-config-loader";
 import { aiLogger } from "@/server/logger";
-import type { Language } from "@/server/db/zodSchemas/user";
+import type { Locale } from "@/server/db/zodSchemas/user";
+
+export type { RecipeExtractionOutput };
 
 
 export async function extractRecipeWithAI(
@@ -23,7 +25,7 @@ export async function extractRecipeWithAI(
   recipeId: string,
   url?: string,
   allergies?: string[],
-  language?: Language
+  locale?: Locale
 ): Promise<AIResult<FullRecipeInsertDTO>> {
   // Guard: AI must be enabled
   const aiEnabled = await isAIEnabled();
@@ -34,7 +36,7 @@ export async function extractRecipeWithAI(
     return aiError("AI features are disabled", "AI_DISABLED");
   }
 
-  aiLogger.info({ url, language }, "Starting AI recipe extraction");
+  aiLogger.info({ url, locale }, "Starting AI recipe extraction");
 
   try {
     const { model, providerName } = await getModels();
@@ -49,7 +51,7 @@ export async function extractRecipeWithAI(
       url,
       allergies,
       strictAllergyDetection: true, // Use strict mode for HTML extraction
-      language,
+      locale,
     });
 
     aiLogger.debug(

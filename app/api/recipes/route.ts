@@ -103,7 +103,7 @@ export async function GET(req: Request) {
             isServerAdmin,
         };
 
-        const result = await listRecipes(listCtx, limit, cursor, search, tags, filterMode, sortMode);
+        const result = await listRecipes(listCtx, limit, cursor, search, undefined, tags, filterMode, sortMode);
 
         log.debug({ count: result.recipes.length, total: result.total }, "Listed recipes via API");
 

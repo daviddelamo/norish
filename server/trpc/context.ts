@@ -38,7 +38,7 @@ export async function createContext(opts: FetchCreateContextFnOptions): Promise<
       name: session.user.name || "",
       image: session.user.image || null,
       isServerAdmin: sessionUser.isServerOwner || sessionUser.isServerAdmin || false,
-      language: ((session.user as any).language as "en" | "es") || "en",
+      locale: (session.user as any).locale as string | null | undefined,
     };
 
     const household = await getHouseholdForUser(user.id);
@@ -78,7 +78,7 @@ export async function createWsContext(opts: CreateWSSContextFnOptions): Promise<
       name: session.user.name || "",
       image: session.user.image || null,
       isServerAdmin: sessionUser.isServerOwner || sessionUser.isServerAdmin || false,
-      language: ((session.user as any).language as "en" | "es") || "en",
+      locale: (session.user as any).locale as string | null | undefined,
     };
 
     return { user, household: null, connectionId, multiplexer: null };

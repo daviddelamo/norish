@@ -35,7 +35,6 @@ export const users = pgTable(
     isServerAdmin: boolean("isServerAdmin").notNull().default(false),
 
     // User preferences
-    language: text("language").notNull().default("en"),
     locale: text("locale"), // User's preferred language (e.g., 'en', 'de')
 
     // BetterAuth timestamps

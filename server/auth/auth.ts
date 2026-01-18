@@ -273,12 +273,6 @@ function createAuth() {
           defaultValue: false,
           input: false,
         },
-        language: {
-          type: "string",
-          required: false,
-          defaultValue: "en",
-          input: false,
-        },
       },
     },
 

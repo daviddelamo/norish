@@ -12,7 +12,7 @@ export function useUser() {
       email: session.user.email,
       name: session.user.name,
       image: session.user.image ?? null,
-      language: ((session.user as any).language as "en" | "es") || "en",
+      locale: (session.user as any).locale as string | null | undefined,
     }
     : null;
 

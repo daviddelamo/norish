@@ -8,9 +8,9 @@ export const UserDtoSchema = z.object({
   name: z.string(),
   image: z.string().nullable().optional(),
   isServerAdmin: z.boolean().optional(),
-  language: z.enum(["en", "es"]).default("en"),
+
   locale: z.string().nullable().optional(),
 });
 
-export type Language = "en" | "es";
+export type Locale = "en" | "es";
 
