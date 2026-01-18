@@ -136,6 +136,7 @@ describe("GET /api/recipes", () => {
                 40,
                 undefined,
                 undefined,
+                undefined,
                 "OR",
                 "dateDesc"
             );
@@ -153,6 +154,7 @@ describe("GET /api/recipes", () => {
                 0,
                 "pasta",
                 undefined,
+                undefined,
                 "OR",
                 "dateDesc"
             );
@@ -168,6 +170,7 @@ describe("GET /api/recipes", () => {
                 expect.any(Object),
                 50,
                 0,
+                undefined,
                 undefined,
                 ["dinner", "easy"],
                 "OR",
@@ -185,6 +188,7 @@ describe("GET /api/recipes", () => {
                 expect.any(Object),
                 50,
                 0,
+                undefined,
                 undefined,
                 undefined,
                 "OR",
@@ -269,6 +273,7 @@ describe("GET /api/recipes", () => {
                 }),
                 expect.any(Number),
                 expect.any(Number),
+                undefined,
                 undefined,
                 undefined,
                 expect.any(String),
