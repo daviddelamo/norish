@@ -30,6 +30,9 @@ import type { FilterMode, SortOrder } from "@/types";
  * - List: { recipes: [...], total: number, nextCursor: number | null }
  */
 export async function GET(req: Request) {
+    // 🚀 DEPLOYMENT VERIFICATION - Check logs for this message to confirm new code is running
+    log.info({ deployVersion: "2026-02-10-v2", timestamp: new Date().toISOString() }, "✅ GET /api/recipes - Rate limit fix ACTIVE");
+
     try {
         // Build headers for auth (supports both cookie and API key)
         const headers = new Headers();
@@ -43,7 +46,13 @@ export async function GET(req: Request) {
             session = await auth.api.getSession({ headers });
         } catch (authError: any) {
             // Check if it's a rate limit error
-            if (authError?.status === "RATE_LIMITED" || authError?.message?.toLowerCase().includes("rate limit")) {
+            // Better-auth returns status "UNAUTHORIZED" with message "Rate limit exceeded"
+            const isRateLimitError =
+                authError?.status === "RATE_LIMITED" ||
+                (authError?.status === "UNAUTHORIZED" && authError?.message?.toLowerCase().includes("rate limit")) ||
+                authError?.message?.toLowerCase().includes("rate limit");
+
+            if (isRateLimitError) {
                 const retryAfter = authError?.retryAfter || 3600; // Default to 1 hour if not specified
                 const maskedApiKey = apiKeyHeader
                     ? `${apiKeyHeader.substring(0, 8)}...${apiKeyHeader.substring(apiKeyHeader.length - 4)}`
@@ -53,9 +62,11 @@ export async function GET(req: Request) {
                     {
                         authError,
                         apiKey: maskedApiKey,
-                        retryAfter
+                        retryAfter,
+                        errorStatus: authError?.status,
+                        errorMessage: authError?.message
                     },
-                    "API rate limit exceeded"
+                    "🚫 API RATE LIMIT EXCEEDED - Returning HTTP 429"
                 );
 
                 return NextResponse.json(
