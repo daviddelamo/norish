@@ -34,7 +34,18 @@ export async function POST(req: Request) {
       // Check if it's a rate limit error
       if (authError?.status === "RATE_LIMITED" || authError?.message?.toLowerCase().includes("rate limit")) {
         const retryAfter = authError?.retryAfter || 3600; // Default to 1 hour if not specified
-        log.warn({ authError }, "API rate limit exceeded");
+        const maskedApiKey = apiKeyHeader
+          ? `${apiKeyHeader.substring(0, 8)}...${apiKeyHeader.substring(apiKeyHeader.length - 4)}`
+          : "none";
+
+        log.warn(
+          {
+            authError,
+            apiKey: maskedApiKey,
+            retryAfter
+          },
+          "API rate limit exceeded"
+        );
 
         return NextResponse.json(
           { error: "Rate limit exceeded. Please try again later." },
@@ -49,6 +60,21 @@ export async function POST(req: Request) {
     }
 
     if (!session?.user?.id) {
+      // Log the API key (masked) for debugging auth failures
+      const maskedApiKey = apiKeyHeader
+        ? `${apiKeyHeader.substring(0, 8)}...${apiKeyHeader.substring(apiKeyHeader.length - 4)}`
+        : "none";
+
+      log.warn(
+        {
+          apiKey: maskedApiKey,
+          hasApiKeyHeader: !!apiKeyHeader,
+          sessionExists: !!session,
+          hasUser: !!session?.user
+        },
+        "Unauthorized API request - no valid session"
+      );
+
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
