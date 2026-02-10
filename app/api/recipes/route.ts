@@ -32,7 +32,6 @@ import type { FilterMode, SortOrder } from "@/types";
 export async function GET(req: Request) {
     // 🚀 DEPLOYMENT VERIFICATION - Check logs for this message to confirm new code is running
     log.info({ deployVersion: "2026-02-10-v2", timestamp: new Date().toISOString() }, "✅ GET /api/recipes - Rate limit fix ACTIVE");
-
     try {
         // Build headers for auth (supports both cookie and API key)
         const headers = new Headers();

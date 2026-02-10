@@ -5,6 +5,9 @@ import type { SubscriptionMultiplexer } from "@/server/redis/subscription-multip
 
 import { auth } from "@/server/auth/auth";
 import { getHouseholdForUser } from "@/server/db";
+import { logger } from "@/server/logger";
+
+const log = logger.child({ module: "trpc:context" });
 
 export type Context = {
   user: User | null;
@@ -44,7 +47,30 @@ export async function createContext(opts: FetchCreateContextFnOptions): Promise<
     const household = await getHouseholdForUser(user.id);
 
     return { user, household, connectionId: null, multiplexer: null };
-  } catch {
+  } catch (error: any) {
+    // Check if it's a rate limit error from better-auth
+    const isRateLimitError =
+      error?.status === "RATE_LIMITED" ||
+      (error?.status === "UNAUTHORIZED" && error?.message?.toLowerCase().includes("rate limit")) ||
+      error?.message?.toLowerCase().includes("rate limit");
+
+    if (isRateLimitError) {
+      const apiKey = req.headers.get("x-api-key");
+      const maskedApiKey = apiKey
+        ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}`
+        : "none";
+
+      log.warn(
+        {
+          error,
+          apiKey: maskedApiKey,
+          errorStatus: error?.status,
+          errorMessage: error?.message,
+        },
+        "🚫 tRPC HTTP: Rate limit exceeded"
+      );
+    }
+
     return { user: null, household: null, connectionId: null, multiplexer: null };
   }
 }
@@ -82,7 +108,31 @@ export async function createWsContext(opts: CreateWSSContextFnOptions): Promise<
     };
 
     return { user, household: null, connectionId, multiplexer: null };
-  } catch {
-    return { user: null, household: null, connectionId, multiplexer: null };
+  } catch (error: any) {
+    // Check if it's a rate limit error from better-auth
+    const isRateLimitError =
+      error?.status === "RATE_LIMITED" ||
+      (error?.status === "UNAUTHORIZED" && error?.message?.toLowerCase().includes("rate limit")) ||
+      error?.message?.toLowerCase().includes("rate limit");
+
+    if (isRateLimitError) {
+      const apiKey = req.headers["x-api-key"];
+      const maskedApiKey = apiKey
+        ? `${String(apiKey).substring(0, 8)}...${String(apiKey).substring(String(apiKey).length - 4)}`
+        : "none";
+
+      log.warn(
+        {
+          error,
+          apiKey: maskedApiKey,
+          errorStatus: error?.status,
+          errorMessage: error?.message,
+          connectionId,
+        },
+        "🚫 tRPC WebSocket: Rate limit exceeded"
+      );
+    }
+
+    return { user, household: null, connectionId, multiplexer: null };
   }
 }
