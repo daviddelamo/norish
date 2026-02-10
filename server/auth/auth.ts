@@ -421,9 +421,9 @@ function createAuth() {
       apiKey({
         enableSessionForAPIKeys: true,
         rateLimit: {
-          enabled: true, // ✅ Rate limiting ENABLED with proper error handling
+          enabled: false, // ⚠️ DISABLED - better-auth rate limiting has bugs, triggers on first request
           timeWindow: 1000 * 60 * 60 * 1, // 1 hour window
-          maxRequests: 1000, // 1000 requests per hour (increased from 500)
+          maxRequests: 1000, // 1000 requests per hour
         },
         apiKeyHeaders: ["x-api-key", "bearer"],
       }),
