@@ -133,6 +133,6 @@ export async function createWsContext(opts: CreateWSSContextFnOptions): Promise<
       );
     }
 
-    return { user, household: null, connectionId, multiplexer: null };
+    return { user: null, household: null, connectionId, multiplexer: null };
   }
 }
