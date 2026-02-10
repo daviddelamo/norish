@@ -37,8 +37,27 @@ export async function GET(req: Request) {
 
         if (apiKeyHeader) headers.set("x-api-key", apiKeyHeader);
 
-        // Authenticate
-        const session = await auth.api.getSession({ headers });
+        // Authenticate - wrap in try-catch to handle rate limit errors
+        let session;
+        try {
+            session = await auth.api.getSession({ headers });
+        } catch (authError: any) {
+            // Check if it's a rate limit error
+            if (authError?.status === "RATE_LIMITED" || authError?.message?.toLowerCase().includes("rate limit")) {
+                const retryAfter = authError?.retryAfter || 3600; // Default to 1 hour if not specified
+                log.warn({ authError }, "API rate limit exceeded");
+
+                return NextResponse.json(
+                    { error: "Rate limit exceeded. Please try again later." },
+                    {
+                        status: 429,
+                        headers: { "X-Retry-After": retryAfter.toString() }
+                    }
+                );
+            }
+            // Re-throw other authentication errors
+            throw authError;
+        }
 
         if (!session?.user?.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

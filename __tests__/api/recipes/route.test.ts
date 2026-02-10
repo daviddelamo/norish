@@ -86,6 +86,39 @@ describe("GET /api/recipes", () => {
             // Verify getSession was called (authentication happens)
             expect(getSession).toHaveBeenCalled();
         });
+
+        it("returns 429 when rate limit is exceeded", async () => {
+            const rateLimitError = Object.assign(
+                new Error("Rate limit exceeded"),
+                {
+                    status: "RATE_LIMITED",
+                    retryAfter: 3600,
+                }
+            );
+            getSession.mockRejectedValue(rateLimitError);
+
+            const request = new Request("http://localhost:3000/api/recipes");
+            const response = await GET(request);
+
+            expect(response.status).toBe(429);
+            expect(response.headers.get("X-Retry-After")).toBe("3600");
+
+            const json = await response.json();
+
+            expect(json.error).toBe("Rate limit exceeded. Please try again later.");
+        });
+
+        it("returns 429 when rate limit error has message but no status", async () => {
+            const rateLimitError = new Error("API rate limit exceeded for this key");
+            getSession.mockRejectedValue(rateLimitError);
+
+            const request = new Request("http://localhost:3000/api/recipes");
+            const response = await GET(request);
+
+            expect(response.status).toBe(429);
+            // Should use default retry after when not specified
+            expect(response.headers.get("X-Retry-After")).toBe("3600");
+        });
     });
 
     describe("List recipes", () => {
