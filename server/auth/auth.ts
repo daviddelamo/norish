@@ -421,9 +421,9 @@ function createAuth() {
       apiKey({
         enableSessionForAPIKeys: true,
         rateLimit: {
-          enabled: false, // ⚠️ RATE LIMITING DISABLED - No limits on API key requests
-          timeWindow: 1000 * 60 * 60 * 1,
-          maxRequests: 500,
+          enabled: true, // ✅ Rate limiting ENABLED with proper error handling
+          timeWindow: 1000 * 60 * 60 * 1, // 1 hour window
+          maxRequests: 1000, // 1000 requests per hour (increased from 500)
         },
         apiKeyHeaders: ["x-api-key", "bearer"],
       }),
