@@ -2,7 +2,6 @@
 
 import { Navbar as HeroUINavbar, NavbarContent, NavbarBrand, NavbarItem } from "@heroui/navbar";
 import NextLink from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
@@ -10,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { siteConfig } from "@/config/site";
 import NavbarUserMenu from "@/components/navbar/navbar-user-menu";
 import MobileNav from "@/components/navbar/mobile-nav";
-import logo from "@/public/norish-logo.png";
+import { BrandLogo } from "@/components/brand/brand-logo";
 import { useAutoHide } from "@/hooks/auto-hide";
 
 // Map hrefs to translation keys
@@ -23,7 +22,9 @@ const navLabelKeys: Record<string, "home" | "calendar" | "groceries"> = {
 export const Navbar = () => {
   const t = useTranslations("navbar.nav");
   const pathname = usePathname();
-  const { isVisible, onHoverStart, onHoverEnd } = useAutoHide();
+  const { isVisible, onHoverStart, onHoverEnd } = useAutoHide({
+    idleDelay: Infinity, // Only hide on scroll, not on idle
+  });
 
   return (
     <>
@@ -36,7 +37,7 @@ export const Navbar = () => {
           y: isVisible ? 0 : -100,
           opacity: isVisible ? 1 : 0,
         }}
-        className="fixed top-4 left-1/2 z-50 hidden w-full max-w-7xl -translate-x-1/2 px-4 md:block"
+        className="fixed top-4 left-1/2 z-[60] hidden w-full max-w-7xl -translate-x-1/2 px-4 md:block"
         initial={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         onMouseEnter={onHoverStart}
@@ -62,7 +63,7 @@ export const Navbar = () => {
                   }
                 }}
               >
-                <Image priority alt="Norish logo" height={30} src={logo} width={120} />
+                <BrandLogo priority height={30} width={120} />
               </NextLink>
             </NavbarBrand>
           </NavbarContent>
@@ -92,8 +93,8 @@ export const Navbar = () => {
           </NavbarContent>
 
           {/* Right */}
-          <NavbarContent justify="end">
-            <NavbarItem>
+          <NavbarContent className="items-center" justify="end">
+            <NavbarItem className="flex items-center">
               <NavbarUserMenu />
             </NavbarItem>
           </NavbarContent>

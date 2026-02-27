@@ -15,13 +15,19 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@heroui/react";
-import { Cog6ToothIcon, ChevronDownIcon } from "@heroicons/react/16/solid";
+import { Cog6ToothIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon } from "@heroicons/react/16/solid";
 import { useTranslations } from "next-intl";
 
 import { useAdminSettingsContext } from "../context";
 
+import { UnsavedChangesChip } from "./unsaved-changes-chip";
+
+import { showSafeErrorToast } from "@/lib/ui/safe-error-toast";
+
 export default function GeneralCard() {
   const t = useTranslations("settings.admin.general");
+  const tErrors = useTranslations("common.errors");
   const { registrationEnabled, updateRegistration, localeConfig, updateLocaleConfig, isLoading } =
     useAdminSettingsContext();
 
@@ -104,10 +110,12 @@ export default function GeneralCard() {
           color: "success",
         });
       } else {
-        addToast({
+        showSafeErrorToast({
           title: t("localesError"),
-          description: result.error,
+          description: tErrors("technicalDetails"),
           color: "danger",
+          error: result.error,
+          context: "admin-general:save-locales",
         });
       }
     } finally {
@@ -172,7 +180,10 @@ export default function GeneralCard() {
         {/* Locale Configuration */}
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <span className="font-medium">{t("locales")}</span>
+            <span className="flex items-center gap-2 font-medium">
+              {t("locales")}
+              {hasLocaleChanges && <UnsavedChangesChip />}
+            </span>
             <span className="text-default-500 text-base">{t("localesDescription")}</span>
           </div>
 

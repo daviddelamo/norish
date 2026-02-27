@@ -11,13 +11,14 @@ import {
   Textarea,
   addToast,
 } from "@heroui/react";
-import { ArrowDownTrayIcon, SparklesIcon } from "@heroicons/react/20/solid";
+import { ArrowDownTrayIcon, SparklesIcon } from "@heroicons/react/16/solid";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { useRecipesMutations } from "@/hooks/recipes";
 import { MAX_RECIPE_PASTE_CHARS } from "@/types/uploads";
 import { usePermissionsContext } from "@/context/permissions-context";
+import { showSafeErrorToast } from "@/lib/ui/safe-error-toast";
 
 interface ImportFromPasteModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ interface ImportFromPasteModalProps {
 
 export default function ImportFromPasteModal({ isOpen, onOpenChange }: ImportFromPasteModalProps) {
   const t = useTranslations("common.import.paste");
+  const tErrors = useTranslations("common.errors");
   const tActions = useTranslations("common.actions");
   const router = useRouter();
   const { isAIEnabled } = usePermissionsContext();
@@ -65,17 +67,17 @@ export default function ImportFromPasteModal({ isOpen, onOpenChange }: ImportFro
       setText("");
       router.push("/");
     } catch (error) {
-      addToast({
+      showSafeErrorToast({
         title: t("failed"),
-        description: (error as Error).message,
+        description: tErrors("technicalDetails"),
         color: "danger",
-        shouldShowTimeoutProgress: true,
-        radius: "full",
+        error,
+        context: "import-from-paste-modal:import",
       });
     } finally {
       setIsSubmitting(false);
     }
-  }, [importRecipeFromPaste, onOpenChange, router, t, text]);
+  }, [importRecipeFromPaste, onOpenChange, router, t, tErrors, text]);
 
   const handleAIImport = useCallback(() => {
     const trimmed = text.trim();
@@ -109,17 +111,17 @@ export default function ImportFromPasteModal({ isOpen, onOpenChange }: ImportFro
       setText("");
       router.push("/");
     } catch (error) {
-      addToast({
+      showSafeErrorToast({
         title: t("failed"),
-        description: (error as Error).message,
+        description: tErrors("technicalDetails"),
         color: "danger",
-        shouldShowTimeoutProgress: true,
-        radius: "full",
+        error,
+        context: "import-from-paste-modal:import-ai",
       });
     } finally {
       setIsSubmitting(false);
     }
-  }, [importRecipeFromPasteWithAI, onOpenChange, router, t, text]);
+  }, [importRecipeFromPasteWithAI, onOpenChange, router, t, tErrors, text]);
 
   const _handleClose = useCallback(() => {
     onOpenChange(false);
@@ -127,7 +129,12 @@ export default function ImportFromPasteModal({ isOpen, onOpenChange }: ImportFro
   }, [onOpenChange]);
 
   return (
-    <Modal isOpen={isOpen} size="lg" onOpenChange={onOpenChange}>
+    <Modal
+      classNames={{ wrapper: "z-[1100]", backdrop: "z-[1099]" }}
+      isOpen={isOpen}
+      size="lg"
+      onOpenChange={onOpenChange}
+    >
       <ModalContent>
         {() => (
           <>

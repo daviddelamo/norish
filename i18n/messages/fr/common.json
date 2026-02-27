@@ -3,6 +3,7 @@
     "save": "Sauver",
     "cancel": "Annuler",
     "delete": "Effacer",
+    "duplicate": "Dupliquer",
     "edit": "Editer",
     "create": "Créer",
     "add": "Ajouter",
@@ -27,7 +28,11 @@
     "test": "Test",
     "format": "Format",
     "restoreDefaults": "Recharger paramètres par défaut",
-    "saveChanges": "Sauvegarder changements"
+    "saveChanges": "Sauvegarder changements",
+    "revealSecret": "Révéler le secret",
+    "hideSecret": "Masquer le secret",
+    "enterNewValue": "Saisir une nouvelle valeur",
+    "cancelEditing": "Annuler la modification"
   },
   "status": {
     "loading": "Chargement...",
@@ -49,17 +54,34 @@
     "searchTags": "Recherche étiquettes",
     "favoritesAndRating": "Favoris et évaluation",
     "favorites": "Favoris",
+    "cookingTime": "Temps de cuisson",
+    "cookingTimeUnder15": "<15 min",
+    "cookingTimeUnder30": "<30 min",
+    "cookingTimeUnder60": "<60 min",
+    "cookingTimeUnder120": "<120 min",
+    "categories": "Catégories",
+    "category": {
+      "breakfast": "Petit-déjeuner",
+      "lunch": "Déjeuner",
+      "dinner": "Dîner",
+      "snack": "Collation"
+    },
     "sortByTitle": "Titre",
     "sortByDate": "Date",
     "clearFilters": "Effacer les filtres"
   },
   "time": {
     "minutes": "min",
-    "hours": "hr"
+    "hours": "h"
   },
   "validation": {
     "required": "Ce champ est requis",
     "invalidUrl": "Entrez une URL valide"
+  },
+  "errors": {
+    "operationFailed": "L'opération a échoué",
+    "nameCannotBeEmpty": "Le nom ne peut pas être vide",
+    "technicalDetails": "Une erreur s'est produite. Consultez la console du navigateur pour les détails techniques."
   },
   "slots": {
     "breakfast": "Petit déjeuner",
@@ -126,6 +148,9 @@
     "recipeLink": "Tapez <strong>/nom de la recette</strong> pour accéder à une autre recette",
     "helpAriaLabel": "Aide à la mise en forme"
   },
+  "tagInput": {
+    "placeholder": "Saisissez les tags séparés par des espaces..."
+  },
   "recurrence": {
     "title": "Répétition",
     "frequency": "Fréquence",
@@ -164,5 +189,20 @@
       "5": "Vendredi",
       "6": "Samedi"
     }
+  },
+  "badges": {
+    "new": "Nouveau"
+  },
+  "timer": {
+    "done": "Termin\u00e9",
+    "done_action": "Termin\u00e9",
+    "one": "Minuteur",
+    "other": "Minuteurs",
+    "label_one": "1 minuteur",
+    "label_other": "{count} minuteurs",
+    "notification_title": "Minuteur termin\u00e9",
+    "notification_body": "{label} est pr\u00eat\u00a0!",
+    "notifications_disabled": "Les notifications sont d\u00e9sactiv\u00e9es",
+    "notifications_disabled_hint": "Activez les notifications dans les param\u00e8tres de votre navigateur pour recevoir des alertes lorsque les minuteurs se terminent en arri\u00e8re-plan."
   }
 }

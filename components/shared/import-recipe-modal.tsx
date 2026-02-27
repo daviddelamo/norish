@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Modal,
   ModalContent,
@@ -9,13 +9,13 @@ import {
   ModalFooter,
   Input,
   Button,
-  addToast,
 } from "@heroui/react";
-import { SparklesIcon, ArrowDownTrayIcon } from "@heroicons/react/20/solid";
+import { SparklesIcon, ArrowDownTrayIcon } from "@heroicons/react/16/solid";
 import { useTranslations } from "next-intl";
 
 import { useRecipesContext } from "@/context/recipes-context";
 import { usePermissionsContext } from "@/context/permissions-context";
+import { showSafeErrorToast } from "@/lib/ui/safe-error-toast";
 
 interface ImportRecipeModalProps {
   isOpen: boolean;
@@ -24,10 +24,44 @@ interface ImportRecipeModalProps {
 
 export default function ImportRecipeModal({ isOpen, onOpenChange }: ImportRecipeModalProps) {
   const t = useTranslations("common.import.url");
+  const tErrors = useTranslations("common.errors");
   const tActions = useTranslations("common.actions");
   const { importRecipe, importRecipeWithAI } = useRecipesContext();
   const { isAIEnabled } = usePermissionsContext();
   const [importUrl, setImportUrl] = useState("");
+
+  useEffect(() => {
+    if (!isOpen || typeof navigator === "undefined" || !navigator.clipboard?.readText) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function fillUrlFromClipboard() {
+      try {
+        const clipboardText = (await navigator.clipboard.readText()).trim();
+
+        if (!clipboardText) {
+          return;
+        }
+
+        const parsedUrl = new URL(clipboardText);
+        const isHttpUrl = parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:";
+
+        if (isHttpUrl && !isCancelled) {
+          setImportUrl((currentValue) =>
+            currentValue.trim() === "" ? clipboardText : currentValue
+          );
+        }
+      } catch {}
+    }
+
+    void fillUrlFromClipboard();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isOpen]);
 
   async function handleImportFromUrl() {
     if (importUrl.trim() === "") return;
@@ -39,12 +73,12 @@ export default function ImportRecipeModal({ isOpen, onOpenChange }: ImportRecipe
     } catch (e) {
       onOpenChange(false);
       setImportUrl("");
-      addToast({
+      showSafeErrorToast({
         title: t("failed"),
-        description: (e as Error).message,
+        description: tErrors("technicalDetails"),
         color: "danger",
-        shouldShowTimeoutProgress: true,
-        radius: "full",
+        error: e,
+        context: "import-recipe-modal:import",
       });
     }
   }
@@ -59,18 +93,23 @@ export default function ImportRecipeModal({ isOpen, onOpenChange }: ImportRecipe
     } catch (e) {
       onOpenChange(false);
       setImportUrl("");
-      addToast({
+      showSafeErrorToast({
         title: t("failedWithAI"),
-        description: (e as Error).message,
+        description: tErrors("technicalDetails"),
         color: "danger",
-        shouldShowTimeoutProgress: true,
-        radius: "full",
+        error: e,
+        context: "import-recipe-modal:import-ai",
       });
     }
   }
 
   return (
-    <Modal isOpen={isOpen} size="md" onOpenChange={onOpenChange}>
+    <Modal
+      classNames={{ wrapper: "z-[1100]", backdrop: "z-[1099]" }}
+      isOpen={isOpen}
+      size="md"
+      onOpenChange={onOpenChange}
+    >
       <ModalContent>
         {() => (
           <>

@@ -2,7 +2,9 @@ const CACHE_NAME = 'norish-cache-v0.3.0-beta';
 const STATIC_ASSETS = [
   '/',
   '/manifest.webmanifest',
+  '/favicon.svg',
   '/favicon.ico',
+  '/favicon-96x96.png',
   '/android-chrome-192x192.png',
   '/android-chrome-512x512.png',
   '/apple-touch-icon.png',
@@ -103,3 +105,21 @@ async function staleWhileRevalidate(req) {
   });
   return cached || network;
 }
+
+// Handle notification clicks — focus existing window or open the app
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus an existing window if one is open
+      for (const client of clientList) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open a new window
+      return self.clients.openWindow('/');
+    })
+  );
+});

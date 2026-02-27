@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Modal, ModalContent, Button } from "@heroui/react";
-import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon } from "@heroicons/react/16/solid";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
+
+import { FallbackPlaceholder, useImageErrors } from "./fallback-image";
 
 export interface ImageLightboxProps {
   images: { src: string; alt?: string }[];
@@ -21,6 +23,7 @@ export default function ImageLightbox({
 }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [direction, setDirection] = useState(0);
+  const { handleImageError, hasError } = useImageErrors();
 
   // Reset to initial index when opening
   useEffect(() => {
@@ -89,23 +92,24 @@ export default function ImageLightbox({
     <Modal
       hideCloseButton
       classNames={{
-        backdrop: "bg-black/90 backdrop-blur-md",
+        backdrop: "z-[1099] bg-black/90 backdrop-blur-md",
         base: "bg-transparent shadow-none max-w-full max-h-full",
-        wrapper: "items-center justify-center",
+        wrapper: "z-[1100] items-center justify-center",
       }}
       isOpen={isOpen}
       size="full"
       onClose={onClose}
     >
-      <ModalContent className="bg-transparent">
+      <ModalContent className="bg-transparent" onClick={(e) => e.stopPropagation()}>
         {() => (
           <div className="relative flex h-screen w-screen items-center justify-center">
             {/* Close button */}
             <Button
               isIconOnly
-              className="absolute top-4 right-4 z-50 bg-black/50 text-white hover:bg-black/70"
+              className="absolute right-4 z-50 bg-black/50 text-white hover:bg-black/70"
               radius="full"
               size="lg"
+              style={{ top: "calc(1rem + env(safe-area-inset-top))" }}
               variant="flat"
               onPress={onClose}
             >
@@ -114,7 +118,10 @@ export default function ImageLightbox({
 
             {/* Image counter */}
             {showNavigation && (
-              <div className="absolute top-4 left-4 z-50 rounded-full bg-black/50 px-4 py-2 text-sm text-white">
+              <div
+                className="absolute left-4 z-50 rounded-full bg-black/50 px-4 py-2 text-sm text-white"
+                style={{ top: "calc(1rem + env(safe-area-inset-top))" }}
+              >
                 {currentIndex + 1} / {images.length}
               </div>
             )}
@@ -149,13 +156,18 @@ export default function ImageLightbox({
                   }}
                   variants={slideVariants}
                 >
-                  <Image
-                    fill
-                    unoptimized
-                    alt={currentImage?.alt || `Image ${currentIndex + 1}`}
-                    className="object-contain"
-                    src={currentImage?.src || ""}
-                  />
+                  {hasError(currentImage?.src || "") ? (
+                    <FallbackPlaceholder className="rounded-lg" />
+                  ) : (
+                    <Image
+                      fill
+                      unoptimized
+                      alt={currentImage?.alt || `Image ${currentIndex + 1}`}
+                      className="object-contain"
+                      src={currentImage?.src || ""}
+                      onError={() => handleImageError(currentImage?.src || "")}
+                    />
+                  )}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -179,7 +191,7 @@ export default function ImageLightbox({
               <div className="absolute bottom-6 left-1/2 z-50 flex -translate-x-1/2 gap-2">
                 {images.map((img, idx) => (
                   <button
-                    key={idx}
+                    key={`${img.src}-${idx}`}
                     className={`h-16 w-16 overflow-hidden rounded-lg border-2 transition-all ${
                       idx === currentIndex
                         ? "border-white opacity-100"

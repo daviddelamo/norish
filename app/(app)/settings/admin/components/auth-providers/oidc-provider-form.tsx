@@ -2,8 +2,8 @@
 
 import type { TestResult } from "./types";
 
-import { useState, useCallback } from "react";
-import { Input, useDisclosure, addToast } from "@heroui/react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { Input, useDisclosure } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import { useAdminSettingsContext } from "../../context";
@@ -15,13 +15,17 @@ import { OIDCClaimMapping, type ClaimMappingValues } from "./oidc-claim-mapping"
 
 import { ServerConfigKeys } from "@/server/db/zodSchemas/server-config";
 import SecretInput from "@/components/shared/secret-input";
+import { useDirtyState } from "@/hooks/use-dirty-state";
+import { showSafeErrorToast } from "@/lib/ui/safe-error-toast";
 
 interface OIDCProviderFormProps {
   config: Record<string, unknown> | undefined;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
-export function OIDCProviderForm({ config }: OIDCProviderFormProps) {
+export function OIDCProviderForm({ config, onDirtyChange }: OIDCProviderFormProps) {
   const tOidc = useTranslations("settings.admin.authProviders.oidc.fields");
+  const tErrors = useTranslations("common.errors");
   const { updateAuthProviderOIDC, deleteAuthProvider, testAuthProvider, fetchConfigSecret } =
     useAdminSettingsContext();
 
@@ -56,6 +60,56 @@ export function OIDCProviderForm({ config }: OIDCProviderFormProps) {
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [saving, setSaving] = useState(false);
   const deleteModal = useDisclosure();
+
+  const configClaim = config?.claimConfig as
+    | {
+        enabled?: boolean;
+        scopes?: string[];
+        groupsClaim?: string;
+        adminGroup?: string;
+        householdPrefix?: string;
+      }
+    | undefined;
+
+  const hasClaimMappingChanges = useDirtyState(claimMapping, configClaim, {
+    normalizeCurrent: (current) => ({
+      enabled: current.enabled,
+      scopes: current.scopes
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean),
+      groupsClaim: current.groupsClaim,
+      adminGroup: current.adminGroup,
+      householdPrefix: current.householdPrefix,
+    }),
+    normalizeInitial: (initial) => ({
+      enabled: initial?.enabled ?? false,
+      scopes: initial?.scopes ?? [],
+      groupsClaim: initial?.groupsClaim ?? "groups",
+      adminGroup: initial?.adminGroup ?? "norish_admin",
+      householdPrefix: initial?.householdPrefix ?? "norish_household_",
+    }),
+  });
+
+  const hasChanges = useMemo(() => {
+    const configName = (config?.name as string) ?? "";
+    const configIssuer = (config?.issuer as string) ?? "";
+    const configClientId = (config?.clientId as string) ?? "";
+    const configWellknown = (config?.wellknown as string) ?? "";
+
+    return (
+      name !== configName ||
+      issuer !== configIssuer ||
+      clientId !== configClientId ||
+      wellknown !== configWellknown ||
+      clientSecret.trim() !== "" ||
+      hasClaimMappingChanges
+    );
+  }, [config, name, issuer, clientId, clientSecret, wellknown, hasClaimMappingChanges]);
+
+  useEffect(() => {
+    onDirtyChange?.(hasChanges);
+  }, [hasChanges, onDirtyChange]);
 
   const handleRevealSecret = useCallback(
     (field: string) => () => fetchConfigSecret(ServerConfigKeys.AUTH_PROVIDER_OIDC, field),
@@ -113,10 +167,11 @@ export function OIDCProviderForm({ config }: OIDCProviderFormProps) {
 
     if (!result.success) {
       deleteModal.onClose();
-      addToast({
-        severity: "danger",
-        title: "Cannot delete provider",
-        description: result.error,
+      showSafeErrorToast({
+        title: tErrors("operationFailed"),
+        description: tErrors("technicalDetails"),
+        error: result.error,
+        context: "admin-auth-provider:delete:oidc",
       });
 
       return;
@@ -169,11 +224,16 @@ export function OIDCProviderForm({ config }: OIDCProviderFormProps) {
       />
 
       {/* Claim Mapping Section */}
-      <OIDCClaimMapping values={claimMapping} onChange={setClaimMapping} />
+      <OIDCClaimMapping
+        isDirty={hasClaimMappingChanges}
+        values={claimMapping}
+        onChange={setClaimMapping}
+      />
 
       <TestResultDisplay result={testResult} />
 
       <ProviderActions
+        hasChanges={hasChanges}
         hasConfig={!!config}
         saving={saving}
         testing={testing}

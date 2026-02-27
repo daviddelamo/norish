@@ -3,7 +3,10 @@ import {
   FireIcon,
   ArrowTopRightOnSquareIcon,
   ArrowLeftIcon,
-} from "@heroicons/react/20/solid";
+  SunIcon,
+  MoonIcon,
+  CakeIcon,
+} from "@heroicons/react/16/solid";
 import { Card, CardBody, Chip, Divider, Link } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
@@ -27,6 +30,9 @@ import MediaCarousel, { buildMediaItems } from "@/components/shared/media-carous
 import { useFavoritesQuery, useFavoritesMutation } from "@/hooks/favorites";
 import { useRatingQuery, useRatingsMutation } from "@/hooks/ratings";
 import { NutritionSection } from "@/components/recipes/nutrition-card";
+import { MOBILE_RECIPE_MEDIA_HEIGHT_STYLE } from "@/app/(app)/recipes/[id]/recipe-layout-constants";
+import { useUserContext } from "@/context/user-context";
+import { getShowFavoritesPreference, getShowRatingsPreference } from "@/lib/user-preferences";
 
 export default function RecipePageMobile() {
   const {
@@ -39,7 +45,11 @@ export default function RecipePageMobile() {
   const { toggleFavorite } = useFavoritesMutation();
   const { userRating, averageRating, isLoading: isRatingLoading } = useRatingQuery(recipe.id);
   const { rateRecipe, isRating } = useRatingsMutation();
+  const { user } = useUserContext();
   const t = useTranslations("recipes.detail");
+  const tForm = useTranslations("recipes.form");
+  const showRatings = getShowRatingsPreference(user);
+  const showFavorites = getShowFavoritesPreference(user);
 
   const isFavorite = checkFavorite(recipe.id);
   const handleToggleFavorite = () => toggleFavorite(recipe.id);
@@ -49,10 +59,22 @@ export default function RecipePageMobile() {
   const mediaItems = buildMediaItems(recipe);
 
   return (
-    <div className="flex w-full flex-col overflow-x-hidden">
+    <div
+      className="flex w-full flex-col"
+      style={{ marginTop: "calc(-1.5rem - env(safe-area-inset-top))" }}
+    >
       {/* Hero Image/Video Carousel */}
-      <div className="relative w-full overflow-hidden" style={{ height: "18rem" }}>
-        <DoubleTapContainer className="h-full w-full" onDoubleTap={handleToggleFavorite}>
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ height: MOBILE_RECIPE_MEDIA_HEIGHT_STYLE }}
+      >
+        <DoubleTapContainer
+          className="h-full w-full"
+          doubleTapEnabled={showFavorites}
+          onDoubleTap={() => {
+            if (showFavorites) handleToggleFavorite();
+          }}
+        >
           <MediaCarousel
             aspectRatio="4/3"
             className="h-full w-full"
@@ -65,21 +87,27 @@ export default function RecipePageMobile() {
         {recipe?.author && (
           <div
             className="absolute left-4 z-50"
-            style={{ top: `calc(1rem + env(safe-area-inset-top))` }}
+            style={{ top: `calc(3.5rem + env(safe-area-inset-top))` }}
           >
-            <AuthorChip image={recipe.author.image} name={recipe.author.name} />
+            <AuthorChip
+              image={recipe.author.image}
+              name={recipe.author.name}
+              userId={recipe.author.id}
+            />
           </div>
         )}
 
-        {/* Heart button - bottom right (always visible) */}
-        <div className="absolute right-4 bottom-4 z-50">
-          <HeartButton
-            showBackground
-            isFavorite={isFavorite}
-            size="lg"
-            onToggle={handleToggleFavorite}
-          />
-        </div>
+        {/* Heart button - bottom right */}
+        {showFavorites && (
+          <div className="absolute right-4 bottom-8 z-50">
+            <HeartButton
+              showBackground
+              isFavorite={isFavorite}
+              size="lg"
+              onToggle={handleToggleFavorite}
+            />
+          </div>
+        )}
       </div>
 
       {/* Unified Content Card - contains all sections */}
@@ -123,6 +151,28 @@ export default function RecipePageMobile() {
             <p className="text-base leading-relaxed">
               <SmartMarkdownRenderer text={recipe.description} />
             </p>
+          )}
+
+          {/* Categories */}
+          {recipe.categories.length > 0 && (
+            <div className="text-default-500 flex flex-wrap items-center gap-4 text-base">
+              {recipe.categories.map((category) => {
+                const IconComponent =
+                  {
+                    Breakfast: FireIcon,
+                    Lunch: SunIcon,
+                    Dinner: MoonIcon,
+                    Snack: CakeIcon,
+                  }[category] || SunIcon;
+
+                return (
+                  <span key={category} className="flex items-center gap-1">
+                    <IconComponent className="h-4 w-4" />
+                    {tForm(`category.${category.toLowerCase()}`)}
+                  </span>
+                );
+              })}
+            </div>
           )}
 
           {/* Time info */}
@@ -186,6 +236,21 @@ export default function RecipePageMobile() {
 
           <Divider />
 
+          {/* Notes */}
+          {recipe.notes && (
+            <>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">{t("notes")}</h2>
+                </div>
+                <div>
+                  <SmartMarkdownRenderer text={recipe.notes} />
+                </div>
+              </div>
+              <Divider />
+            </>
+          )}
+
           {/* Steps Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -198,14 +263,16 @@ export default function RecipePageMobile() {
             </div>
 
             {/* Rating Section */}
-            <div className="bg-default-100 -mx-1 flex flex-col items-center gap-4 rounded-xl py-6">
-              <p className="text-default-600 font-medium">{t("ratingPrompt")}</p>
-              <StarRating
-                isLoading={isRating || isRatingLoading}
-                value={userRating ?? averageRating}
-                onChange={handleRateRecipe}
-              />
-            </div>
+            {showRatings && (
+              <div className="bg-default-100 -mx-1 flex flex-col items-center gap-4 rounded-xl py-6">
+                <p className="text-default-600 font-medium">{t("ratingPrompt")}</p>
+                <StarRating
+                  isLoading={isRating || isRatingLoading}
+                  value={userRating ?? averageRating}
+                  onChange={handleRateRecipe}
+                />
+              </div>
+            )}
           </div>
 
           {/* Nutrition Section */}

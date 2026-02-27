@@ -3,9 +3,11 @@
 import { UserSettingsProvider } from "../context";
 
 import ProfileCard from "./profile-card";
+import PreferencesCard from "./preferences-card";
 import AllergiesCard from "./allergies-card";
 import LanguageSelectorCard from "./language-selector-card";
 import ApiTokenCard from "./api-token-card";
+import SiteAuthTokensCard from "./site-auth-tokens-card";
 import ArchiveImportCard from "./archive-import-card";
 import DangerZoneCard from "./danger-zone-card";
 
@@ -13,9 +15,11 @@ function UserSettingsContent() {
   return (
     <div className="flex w-full flex-col gap-6">
       <ProfileCard />
+      <PreferencesCard />
       <AllergiesCard />
       <LanguageSelectorCard />
       <ApiTokenCard />
+      <SiteAuthTokensCard />
       <ArchiveImportCard />
       <DangerZoneCard />
     </div>

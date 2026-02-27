@@ -21,7 +21,12 @@ export function BaseProviders({ children, themeProps }: BaseProvidersProps) {
     <NextThemesProvider enableSystem attribute="class" defaultTheme="system" {...themeProps}>
       <HeroUIProvider navigate={(path) => router.push(path)}>
         <TRPCProviderWrapper>
-          <ToastProvider placement="top-center" toastProps={{ timeout: 5000 }} />
+          <ToastProvider
+            maxVisibleToasts={1}
+            placement="top-right"
+            toastOffset={48}
+            toastProps={{ timeout: 5000 }}
+          />
           {children}
         </TRPCProviderWrapper>
       </HeroUIProvider>

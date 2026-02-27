@@ -1,6 +1,6 @@
 {
-  "id": "15eab614-75f3-47f0-b7ce-e01d683d3a0b",
-  "prevId": "a873e373-fec3-4a00-981f-7112a0ca59c5",
+  "id": "b38dc8cc-18f0-42e8-a34d-91ee0dd952d2",
+  "prevId": "9c8e04e6-beb9-4139-b800-7e323f74137e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -374,7 +374,7 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "rateLimitTimeWindow": {
           "name": "rateLimitTimeWindow",
@@ -388,7 +388,7 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "default": 100000
+          "default": 100
         },
         "requestCount": {
           "name": "requestCount",
@@ -1618,6 +1618,14 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "categories": {
+          "name": "categories",
+          "type": "recipe_category[]",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
         }
       },
       "indexes": {
@@ -2462,8 +2470,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.planned_recipes": {
-      "name": "planned_recipes",
+    "public.planned_items": {
+      "name": "planned_items",
       "schema": "",
       "columns": {
         "id": {
@@ -2479,12 +2487,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "recipe_id": {
-          "name": "recipe_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
         "date": {
           "name": "date",
           "type": "date",
@@ -2497,6 +2499,32 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "item_type": {
+          "name": "item_type",
+          "type": "item_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recipe_id": {
+          "name": "recipe_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -2514,8 +2542,8 @@
         }
       },
       "indexes": {
-        "idx_planned_recipes_user_date": {
-          "name": "idx_planned_recipes_user_date",
+        "idx_planned_items_user_date": {
+          "name": "idx_planned_items_user_date",
           "columns": [
             {
               "expression": "user_id",
@@ -2535,8 +2563,8 @@
           "method": "btree",
           "with": {}
         },
-        "idx_planned_recipes_user": {
-          "name": "idx_planned_recipes_user",
+        "idx_planned_items_user": {
+          "name": "idx_planned_items_user",
           "columns": [
             {
               "expression": "user_id",
@@ -2550,8 +2578,35 @@
           "method": "btree",
           "with": {}
         },
-        "idx_planned_recipes_recipe": {
-          "name": "idx_planned_recipes_recipe",
+        "idx_planned_items_date_slot_order": {
+          "name": "idx_planned_items_date_slot_order",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "slot",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sort_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_planned_items_recipe": {
+          "name": "idx_planned_items_recipe",
           "columns": [
             {
               "expression": "recipe_id",
@@ -2567,9 +2622,9 @@
         }
       },
       "foreignKeys": {
-        "planned_recipes_user_id_user_id_fk": {
-          "name": "planned_recipes_user_id_user_id_fk",
-          "tableFrom": "planned_recipes",
+        "planned_items_user_id_user_id_fk": {
+          "name": "planned_items_user_id_user_id_fk",
+          "tableFrom": "planned_items",
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
@@ -2580,9 +2635,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "planned_recipes_recipe_id_recipes_id_fk": {
-          "name": "planned_recipes_recipe_id_recipes_id_fk",
-          "tableFrom": "planned_recipes",
+        "planned_items_recipe_id_recipes_id_fk": {
+          "name": "planned_items_recipe_id_recipes_id_fk",
+          "tableFrom": "planned_items",
           "tableTo": "recipes",
           "columnsFrom": [
             "recipe_id"
@@ -2591,135 +2646,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.notes": {
-      "name": "notes",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "recipe_id": {
-          "name": "recipe_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "date": {
-          "name": "date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "slot": {
-          "name": "slot",
-          "type": "slot_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "idx_notes_user_date": {
-          "name": "idx_notes_user_date",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "date",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_notes_user": {
-          "name": "idx_notes_user",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "notes_user_id_user_id_fk": {
-          "name": "notes_user_id_user_id_fk",
-          "tableFrom": "notes",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "notes_recipe_id_recipes_id_fk": {
-          "name": "notes_recipe_id_recipes_id_fk",
-          "tableFrom": "notes",
-          "tableTo": "recipes",
-          "columnsFrom": [
-            "recipe_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -3539,8 +3465,26 @@
         "us"
       ]
     },
+    "public.item_type": {
+      "name": "item_type",
+      "schema": "public",
+      "values": [
+        "recipe",
+        "note"
+      ]
+    },
     "public.slot_type": {
       "name": "slot_type",
+      "schema": "public",
+      "values": [
+        "Breakfast",
+        "Lunch",
+        "Dinner",
+        "Snack"
+      ]
+    },
+    "public.recipe_category": {
+      "name": "recipe_category",
       "schema": "public",
       "values": [
         "Breakfast",

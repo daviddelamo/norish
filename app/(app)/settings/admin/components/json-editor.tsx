@@ -1,17 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Textarea, Button, Chip } from "@heroui/react";
+import { Textarea, Button } from "@heroui/react";
 import { ArrowPathIcon, CheckIcon, ExclamationTriangleIcon } from "@heroicons/react/16/solid";
 import { useTranslations } from "next-intl";
 
 interface JsonEditorProps {
   value: unknown;
-  onSave: (json: string) => Promise<{ success: boolean; error?: string }>;
-  onRestoreDefaults?: () => Promise<{ success: boolean; error?: string }>;
   label?: string;
-  description?: string;
+  description: string;
+  onSave: (jsonString: string) => Promise<{ success: boolean; error?: string }>;
+  onRestoreDefaults?: () => Promise<{ success: boolean; error?: string }>;
   disabled?: boolean;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 export default function JsonEditor({
@@ -21,6 +22,7 @@ export default function JsonEditor({
   label,
   description,
   disabled = false,
+  onDirtyChange,
 }: JsonEditorProps) {
   const t = useTranslations("settings.admin.jsonEditor");
   const tActions = useTranslations("common.actions");
@@ -31,12 +33,22 @@ export default function JsonEditor({
 
   // Initialize text when value changes
   useEffect(() => {
-    if (value !== undefined) {
-      setText(JSON.stringify(value, null, 2));
+    if (value === undefined) {
+      setText("");
       setIsDirty(false);
       setError(null);
+
+      return;
     }
+
+    setText(JSON.stringify(value, null, 2));
+    setIsDirty(false);
+    setError(null);
   }, [value]);
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const handleTextChange = useCallback(
     (newText: string) => {
@@ -106,11 +118,6 @@ export default function JsonEditor({
       {label && (
         <div className="flex items-center gap-2">
           <span className="font-medium">{label}</span>
-          {isDirty && (
-            <Chip color="warning" size="sm" variant="flat">
-              {t("unsavedChanges")}
-            </Chip>
-          )}
         </div>
       )}
 
@@ -119,14 +126,14 @@ export default function JsonEditor({
       <Textarea
         classNames={{
           input: "font-mono text-sm",
-          inputWrapper: error ? "border-danger" : "",
         }}
-        isDisabled={disabled || saving}
-        maxRows={20}
-        minRows={8}
+        errorMessage={error || undefined}
+        isDisabled={disabled}
+        isInvalid={!!error && text !== ""}
+        minRows={10}
         placeholder={t("placeholder")}
         value={text}
-        onValueChange={handleTextChange}
+        onChange={(e) => handleTextChange(e.target.value)}
       />
 
       {error && (
@@ -149,7 +156,7 @@ export default function JsonEditor({
         {onRestoreDefaults && (
           <Button
             color="warning"
-            isDisabled={disabled || saving}
+            isDisabled={saving}
             startContent={<ArrowPathIcon className="h-5 w-5" />}
             variant="flat"
             onPress={handleRestoreDefaults}

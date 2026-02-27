@@ -2,8 +2,9 @@
 
 import type { ProviderKey, FieldDef, TestResult } from "./types";
 
-import { useState, useCallback } from "react";
-import { Input, useDisclosure, addToast } from "@heroui/react";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { Input, useDisclosure } from "@heroui/react";
+import { useTranslations } from "next-intl";
 
 import { useAdminSettingsContext } from "../../context";
 
@@ -13,6 +14,7 @@ import { TestResultDisplay } from "./test-result-display";
 
 import { ServerConfigKeys, type ServerConfigKey } from "@/server/db/zodSchemas/server-config";
 import SecretInput from "@/components/shared/secret-input";
+import { showSafeErrorToast } from "@/lib/ui/safe-error-toast";
 
 const CONFIG_KEYS: Record<ProviderKey, ServerConfigKey> = {
   oidc: ServerConfigKeys.AUTH_PROVIDER_OIDC,
@@ -25,6 +27,7 @@ interface AuthProviderFormProps {
   providerName: string;
   config: Record<string, unknown> | undefined;
   fields: FieldDef[];
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 export function AuthProviderForm({
@@ -32,7 +35,9 @@ export function AuthProviderForm({
   providerName,
   config,
   fields,
+  onDirtyChange,
 }: AuthProviderFormProps) {
+  const tErrors = useTranslations("common.errors");
   const {
     updateAuthProviderGitHub,
     updateAuthProviderGoogle,
@@ -56,6 +61,24 @@ export function AuthProviderForm({
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [saving, setSaving] = useState(false);
   const deleteModal = useDisclosure();
+
+  const hasChanges = useMemo(
+    () =>
+      fields.some((field) => {
+        const value = values[field.key] ?? "";
+
+        if (field.secret) {
+          return value.trim() !== "";
+        }
+
+        return value !== ((config?.[field.key] as string) ?? "");
+      }),
+    [fields, values, config]
+  );
+
+  useEffect(() => {
+    onDirtyChange?.(hasChanges);
+  }, [hasChanges, onDirtyChange]);
 
   const handleRevealSecret = useCallback(
     (field: string) => () => fetchConfigSecret(CONFIG_KEYS[providerKey], field),
@@ -99,10 +122,11 @@ export function AuthProviderForm({
 
     if (!result.success) {
       deleteModal.onClose();
-      addToast({
-        severity: "danger",
-        title: "Cannot delete provider",
-        description: result.error,
+      showSafeErrorToast({
+        title: tErrors("operationFailed"),
+        description: tErrors("technicalDetails"),
+        error: result.error,
+        context: `admin-auth-provider:delete:${providerKey}`,
       });
 
       return;
@@ -148,6 +172,7 @@ export function AuthProviderForm({
       <TestResultDisplay result={testResult} />
 
       <ProviderActions
+        hasChanges={hasChanges}
         hasConfig={!!config}
         saving={saving}
         testing={testing}

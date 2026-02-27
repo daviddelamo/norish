@@ -52,3 +52,9 @@ bun.lockb
 docker-compose.yml
 instagram-cookies.txt
 
+# archives
+*.tar.gz
+
+.sisyphus
+/.sisyphus
+/.sisyphus/

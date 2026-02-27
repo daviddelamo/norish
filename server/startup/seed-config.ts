@@ -8,6 +8,9 @@ import {
   type AuthProviderGoogle,
   type AuthProviderOIDC,
   type PromptsConfig,
+  type TimerKeywordsConfig,
+  UnitsConfigSchema,
+  UnitsMapSchema,
   DEFAULT_RECIPE_PERMISSION_POLICY,
 } from "../db/zodSchemas/server-config";
 
@@ -18,6 +21,7 @@ import { serverLogger } from "@/server/logger";
 import defaultUnits from "@/config/units.default.json";
 import defaultContentIndicators from "@/config/content-indicators.default.json";
 import defaultRecurrenceConfig from "@/config/recurrence-config.default.json";
+import defaultTimerKeywords from "@/config/timer-keywords.default.json";
 import { loadDefaultPrompts } from "@/server/ai/prompts/loader";
 
 /**
@@ -64,7 +68,7 @@ const REQUIRED_CONFIGS: ConfigDefinition[] = [
   },
   {
     key: ServerConfigKeys.UNITS,
-    getDefaultValue: () => defaultUnits,
+    getDefaultValue: () => ({ units: defaultUnits, isOverridden: false }),
     sensitive: false,
     description: `Units (${Object.keys(defaultUnits).length} definitions)`,
   },
@@ -133,6 +137,12 @@ const REQUIRED_CONFIGS: ConfigDefinition[] = [
     sensitive: false,
     description: `Locale config (${Object.keys(DEFAULT_LOCALE_CONFIG.locales).length} locales)`,
   },
+  {
+    key: ServerConfigKeys.TIMER_KEYWORDS,
+    getDefaultValue: () => ({ ...defaultTimerKeywords, isOverridden: false }),
+    sensitive: false,
+    description: "Timer detection keywords for multilingual support",
+  },
 ];
 
 /**
@@ -150,8 +160,11 @@ export async function seedServerConfig(): Promise<void> {
   const seededCount = await seedMissingConfigs();
 
   await importEnvAuthProvidersIfMissing();
+  await syncUnits();
   await syncPrompts();
   await syncLocales();
+  await syncTimerKeywords();
+
   if (seededCount === 0) {
     serverLogger.info("All server configuration keys present");
   } else {
@@ -462,6 +475,116 @@ async function syncPrompts(): Promise<void> {
 }
 
 /**
+ * Sync timer keywords from default config file
+ * Updates DB if file changes and user hasn't overridden
+ */
+async function syncTimerKeywords(): Promise<void> {
+  const existing = await getConfig<TimerKeywordsConfig>(ServerConfigKeys.TIMER_KEYWORDS);
+
+  // If user has overridden, don't touch it
+  if (existing?.isOverridden) {
+    serverLogger.debug("Timer keywords are overridden by admin, skipping file sync");
+
+    return;
+  }
+
+  const fileDefaults = { ...defaultTimerKeywords, isOverridden: false };
+
+  // If no config exists, seed it
+  if (!existing) {
+    await setConfig(ServerConfigKeys.TIMER_KEYWORDS, fileDefaults, null, false);
+    serverLogger.info("Seeded timer keywords from default config file");
+
+    return;
+  }
+
+  // If config exists but isOverridden=false, check if file has changed
+  const storedComparable = {
+    enabled: existing.enabled,
+    hours: existing.hours,
+    minutes: existing.minutes,
+    seconds: existing.seconds,
+  };
+  const fileComparable = {
+    enabled: fileDefaults.enabled,
+    hours: fileDefaults.hours,
+    minutes: fileDefaults.minutes,
+    seconds: fileDefaults.seconds,
+  };
+
+  if (configsDiffer(storedComparable, fileComparable)) {
+    await setConfig(ServerConfigKeys.TIMER_KEYWORDS, fileDefaults, null, false);
+    serverLogger.info("Updated timer keywords from default file (content changed)");
+  }
+}
+
+/**
+ * Migrate units config to wrapped schema format introduced in v0.16.0.
+ */
+async function syncUnits(): Promise<void> {
+  const existing = await getConfig<unknown>(ServerConfigKeys.UNITS);
+
+  if (!existing) {
+    return;
+  }
+
+  const wrapped = UnitsConfigSchema.safeParse(existing);
+
+  if (wrapped.success) {
+    return;
+  }
+
+  const legacyWrapped =
+    typeof existing === "object" &&
+    existing !== null &&
+    "units" in existing &&
+    "isOverwritten" in existing
+      ? UnitsMapSchema.safeParse((existing as { units: unknown }).units)
+      : null;
+
+  if (legacyWrapped?.success) {
+    await setConfig(
+      ServerConfigKeys.UNITS,
+      { units: legacyWrapped.data, isOverridden: false },
+      null,
+      false
+    );
+    serverLogger.info("Migrated units config flag from isOverwritten to isOverridden");
+
+    return;
+  }
+
+  const legacy = UnitsMapSchema.safeParse(existing);
+
+  if (legacy.success) {
+    await setConfig(
+      ServerConfigKeys.UNITS,
+      { units: legacy.data, isOverridden: false },
+      null,
+      false
+    );
+    serverLogger.info("Migrated units config to wrapped schema format");
+
+    return;
+  }
+
+  await setConfig(
+    ServerConfigKeys.UNITS,
+    { units: defaultUnits, isOverridden: false },
+    null,
+    false
+  );
+  serverLogger.warn("Units config had invalid structure; reset to defaults");
+}
+
+/**
+ * Export for testing - seeds timer keywords if not present or if not overridden
+ */
+export async function seedDefaultTimerKeywords(): Promise<void> {
+  await syncTimerKeywords();
+}
+
+/**
  * Add any new locales from DEFAULT_LOCALE_CONFIG to the DB config.
  * Preserves existing locale settings (enabled/disabled state).
  * Respects ENABLED_LOCALES env var when adding new locales.
@@ -504,7 +627,7 @@ export function getDefaultConfigValue(key: ServerConfigKey): unknown {
     case ServerConfigKeys.REGISTRATION_ENABLED:
       return true;
     case ServerConfigKeys.UNITS:
-      return defaultUnits;
+      return { units: defaultUnits, isOverridden: false };
     case ServerConfigKeys.CONTENT_INDICATORS:
       return defaultContentIndicators;
     case ServerConfigKeys.RECURRENCE_CONFIG:
@@ -534,6 +657,8 @@ export function getDefaultConfigValue(key: ServerConfigKey): unknown {
       return { ...loadDefaultPrompts(), isOverridden: false };
     case ServerConfigKeys.LOCALE_CONFIG:
       return DEFAULT_LOCALE_CONFIG;
+    case ServerConfigKeys.TIMER_KEYWORDS:
+      return { ...defaultTimerKeywords, isOverridden: false };
     default:
       return null;
   }

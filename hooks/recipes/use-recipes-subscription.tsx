@@ -83,6 +83,7 @@ export function useRecipesSubscription() {
                   cookMinutes: updatedRecipe.cookMinutes,
                   totalMinutes: updatedRecipe.totalMinutes,
                   tags: updatedRecipe.tags,
+                  categories: updatedRecipe.categories,
                   updatedAt: updatedRecipe.updatedAt,
                 }
               : r
@@ -226,6 +227,10 @@ export function useRecipesSubscription() {
     trpc.recipes.onFailed.subscriptionOptions(undefined, {
       onData: (payload) => {
         log.info({ reason: payload.reason, recipeId: payload.recipeId }, "[onFailed] Received");
+        log.error(
+          { reason: payload.reason, recipeId: payload.recipeId, url: payload.url },
+          "[onFailed]"
+        );
         if (payload.recipeId) {
           removePendingRecipe(payload.recipeId);
           removeAutoTaggingRecipe(payload.recipeId);
@@ -239,7 +244,7 @@ export function useRecipesSubscription() {
           title: t("failed"),
           shouldShowTimeoutProgress: true,
           radius: "full",
-          description: payload.reason,
+          description: t("failedDescription"),
           classNames: {
             closeButton: "opacity-100 absolute right-4 top-1/2 -translate-y-1/2",
           },
