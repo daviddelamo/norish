@@ -30,30 +30,30 @@ export function I18nProvider({ children, initialLocale = "en" }: I18nProviderPro
     const [isLoading, setIsLoading] = useState(false);
 
     const trpc = useTRPC();
-    const updateLocaleMutation = useMutation(trpc.user.setLocale.mutationOptions());
+    const updatePreferencesMutation = useMutation(trpc.user.updatePreferences.mutationOptions());
 
     // Sync language from user data when available
     const { data: userData } = useQuery(trpc.user.get.queryOptions());
 
     useEffect(() => {
         // Cast to Locale if valid, otherwise ignore
-        const userLocale = userData?.user?.locale as Locale | undefined;
+        const userLocale = userData?.user?.preferences?.locale as Locale | undefined;
         if (userLocale && (userLocale === "en" || userLocale === "es")) {
             setLocaleState(userLocale);
         }
-    }, [userData?.user?.locale]);
+    }, [userData?.user?.preferences?.locale]);
 
     const setLocale = useCallback(
         async (newLocale: Locale) => {
             setIsLoading(true);
             try {
-                await updateLocaleMutation.mutateAsync({ locale: newLocale });
+                await updatePreferencesMutation.mutateAsync({ preferences: { locale: newLocale } });
                 setLocaleState(newLocale);
             } finally {
                 setIsLoading(false);
             }
         },
-        [updateLocaleMutation]
+        [updatePreferencesMutation]
     );
 
     const t = useCallback(
