@@ -5,7 +5,41 @@ import { SERVER_CONFIG } from "./config/env-config-server";
 
 import { auth } from "@/server/auth/auth";
 
+// Simple in-memory rate limiting map
+// note: in a serverless environment this would be reset frequently,
+// but in a containerized long-running process (like Coolify), this persists nicely.
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
 export async function proxy(request: NextRequest) {
+  // --- Rate limiting for API routes ---
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+    const now = Date.now();
+    const windowMs = 60 * 60 * 1000; // 1 hour window
+    const maxRequests = 1000; // 1000 requests per hour
+
+    const record = rateLimitMap.get(ip);
+
+    if (!record || now > record.resetTime) {
+      rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs });
+    } else if (record.count >= maxRequests) {
+      const retryAfter = Math.ceil((record.resetTime - now) / 1000);
+      console.warn(`[Proxy] Rate limit exceeded for IP: ${ip}`);
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        {
+          status: 429,
+          headers: {
+            "X-Retry-After": String(retryAfter),
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    } else {
+      record.count++;
+    }
+  }
+
   // WebSocket upgrade requests should not be redirected - they'll be handled at the app level
   const isWebSocket =
     request.headers.get("upgrade")?.toLowerCase() === "websocket" &&
