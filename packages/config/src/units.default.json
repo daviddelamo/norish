@@ -1,0 +1,3662 @@
+{
+  "centiliter": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "cl"
+      },
+      {
+        "locale": "de",
+        "name": "cl"
+      },
+      {
+        "locale": "nl",
+        "name": "cl"
+      },
+      {
+        "locale": "ko",
+        "name": "cl"
+      },
+      {
+        "locale": "da",
+        "name": "cl"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "centiliters"
+      },
+      {
+        "locale": "de",
+        "name": "cl"
+      },
+      {
+        "locale": "nl",
+        "name": "centiliter"
+      },
+      {
+        "locale": "ko",
+        "name": "센티리터"
+      },
+      {
+        "locale": "da",
+        "name": "cl"
+      }
+    ],
+    "alternates": [
+      "centiliter",
+      "centiliters",
+      "zentiliter",
+      "cl.",
+      "센티리터"
+    ]
+  },
+  "deciliter": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "dl"
+      },
+      {
+        "locale": "de",
+        "name": "dl"
+      },
+      {
+        "locale": "nl",
+        "name": "dl"
+      },
+      {
+        "locale": "ko",
+        "name": "dl"
+      },
+      {
+        "locale": "da",
+        "name": "dl"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "deciliters"
+      },
+      {
+        "locale": "de",
+        "name": "dl"
+      },
+      {
+        "locale": "nl",
+        "name": "deciliter"
+      },
+      {
+        "locale": "ko",
+        "name": "데시리터"
+      },
+      {
+        "locale": "da",
+        "name": "dl"
+      }
+    ],
+    "alternates": [
+      "deciliter",
+      "deciliters",
+      "deziliter",
+      "dl.",
+      "데시리터"
+    ]
+  },
+  "gram": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "g"
+      },
+      {
+        "locale": "de",
+        "name": "g"
+      },
+      {
+        "locale": "nl",
+        "name": "gr"
+      },
+      {
+        "locale": "ko",
+        "name": "g"
+      },
+      {
+        "locale": "da",
+        "name": "g"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "grams"
+      },
+      {
+        "locale": "de",
+        "name": "g"
+      },
+      {
+        "locale": "nl",
+        "name": "gram"
+      },
+      {
+        "locale": "ko",
+        "name": "그램"
+      },
+      {
+        "locale": "da",
+        "name": "g"
+      }
+    ],
+    "alternates": [
+      "g",
+      "g.",
+      "gr",
+      "gr.",
+      "gram",
+      "gramm",
+      "grammen",
+      "그램",
+      "그람"
+    ]
+  },
+  "teaspoon": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "tsp"
+      },
+      {
+        "locale": "de",
+        "name": "TL"
+      },
+      {
+        "locale": "nl",
+        "name": "tl"
+      },
+      {
+        "locale": "ko",
+        "name": "작은술"
+      },
+      {
+        "locale": "da",
+        "name": "tsk"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "teaspoons"
+      },
+      {
+        "locale": "de",
+        "name": "TL"
+      },
+      {
+        "locale": "nl",
+        "name": "theelepels"
+      },
+      {
+        "locale": "ko",
+        "name": "작은술"
+      },
+      {
+        "locale": "da",
+        "name": "tsk"
+      }
+    ],
+    "alternates": [
+      "teel",
+      "teel.",
+      "teelöffel",
+      "teelöff.",
+      "teelöff",
+      "theelepel",
+      "theelepels",
+      "tl",
+      "tl.",
+      "작은술",
+      "티스푼",
+      "tsp",
+      "ts",
+      "t",
+      "tsk.",
+      "teskefuld",
+      "teskefulde"
+    ]
+  },
+  "tablespoon": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "tbsp"
+      },
+      {
+        "locale": "de",
+        "name": "EL"
+      },
+      {
+        "locale": "nl",
+        "name": "el"
+      },
+      {
+        "locale": "ko",
+        "name": "큰술"
+      },
+      {
+        "locale": "da",
+        "name": "spsk"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "tablespoons"
+      },
+      {
+        "locale": "de",
+        "name": "EL"
+      },
+      {
+        "locale": "nl",
+        "name": "eetlepels"
+      },
+      {
+        "locale": "ko",
+        "name": "큰술"
+      },
+      {
+        "locale": "da",
+        "name": "spsk"
+      }
+    ],
+    "alternates": [
+      "eetlepel",
+      "eetlepels",
+      "el",
+      "el.",
+      "essl",
+      "essl.",
+      "esslöffel",
+      "큰술",
+      "테이블스푼",
+      "tbsp",
+      "T",
+      "spsk.",
+      "spiseskefuld",
+      "spiseskefulde"
+    ]
+  },
+  "knife_tip": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "knife tip"
+      },
+      {
+        "locale": "de",
+        "name": "Msp."
+      },
+      {
+        "locale": "nl",
+        "name": "mespunt"
+      },
+      {
+        "locale": "ko",
+        "name": "칼끝"
+      },
+      {
+        "locale": "da",
+        "name": "knivspids"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "knife tips"
+      },
+      {
+        "locale": "de",
+        "name": "Msp."
+      },
+      {
+        "locale": "nl",
+        "name": "mespuntjes"
+      },
+      {
+        "locale": "ko",
+        "name": "칼끝"
+      },
+      {
+        "locale": "da",
+        "name": "knivspidser"
+      }
+    ],
+    "alternates": [
+      "mespunt",
+      "mespuntje",
+      "mespuntjes",
+      "messerspitze",
+      "messerspitzen",
+      "msp",
+      "msp.",
+      "칼끝",
+      "칼끝만큼",
+      "knsp",
+      "knsp."
+    ]
+  },
+  "pinch": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "pinch"
+      },
+      {
+        "locale": "de",
+        "name": "Prise"
+      },
+      {
+        "locale": "nl",
+        "name": "snufje"
+      },
+      {
+        "locale": "ko",
+        "name": "꼬집"
+      },
+      {
+        "locale": "da",
+        "name": "nip"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "pinches"
+      },
+      {
+        "locale": "de",
+        "name": "Prisen"
+      },
+      {
+        "locale": "nl",
+        "name": "snufjes"
+      },
+      {
+        "locale": "ko",
+        "name": "꼬집"
+      },
+      {
+        "locale": "da",
+        "name": "nip"
+      }
+    ],
+    "alternates": [
+      "prise(n)",
+      "prise/n",
+      "a pinch",
+      "dash",
+      "pinch",
+      "pinches",
+      "pr",
+      "pr.",
+      "snufje",
+      "snufjes",
+      "한꼬집",
+      "꼬집",
+      "약간",
+      "et nip",
+      "drys"
+    ]
+  },
+  "piece": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "piece"
+      },
+      {
+        "locale": "de",
+        "name": "Stk."
+      },
+      {
+        "locale": "nl",
+        "name": "stuk"
+      },
+      {
+        "locale": "ko",
+        "name": "개"
+      },
+      {
+        "locale": "da",
+        "name": "stk."
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "pieces"
+      },
+      {
+        "locale": "de",
+        "name": "Stk."
+      },
+      {
+        "locale": "nl",
+        "name": "stuks"
+      },
+      {
+        "locale": "ko",
+        "name": "개"
+      },
+      {
+        "locale": "da",
+        "name": "stk."
+      }
+    ],
+    "alternates": [
+      "pc",
+      "pc.",
+      "pcs",
+      "pcs.",
+      "piece",
+      "pieces",
+      "stk",
+      "stk.",
+      "stück",
+      "stücke",
+      "stuk",
+      "stukje",
+      "stukjes",
+      "stuks",
+      "stückchen",
+      "개",
+      "장",
+      "모",
+      "토막",
+      "styk",
+      "styks"
+    ]
+  },
+  "clove": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "clove"
+      },
+      {
+        "locale": "de",
+        "name": "Zehe"
+      },
+      {
+        "locale": "nl",
+        "name": "teen"
+      },
+      {
+        "locale": "ko",
+        "name": "쪽"
+      },
+      {
+        "locale": "da",
+        "name": "fed"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "cloves"
+      },
+      {
+        "locale": "de",
+        "name": "Zehen"
+      },
+      {
+        "locale": "nl",
+        "name": "tenen"
+      },
+      {
+        "locale": "ko",
+        "name": "쪽"
+      },
+      {
+        "locale": "da",
+        "name": "fed"
+      }
+    ],
+    "alternates": [
+      "zehe(n)",
+      "zehe/n",
+      "teen",
+      "teentje",
+      "teentjes",
+      "tenen",
+      "쪽",
+      "톨",
+      "hvidløgsfed"
+    ]
+  },
+  "leaf": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "leaf"
+      },
+      {
+        "locale": "de",
+        "name": "Blatt"
+      },
+      {
+        "locale": "nl",
+        "name": "blaadje"
+      },
+      {
+        "locale": "ko",
+        "name": "잎"
+      },
+      {
+        "locale": "da",
+        "name": "blad"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "leaves"
+      },
+      {
+        "locale": "de",
+        "name": "Blätter"
+      },
+      {
+        "locale": "nl",
+        "name": "blaadjes"
+      },
+      {
+        "locale": "ko",
+        "name": "잎"
+      },
+      {
+        "locale": "da",
+        "name": "blade"
+      }
+    ],
+    "alternates": [
+      "blaadje",
+      "blaadjes",
+      "bladeren",
+      "blättchen",
+      "leaf",
+      "leaves",
+      "잎",
+      "장"
+    ]
+  },
+  "sprig": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "sprig"
+      },
+      {
+        "locale": "de",
+        "name": "Zweig"
+      },
+      {
+        "locale": "nl",
+        "name": "takje"
+      },
+      {
+        "locale": "ko",
+        "name": "줄기"
+      },
+      {
+        "locale": "da",
+        "name": "kvist"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "sprigs"
+      },
+      {
+        "locale": "de",
+        "name": "Zweige"
+      },
+      {
+        "locale": "nl",
+        "name": "takjes"
+      },
+      {
+        "locale": "ko",
+        "name": "줄기"
+      },
+      {
+        "locale": "da",
+        "name": "kviste"
+      }
+    ],
+    "alternates": [
+      "sprig",
+      "sprigs",
+      "sprigs of",
+      "stengel",
+      "stiel",
+      "stiele",
+      "stängel",
+      "stängelchen",
+      "tak",
+      "takje",
+      "takjes",
+      "takken",
+      "zweiglein",
+      "줄기",
+      "가지",
+      "stilk",
+      "stilke"
+    ]
+  },
+  "bunch": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "bunch"
+      },
+      {
+        "locale": "de",
+        "name": "Bund"
+      },
+      {
+        "locale": "nl",
+        "name": "bos"
+      },
+      {
+        "locale": "ko",
+        "name": "다발"
+      },
+      {
+        "locale": "da",
+        "name": "bundt"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "bunches"
+      },
+      {
+        "locale": "de",
+        "name": "Bünde"
+      },
+      {
+        "locale": "nl",
+        "name": "bossen"
+      },
+      {
+        "locale": "ko",
+        "name": "다발"
+      },
+      {
+        "locale": "da",
+        "name": "bundter"
+      }
+    ],
+    "alternates": [
+      "bd",
+      "bosje",
+      "bosjes",
+      "bossen",
+      "bunch",
+      "bunches",
+      "bund",
+      "bündel",
+      "büschel",
+      "다발",
+      "한단",
+      "단"
+    ]
+  },
+  "stalk": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "stalk"
+      },
+      {
+        "locale": "de",
+        "name": "Stängel"
+      },
+      {
+        "locale": "nl",
+        "name": "stengel"
+      },
+      {
+        "locale": "ko",
+        "name": "대"
+      },
+      {
+        "locale": "da",
+        "name": "stængel"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "stalks"
+      },
+      {
+        "locale": "de",
+        "name": "Stängel"
+      },
+      {
+        "locale": "nl",
+        "name": "stengels"
+      },
+      {
+        "locale": "ko",
+        "name": "대"
+      },
+      {
+        "locale": "da",
+        "name": "stængler"
+      }
+    ],
+    "alternates": [
+      "stengel",
+      "stengels",
+      "대",
+      "줄기",
+      "stilk",
+      "stilke"
+    ]
+  },
+  "pack": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "pack"
+      },
+      {
+        "locale": "de",
+        "name": "Pck."
+      },
+      {
+        "locale": "nl",
+        "name": "pak"
+      },
+      {
+        "locale": "ko",
+        "name": "팩"
+      },
+      {
+        "locale": "da",
+        "name": "pakke"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "packs"
+      },
+      {
+        "locale": "de",
+        "name": "Pck."
+      },
+      {
+        "locale": "nl",
+        "name": "pakken"
+      },
+      {
+        "locale": "ko",
+        "name": "팩"
+      },
+      {
+        "locale": "da",
+        "name": "pakker"
+      }
+    ],
+    "alternates": [
+      "pack",
+      "packet",
+      "packets",
+      "packs",
+      "packung",
+      "packungen",
+      "pak",
+      "pakje",
+      "pakjes",
+      "pakken",
+      "pck",
+      "pck.",
+      "pkg",
+      "pkg.",
+      "pkgs",
+      "päckchen",
+      "팩",
+      "봉",
+      "봉지",
+      "포",
+      "pk."
+    ]
+  },
+  "can": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "can"
+      },
+      {
+        "locale": "de",
+        "name": "Dose"
+      },
+      {
+        "locale": "nl",
+        "name": "blik"
+      },
+      {
+        "locale": "ko",
+        "name": "캔"
+      },
+      {
+        "locale": "da",
+        "name": "dåse"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "cans"
+      },
+      {
+        "locale": "de",
+        "name": "Dosen"
+      },
+      {
+        "locale": "nl",
+        "name": "blikken"
+      },
+      {
+        "locale": "ko",
+        "name": "캔"
+      },
+      {
+        "locale": "da",
+        "name": "dåser"
+      }
+    ],
+    "alternates": [
+      "dose(n)",
+      "dose/n",
+      "blik",
+      "blikje",
+      "blikjes",
+      "blikken",
+      "büchse",
+      "büchsen",
+      "can",
+      "cans",
+      "ds",
+      "ds.",
+      "döschen",
+      "kl. dose",
+      "kl. dosen",
+      "kleine dose",
+      "kleine dosen",
+      "tin",
+      "캔",
+      "통"
+    ]
+  },
+  "jar": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "jar"
+      },
+      {
+        "locale": "de",
+        "name": "Glas"
+      },
+      {
+        "locale": "nl",
+        "name": "pot"
+      },
+      {
+        "locale": "ko",
+        "name": "병"
+      },
+      {
+        "locale": "da",
+        "name": "glas"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "jars"
+      },
+      {
+        "locale": "de",
+        "name": "Gläser"
+      },
+      {
+        "locale": "nl",
+        "name": "potten"
+      },
+      {
+        "locale": "ko",
+        "name": "병"
+      },
+      {
+        "locale": "da",
+        "name": "glas"
+      }
+    ],
+    "alternates": [
+      "e.m. glas",
+      "e.m. gläser",
+      "e.m.glas",
+      "e.m.gläser",
+      "jar",
+      "jars",
+      "mason jar",
+      "pot",
+      "potten",
+      "병",
+      "유리병"
+    ]
+  },
+  "bottle": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "bottle"
+      },
+      {
+        "locale": "de",
+        "name": "Fl."
+      },
+      {
+        "locale": "nl",
+        "name": "fles"
+      },
+      {
+        "locale": "ko",
+        "name": "병"
+      },
+      {
+        "locale": "da",
+        "name": "fl."
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "bottles"
+      },
+      {
+        "locale": "de",
+        "name": "Fl."
+      },
+      {
+        "locale": "nl",
+        "name": "flessen"
+      },
+      {
+        "locale": "ko",
+        "name": "병"
+      },
+      {
+        "locale": "da",
+        "name": "flasker"
+      }
+    ],
+    "alternates": [
+      "flasche",
+      "flaschen",
+      "bottle",
+      "bottles",
+      "btl",
+      "btls",
+      "fl",
+      "fl.",
+      "fles",
+      "flesje",
+      "flesjes",
+      "flessen",
+      "fläschchen",
+      "병"
+    ]
+  },
+  "bag": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "bag"
+      },
+      {
+        "locale": "de",
+        "name": "Btl."
+      },
+      {
+        "locale": "nl",
+        "name": "zak"
+      },
+      {
+        "locale": "ko",
+        "name": "봉지"
+      },
+      {
+        "locale": "da",
+        "name": "pose"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "bags"
+      },
+      {
+        "locale": "de",
+        "name": "Btl."
+      },
+      {
+        "locale": "nl",
+        "name": "zakken"
+      },
+      {
+        "locale": "ko",
+        "name": "봉지"
+      },
+      {
+        "locale": "da",
+        "name": "poser"
+      }
+    ],
+    "alternates": [
+      "bag",
+      "bags",
+      "btl",
+      "btl.",
+      "beutel",
+      "sack",
+      "tütchen",
+      "tüte",
+      "tüten",
+      "zak",
+      "zakje",
+      "zakjes",
+      "zakken",
+      "봉지",
+      "자루"
+    ]
+  },
+  "box": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "box"
+      },
+      {
+        "locale": "de",
+        "name": "Schachtel"
+      },
+      {
+        "locale": "nl",
+        "name": "doos"
+      },
+      {
+        "locale": "ko",
+        "name": "박스"
+      },
+      {
+        "locale": "da",
+        "name": "æske"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "boxes"
+      },
+      {
+        "locale": "de",
+        "name": "Schachteln"
+      },
+      {
+        "locale": "nl",
+        "name": "dozen"
+      },
+      {
+        "locale": "ko",
+        "name": "박스"
+      },
+      {
+        "locale": "da",
+        "name": "æsker"
+      }
+    ],
+    "alternates": [
+      "box",
+      "boxes",
+      "bx",
+      "bx.",
+      "doosje",
+      "doosjes",
+      "dozen",
+      "박스",
+      "상자"
+    ]
+  },
+  "handful": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "handful"
+      },
+      {
+        "locale": "de",
+        "name": "Handvoll"
+      },
+      {
+        "locale": "nl",
+        "name": "handje"
+      },
+      {
+        "locale": "ko",
+        "name": "한줌"
+      },
+      {
+        "locale": "da",
+        "name": "håndfuld"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "handfuls"
+      },
+      {
+        "locale": "de",
+        "name": "Handvoll"
+      },
+      {
+        "locale": "nl",
+        "name": "handjes"
+      },
+      {
+        "locale": "ko",
+        "name": "한줌"
+      },
+      {
+        "locale": "da",
+        "name": "håndfulde"
+      }
+    ],
+    "alternates": [
+      "a handful",
+      "hand voll",
+      "handful",
+      "handfuls",
+      "handje",
+      "handjes",
+      "handvol",
+      "handvullen",
+      "hdv",
+      "hdv.",
+      "한줌",
+      "줌"
+    ]
+  },
+  "splash": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "splash"
+      },
+      {
+        "locale": "de",
+        "name": "Schuss"
+      },
+      {
+        "locale": "nl",
+        "name": "scheut"
+      },
+      {
+        "locale": "ko",
+        "name": "약간"
+      },
+      {
+        "locale": "da",
+        "name": "skvæt"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "splashes"
+      },
+      {
+        "locale": "de",
+        "name": "Schuss"
+      },
+      {
+        "locale": "nl",
+        "name": "scheuten"
+      },
+      {
+        "locale": "ko",
+        "name": "약간"
+      },
+      {
+        "locale": "da",
+        "name": "skvæt"
+      }
+    ],
+    "alternates": [
+      "a splash",
+      "scheut",
+      "scheuten",
+      "scheutje",
+      "scheutjes",
+      "schuß",
+      "splash",
+      "splashes",
+      "약간",
+      "조금",
+      "et skvæt",
+      "slat",
+      "slatter"
+    ]
+  },
+  "cup": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "cup"
+      },
+      {
+        "locale": "de",
+        "name": "Tasse"
+      },
+      {
+        "locale": "nl",
+        "name": "kop"
+      },
+      {
+        "locale": "ko",
+        "name": "컵"
+      },
+      {
+        "locale": "da",
+        "name": "kop"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "cups"
+      },
+      {
+        "locale": "de",
+        "name": "Tassen"
+      },
+      {
+        "locale": "nl",
+        "name": "koppen"
+      },
+      {
+        "locale": "ko",
+        "name": "컵"
+      },
+      {
+        "locale": "da",
+        "name": "kopper"
+      }
+    ],
+    "alternates": [
+      "beh",
+      "beh.",
+      "gr. tasse",
+      "gr. tassen",
+      "große tasse",
+      "große tassen",
+      "kl. tasse",
+      "kl. tassen",
+      "kleine tasse",
+      "kleine tassen",
+      "kop",
+      "kopje",
+      "kopjes",
+      "koppen",
+      "tass",
+      "tass.",
+      "tässchen",
+      "컵",
+      "공기",
+      "pægl"
+    ]
+  },
+  "glass": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "glass"
+      },
+      {
+        "locale": "de",
+        "name": "Glas"
+      },
+      {
+        "locale": "nl",
+        "name": "glas"
+      },
+      {
+        "locale": "ko",
+        "name": "잔"
+      },
+      {
+        "locale": "da",
+        "name": "glas"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "glasses"
+      },
+      {
+        "locale": "de",
+        "name": "Gläser"
+      },
+      {
+        "locale": "nl",
+        "name": "glazen"
+      },
+      {
+        "locale": "ko",
+        "name": "잔"
+      },
+      {
+        "locale": "da",
+        "name": "glas"
+      }
+    ],
+    "alternates": [
+      "glas",
+      "glazen",
+      "gläschen",
+      "gr. glas",
+      "großes glas",
+      "kl. glas",
+      "kleines glas",
+      "shotglas",
+      "잔",
+      "컵"
+    ]
+  },
+  "slice": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "slice"
+      },
+      {
+        "locale": "de",
+        "name": "Scheibe"
+      },
+      {
+        "locale": "nl",
+        "name": "plakje"
+      },
+      {
+        "locale": "ko",
+        "name": "조각"
+      },
+      {
+        "locale": "da",
+        "name": "skive"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "slices"
+      },
+      {
+        "locale": "de",
+        "name": "Scheiben"
+      },
+      {
+        "locale": "nl",
+        "name": "plakjes"
+      },
+      {
+        "locale": "ko",
+        "name": "조각"
+      },
+      {
+        "locale": "da",
+        "name": "skiver"
+      }
+    ],
+    "alternates": [
+      "scheibe(n)",
+      "scheibe/n",
+      "plakje",
+      "plakjes",
+      "plakken",
+      "scheibchen",
+      "slc",
+      "slcs",
+      "slice",
+      "slices",
+      "조각",
+      "슬라이스"
+    ]
+  },
+  "strip": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "strip"
+      },
+      {
+        "locale": "de",
+        "name": "Streifen"
+      },
+      {
+        "locale": "nl",
+        "name": "reepje"
+      },
+      {
+        "locale": "ko",
+        "name": "채"
+      },
+      {
+        "locale": "da",
+        "name": "strimmel"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "strips"
+      },
+      {
+        "locale": "de",
+        "name": "Streifen"
+      },
+      {
+        "locale": "nl",
+        "name": "reepjes"
+      },
+      {
+        "locale": "ko",
+        "name": "채"
+      },
+      {
+        "locale": "da",
+        "name": "strimler"
+      }
+    ],
+    "alternates": [
+      "reepje",
+      "reepjes",
+      "repen",
+      "strip",
+      "strips",
+      "채",
+      "가늘게썬조각"
+    ]
+  },
+  "sheet": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "sheet"
+      },
+      {
+        "locale": "de",
+        "name": "Blatt"
+      },
+      {
+        "locale": "nl",
+        "name": "vel"
+      },
+      {
+        "locale": "ko",
+        "name": "장"
+      },
+      {
+        "locale": "da",
+        "name": "ark"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "sheets"
+      },
+      {
+        "locale": "de",
+        "name": "Blätter"
+      },
+      {
+        "locale": "nl",
+        "name": "vellen"
+      },
+      {
+        "locale": "ko",
+        "name": "장"
+      },
+      {
+        "locale": "da",
+        "name": "ark"
+      }
+    ],
+    "alternates": [
+      "vel",
+      "vellen",
+      "velletje",
+      "velletjes",
+      "장"
+    ]
+  },
+  "serving": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "serving"
+      },
+      {
+        "locale": "de",
+        "name": "Portion"
+      },
+      {
+        "locale": "nl",
+        "name": "portie"
+      },
+      {
+        "locale": "ko",
+        "name": "인분"
+      },
+      {
+        "locale": "da",
+        "name": "portion"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "servings"
+      },
+      {
+        "locale": "de",
+        "name": "Portionen"
+      },
+      {
+        "locale": "nl",
+        "name": "porties"
+      },
+      {
+        "locale": "ko",
+        "name": "인분"
+      },
+      {
+        "locale": "da",
+        "name": "portioner"
+      }
+    ],
+    "alternates": [
+      "port",
+      "port.",
+      "portie",
+      "porties",
+      "portion",
+      "portions",
+      "serving",
+      "servings",
+      "인분"
+    ]
+  },
+  "round_slice": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "round"
+      },
+      {
+        "locale": "de",
+        "name": "Scheibe"
+      },
+      {
+        "locale": "nl",
+        "name": "schijf"
+      },
+      {
+        "locale": "ko",
+        "name": "둥근 조각"
+      },
+      {
+        "locale": "da",
+        "name": "skive"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "rounds"
+      },
+      {
+        "locale": "de",
+        "name": "Scheiben"
+      },
+      {
+        "locale": "nl",
+        "name": "schijven"
+      },
+      {
+        "locale": "ko",
+        "name": "둥근 조각"
+      },
+      {
+        "locale": "da",
+        "name": "skiver"
+      }
+    ],
+    "alternates": [
+      "schijfje",
+      "schijfjes",
+      "schijven",
+      "둥근 조각",
+      "동그랗게 썬 것",
+      "rundskive",
+      "rundtenom"
+    ]
+  },
+  "ring": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "ring"
+      },
+      {
+        "locale": "de",
+        "name": "Ring"
+      },
+      {
+        "locale": "nl",
+        "name": "ring"
+      },
+      {
+        "locale": "ko",
+        "name": "링"
+      },
+      {
+        "locale": "da",
+        "name": "ring"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "rings"
+      },
+      {
+        "locale": "de",
+        "name": "Ringe"
+      },
+      {
+        "locale": "nl",
+        "name": "ringen"
+      },
+      {
+        "locale": "ko",
+        "name": "링"
+      },
+      {
+        "locale": "da",
+        "name": "ringe"
+      }
+    ],
+    "alternates": [
+      "ring",
+      "ringen",
+      "ringlein",
+      "링",
+      "고리 모양",
+      "ringe"
+    ]
+  },
+  "ball": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "ball"
+      },
+      {
+        "locale": "de",
+        "name": "Kugel"
+      },
+      {
+        "locale": "nl",
+        "name": "bol"
+      },
+      {
+        "locale": "ko",
+        "name": "알"
+      },
+      {
+        "locale": "da",
+        "name": "kugle"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "balls"
+      },
+      {
+        "locale": "de",
+        "name": "Kugeln"
+      },
+      {
+        "locale": "nl",
+        "name": "bollen"
+      },
+      {
+        "locale": "ko",
+        "name": "알"
+      },
+      {
+        "locale": "da",
+        "name": "kugler"
+      }
+    ],
+    "alternates": [
+      "bol",
+      "bollen",
+      "bolletje",
+      "bolletjes",
+      "kügelchen",
+      "알",
+      "경단",
+      "볼"
+    ]
+  },
+  "dash": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "dash"
+      },
+      {
+        "locale": "de",
+        "name": "Spritzer"
+      },
+      {
+        "locale": "nl",
+        "name": "scheutje"
+      },
+      {
+        "locale": "ko",
+        "name": "약간"
+      },
+      {
+        "locale": "da",
+        "name": "stænk"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "dashes"
+      },
+      {
+        "locale": "de",
+        "name": "Spritzer"
+      },
+      {
+        "locale": "nl",
+        "name": "scheutjes"
+      },
+      {
+        "locale": "ko",
+        "name": "약간"
+      },
+      {
+        "locale": "da",
+        "name": "stænk"
+      }
+    ],
+    "alternates": [
+      "a dash",
+      "dash",
+      "dashes",
+      "약간",
+      "소량",
+      "et stænk"
+    ]
+  },
+  "drizzle": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "drizzle"
+      },
+      {
+        "locale": "de",
+        "name": "Spritzer"
+      },
+      {
+        "locale": "nl",
+        "name": "scheutje"
+      },
+      {
+        "locale": "ko",
+        "name": "살짝"
+      },
+      {
+        "locale": "da",
+        "name": "dryp"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "drizzles"
+      },
+      {
+        "locale": "de",
+        "name": "Spritzer"
+      },
+      {
+        "locale": "nl",
+        "name": "scheutjes"
+      },
+      {
+        "locale": "ko",
+        "name": "살짝"
+      },
+      {
+        "locale": "da",
+        "name": "dryp"
+      }
+    ],
+    "alternates": [
+      "a drizzle",
+      "drizzle",
+      "drizzles",
+      "spritzerchen",
+      "살짝",
+      "뿌림"
+    ]
+  },
+  "scoop": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "scoop"
+      },
+      {
+        "locale": "de",
+        "name": "Kugel"
+      },
+      {
+        "locale": "nl",
+        "name": "bolletje"
+      },
+      {
+        "locale": "ko",
+        "name": "스쿱"
+      },
+      {
+        "locale": "da",
+        "name": "kugle"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "scoops"
+      },
+      {
+        "locale": "de",
+        "name": "Kugeln"
+      },
+      {
+        "locale": "nl",
+        "name": "bolletjes"
+      },
+      {
+        "locale": "ko",
+        "name": "스쿱"
+      },
+      {
+        "locale": "da",
+        "name": "kugler"
+      }
+    ],
+    "alternates": [
+      "scoop",
+      "scoops",
+      "스쿱",
+      "국자"
+    ]
+  },
+  "stick": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "stick"
+      },
+      {
+        "locale": "de",
+        "name": "Stange"
+      },
+      {
+        "locale": "nl",
+        "name": "staaf"
+      },
+      {
+        "locale": "ko",
+        "name": "막대"
+      },
+      {
+        "locale": "da",
+        "name": "stang"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "sticks"
+      },
+      {
+        "locale": "de",
+        "name": "Stangen"
+      },
+      {
+        "locale": "nl",
+        "name": "staven"
+      },
+      {
+        "locale": "ko",
+        "name": "막대"
+      },
+      {
+        "locale": "da",
+        "name": "stænger"
+      }
+    ],
+    "alternates": [
+      "stick",
+      "stick(s)",
+      "sticks",
+      "stänglein",
+      "막대",
+      "스틱"
+    ]
+  },
+  "tub": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "tub"
+      },
+      {
+        "locale": "de",
+        "name": "Becher"
+      },
+      {
+        "locale": "nl",
+        "name": "bakje"
+      },
+      {
+        "locale": "ko",
+        "name": "통"
+      },
+      {
+        "locale": "da",
+        "name": "bæger"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "tubs"
+      },
+      {
+        "locale": "de",
+        "name": "Becher"
+      },
+      {
+        "locale": "nl",
+        "name": "bakjes"
+      },
+      {
+        "locale": "ko",
+        "name": "통"
+      },
+      {
+        "locale": "da",
+        "name": "bægre"
+      }
+    ],
+    "alternates": [
+      "container",
+      "tub",
+      "tubs",
+      "통",
+      "용기"
+    ]
+  },
+  "capful": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "capful"
+      },
+      {
+        "locale": "de",
+        "name": "Verschluss"
+      },
+      {
+        "locale": "nl",
+        "name": "dop"
+      },
+      {
+        "locale": "ko",
+        "name": "뚜껑"
+      },
+      {
+        "locale": "da",
+        "name": "hætte"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "capfuls"
+      },
+      {
+        "locale": "de",
+        "name": "Verschlüsse"
+      },
+      {
+        "locale": "nl",
+        "name": "doppen"
+      },
+      {
+        "locale": "ko",
+        "name": "뚜껑"
+      },
+      {
+        "locale": "da",
+        "name": "hætter"
+      }
+    ],
+    "alternates": [
+      "cap full",
+      "capful",
+      "capfuls",
+      "뚜껑",
+      "캡"
+    ]
+  },
+  "pouch": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "pouch"
+      },
+      {
+        "locale": "de",
+        "name": "Beutel"
+      },
+      {
+        "locale": "nl",
+        "name": "zakje"
+      },
+      {
+        "locale": "ko",
+        "name": "파우치"
+      },
+      {
+        "locale": "da",
+        "name": "pose"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "pouches"
+      },
+      {
+        "locale": "de",
+        "name": "Beutel"
+      },
+      {
+        "locale": "nl",
+        "name": "zakjes"
+      },
+      {
+        "locale": "ko",
+        "name": "파우치"
+      },
+      {
+        "locale": "da",
+        "name": "poser"
+      }
+    ],
+    "alternates": [
+      "pouch",
+      "pouches",
+      "파우치",
+      "주머니"
+    ]
+  },
+  "sleeve": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "sleeve"
+      },
+      {
+        "locale": "de",
+        "name": "Packung"
+      },
+      {
+        "locale": "nl",
+        "name": "verpakking"
+      },
+      {
+        "locale": "ko",
+        "name": "봉지"
+      },
+      {
+        "locale": "da",
+        "name": "omslag"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "sleeves"
+      },
+      {
+        "locale": "de",
+        "name": "Packungen"
+      },
+      {
+        "locale": "nl",
+        "name": "verpakkingen"
+      },
+      {
+        "locale": "ko",
+        "name": "봉지"
+      },
+      {
+        "locale": "da",
+        "name": "omslag"
+      }
+    ],
+    "alternates": [
+      "sleeve",
+      "sleeves",
+      "봉지",
+      "묶음"
+    ]
+  },
+  "roll": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "roll"
+      },
+      {
+        "locale": "de",
+        "name": "Rolle"
+      },
+      {
+        "locale": "nl",
+        "name": "rol"
+      },
+      {
+        "locale": "ko",
+        "name": "롤"
+      },
+      {
+        "locale": "da",
+        "name": "rulle"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "rolls"
+      },
+      {
+        "locale": "de",
+        "name": "Rollen"
+      },
+      {
+        "locale": "nl",
+        "name": "rollen"
+      },
+      {
+        "locale": "ko",
+        "name": "롤"
+      },
+      {
+        "locale": "da",
+        "name": "ruller"
+      }
+    ],
+    "alternates": [
+      "roll",
+      "rolls",
+      "röllchen",
+      "롤",
+      "말이"
+    ]
+  },
+  "ear": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "ear"
+      },
+      {
+        "locale": "de",
+        "name": "Kolben"
+      },
+      {
+        "locale": "nl",
+        "name": "kolf"
+      },
+      {
+        "locale": "ko",
+        "name": "개"
+      },
+      {
+        "locale": "da",
+        "name": "kolbe"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "ears"
+      },
+      {
+        "locale": "de",
+        "name": "Kolben"
+      },
+      {
+        "locale": "nl",
+        "name": "kolven"
+      },
+      {
+        "locale": "ko",
+        "name": "개"
+      },
+      {
+        "locale": "da",
+        "name": "kolber"
+      }
+    ],
+    "alternates": [
+      "ear",
+      "ear of corn",
+      "ears",
+      "ears of corn",
+      "개",
+      "이삭",
+      "majskolbe"
+    ]
+  },
+  "wedge": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "wedge"
+      },
+      {
+        "locale": "de",
+        "name": "Spalte"
+      },
+      {
+        "locale": "nl",
+        "name": "part"
+      },
+      {
+        "locale": "ko",
+        "name": "쪽"
+      },
+      {
+        "locale": "da",
+        "name": "båd"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "wedges"
+      },
+      {
+        "locale": "de",
+        "name": "Spalten"
+      },
+      {
+        "locale": "nl",
+        "name": "parten"
+      },
+      {
+        "locale": "ko",
+        "name": "쪽"
+      },
+      {
+        "locale": "da",
+        "name": "både"
+      }
+    ],
+    "alternates": [
+      "ecke",
+      "keil",
+      "wedge",
+      "wedges",
+      "쪽"
+    ]
+  },
+  "chunk": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "chunk"
+      },
+      {
+        "locale": "de",
+        "name": "Stück"
+      },
+      {
+        "locale": "nl",
+        "name": "stuk"
+      },
+      {
+        "locale": "ko",
+        "name": "덩어리"
+      },
+      {
+        "locale": "da",
+        "name": "klump"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "chunks"
+      },
+      {
+        "locale": "de",
+        "name": "Stücke"
+      },
+      {
+        "locale": "nl",
+        "name": "stukken"
+      },
+      {
+        "locale": "ko",
+        "name": "덩어리"
+      },
+      {
+        "locale": "da",
+        "name": "klumper"
+      }
+    ],
+    "alternates": [
+      "chunk",
+      "chunks",
+      "덩어리",
+      "토막"
+    ]
+  },
+  "cube": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "cube"
+      },
+      {
+        "locale": "de",
+        "name": "Würfel"
+      },
+      {
+        "locale": "nl",
+        "name": "blokje"
+      },
+      {
+        "locale": "ko",
+        "name": "깍둑"
+      },
+      {
+        "locale": "da",
+        "name": "terning"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "cubes"
+      },
+      {
+        "locale": "de",
+        "name": "Würfel"
+      },
+      {
+        "locale": "nl",
+        "name": "blokjes"
+      },
+      {
+        "locale": "ko",
+        "name": "깍둑"
+      },
+      {
+        "locale": "da",
+        "name": "terninger"
+      }
+    ],
+    "alternates": [
+      "cube",
+      "cubes",
+      "würfelchen",
+      "깍둑썰기",
+      "큐브"
+    ]
+  },
+  "fillet": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "fillet"
+      },
+      {
+        "locale": "de",
+        "name": "Filet"
+      },
+      {
+        "locale": "nl",
+        "name": "filet"
+      },
+      {
+        "locale": "ko",
+        "name": "토막"
+      },
+      {
+        "locale": "da",
+        "name": "filet"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "fillets"
+      },
+      {
+        "locale": "de",
+        "name": "Filets"
+      },
+      {
+        "locale": "nl",
+        "name": "filets"
+      },
+      {
+        "locale": "ko",
+        "name": "토막"
+      },
+      {
+        "locale": "da",
+        "name": "fileter"
+      }
+    ],
+    "alternates": [
+      "filet",
+      "filets",
+      "fillet",
+      "fillets",
+      "토막",
+      "필렛",
+      "필레"
+    ]
+  },
+  "heaping_tablespoon": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "heaping tbsp"
+      },
+      {
+        "locale": "de",
+        "name": "geh. EL"
+      },
+      {
+        "locale": "nl",
+        "name": "ruime el"
+      },
+      {
+        "locale": "ko",
+        "name": "수북한 큰술"
+      },
+      {
+        "locale": "da",
+        "name": "toppet spsk"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "heaping tablespoons"
+      },
+      {
+        "locale": "de",
+        "name": "geh. EL"
+      },
+      {
+        "locale": "nl",
+        "name": "ruime eetlepels"
+      },
+      {
+        "locale": "ko",
+        "name": "수북한 큰술"
+      },
+      {
+        "locale": "da",
+        "name": "toppet spsk"
+      }
+    ],
+    "alternates": [
+      "gehäufte esslöffel",
+      "gehäufter esslöffel",
+      "gehäufte el",
+      "gehäufter el",
+      "el, gehäuft",
+      "el, geh.",
+      "el gehäuft",
+      "el geh.",
+      "großzügige el",
+      "großzügige esslöffel",
+      "großzügiger el",
+      "großzügiger esslöffel",
+      "heaping tablespoon",
+      "heaping tablespoons",
+      "수북한 큰술",
+      "수북이 큰술",
+      "toppet spsk.",
+      "toppet spiseskefuld",
+      "spiseskefuld med top",
+      "spiseske med top",
+      "spsk med top",
+      "spsk m. top",
+      "spsk. m. top"
+    ]
+  },
+  "scant_tablespoon": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "scant tbsp"
+      },
+      {
+        "locale": "de",
+        "name": "gestr. EL"
+      },
+      {
+        "locale": "nl",
+        "name": "schaarse el"
+      },
+      {
+        "locale": "ko",
+        "name": "깎은 큰술"
+      },
+      {
+        "locale": "da",
+        "name": "strøget spsk"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "scant tablespoons"
+      },
+      {
+        "locale": "de",
+        "name": "gestr. EL"
+      },
+      {
+        "locale": "nl",
+        "name": "schaarse eetlepels"
+      },
+      {
+        "locale": "ko",
+        "name": "깎은 큰술"
+      },
+      {
+        "locale": "da",
+        "name": "strøget spsk"
+      }
+    ],
+    "alternates": [
+      "el, gestr.",
+      "el, gestrichen",
+      "el gestr.",
+      "el gestrichen",
+      "gestrichene el",
+      "gestrichene esslöffel",
+      "gestrichener el",
+      "gestrichener esslöffel",
+      "knappe el",
+      "knapper el",
+      "knappe esslöffel",
+      "knapper esslöffel",
+      "scant tablespoon",
+      "scant tablespoons",
+      "깎은 큰술",
+      "strøget spsk.",
+      "strøget spiseskefuld",
+      "strøget spiseske"
+    ]
+  },
+  "generous_pinch": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "generous pinch"
+      },
+      {
+        "locale": "de",
+        "name": "großzügige Prise"
+      },
+      {
+        "locale": "nl",
+        "name": "ruim snufje"
+      },
+      {
+        "locale": "ko",
+        "name": "넉넉한 꼬집"
+      },
+      {
+        "locale": "da",
+        "name": "godt nip"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "generous pinches"
+      },
+      {
+        "locale": "de",
+        "name": "große Prisen"
+      },
+      {
+        "locale": "nl",
+        "name": "ruime snufjes"
+      },
+      {
+        "locale": "ko",
+        "name": "넉넉한 꼬집"
+      },
+      {
+        "locale": "da",
+        "name": "gode nip"
+      }
+    ],
+    "alternates": [
+      "big pinch",
+      "gehäufte prise",
+      "grosszügige prise",
+      "große prise",
+      "große prisen",
+      "heaping pinch",
+      "large pinch",
+      "넉넉한 꼬집",
+      "큰 꼬집",
+      "god knivspids",
+      "stor knivspids"
+    ]
+  },
+  "large_splash": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "large splash"
+      },
+      {
+        "locale": "de",
+        "name": "großer Schuss"
+      },
+      {
+        "locale": "nl",
+        "name": "grote scheut"
+      },
+      {
+        "locale": "ko",
+        "name": "넉넉히"
+      },
+      {
+        "locale": "da",
+        "name": "stort skvæt"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "large splashes"
+      },
+      {
+        "locale": "de",
+        "name": "große Schüsse"
+      },
+      {
+        "locale": "nl",
+        "name": "grote scheuten"
+      },
+      {
+        "locale": "ko",
+        "name": "넉넉히"
+      },
+      {
+        "locale": "da",
+        "name": "store skvæt"
+      }
+    ],
+    "alternates": [
+      "big splash",
+      "good splash",
+      "grosser schuss",
+      "großer schuß",
+      "großzügiger schuss",
+      "넉넉히",
+      "godt skvæt"
+    ]
+  },
+  "dozen": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "dozen"
+      },
+      {
+        "locale": "de",
+        "name": "Dutzend"
+      },
+      {
+        "locale": "nl",
+        "name": "dozijn"
+      },
+      {
+        "locale": "ko",
+        "name": "다스"
+      },
+      {
+        "locale": "da",
+        "name": "dusin"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "dozen"
+      },
+      {
+        "locale": "de",
+        "name": "Dutzend"
+      },
+      {
+        "locale": "nl",
+        "name": "dozijn"
+      },
+      {
+        "locale": "ko",
+        "name": "다스"
+      },
+      {
+        "locale": "da",
+        "name": "dusin"
+      }
+    ],
+    "alternates": [
+      "dutzende",
+      "dz",
+      "dz.",
+      "다스",
+      "더즌"
+    ]
+  },
+  "small_splash": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "small splash"
+      },
+      {
+        "locale": "de",
+        "name": "kleiner Schuss"
+      },
+      {
+        "locale": "nl",
+        "name": "klein scheutje"
+      },
+      {
+        "locale": "ko",
+        "name": "조금"
+      },
+      {
+        "locale": "da",
+        "name": "lille skvæt"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "small splashes"
+      },
+      {
+        "locale": "de",
+        "name": "kleine Schüsse"
+      },
+      {
+        "locale": "nl",
+        "name": "kleine scheutjes"
+      },
+      {
+        "locale": "ko",
+        "name": "조금"
+      },
+      {
+        "locale": "da",
+        "name": "lille skvæt"
+      }
+    ],
+    "alternates": [
+      "kleiner schuß",
+      "winziger schuss",
+      "조금",
+      "소량",
+      "en smule"
+    ]
+  },
+  "bulb": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "bulb"
+      },
+      {
+        "locale": "de",
+        "name": "Knolle"
+      },
+      {
+        "locale": "nl",
+        "name": "bol"
+      },
+      {
+        "locale": "ko",
+        "name": "통"
+      },
+      {
+        "locale": "da",
+        "name": "hoved"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "bulbs"
+      },
+      {
+        "locale": "de",
+        "name": "Knollen"
+      },
+      {
+        "locale": "nl",
+        "name": "bollen"
+      },
+      {
+        "locale": "ko",
+        "name": "통"
+      },
+      {
+        "locale": "da",
+        "name": "hoveder"
+      }
+    ],
+    "alternates": [
+      "knöllchen",
+      "통",
+      "뿌리"
+    ]
+  },
+  "head": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "head"
+      },
+      {
+        "locale": "de",
+        "name": "Kopf"
+      },
+      {
+        "locale": "nl",
+        "name": "krop"
+      },
+      {
+        "locale": "ko",
+        "name": "통"
+      },
+      {
+        "locale": "da",
+        "name": "hoved"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "heads"
+      },
+      {
+        "locale": "de",
+        "name": "Köpfe"
+      },
+      {
+        "locale": "nl",
+        "name": "kroppen"
+      },
+      {
+        "locale": "ko",
+        "name": "통"
+      },
+      {
+        "locale": "da",
+        "name": "hoveder"
+      }
+    ],
+    "alternates": [
+      "köpfchen",
+      "통",
+      "포기"
+    ]
+  },
+  "to_taste": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "to taste"
+      },
+      {
+        "locale": "de",
+        "name": "n. B."
+      },
+      {
+        "locale": "nl",
+        "name": "naar smaak"
+      },
+      {
+        "locale": "ko",
+        "name": "기호에 맞게"
+      },
+      {
+        "locale": "da",
+        "name": "efter smag"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "to taste"
+      },
+      {
+        "locale": "de",
+        "name": "n. B."
+      },
+      {
+        "locale": "nl",
+        "name": "naar smaak"
+      },
+      {
+        "locale": "ko",
+        "name": "기호에 맞게"
+      },
+      {
+        "locale": "da",
+        "name": "efter smag"
+      }
+    ],
+    "alternates": [
+      "n.b.",
+      "nach bedarf",
+      "nach belieben",
+      "nach geschmack",
+      "기호에 맞게",
+      "취향껏",
+      "smages til",
+      "efter behag",
+      "efter behov"
+    ]
+  },
+  "pound": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "lb"
+      },
+      {
+        "locale": "de",
+        "name": "Pfd."
+      },
+      {
+        "locale": "nl",
+        "name": "pond"
+      },
+      {
+        "locale": "ko",
+        "name": "파운드"
+      },
+      {
+        "locale": "da",
+        "name": "pund"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "pounds"
+      },
+      {
+        "locale": "de",
+        "name": "Pfd."
+      },
+      {
+        "locale": "nl",
+        "name": "pond"
+      },
+      {
+        "locale": "ko",
+        "name": "파운드"
+      },
+      {
+        "locale": "da",
+        "name": "pund"
+      }
+    ],
+    "alternates": [
+      "pfd",
+      "pfd.",
+      "파운드",
+      "lb"
+    ]
+  },
+  "bar": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "bar"
+      },
+      {
+        "locale": "de",
+        "name": "Riegel"
+      },
+      {
+        "locale": "nl",
+        "name": "reep"
+      },
+      {
+        "locale": "ko",
+        "name": "판"
+      },
+      {
+        "locale": "da",
+        "name": "plade"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "bars"
+      },
+      {
+        "locale": "de",
+        "name": "Riegel"
+      },
+      {
+        "locale": "nl",
+        "name": "repen"
+      },
+      {
+        "locale": "ko",
+        "name": "판"
+      },
+      {
+        "locale": "da",
+        "name": "plader"
+      }
+    ],
+    "alternates": [
+      "reihen",
+      "riegelchen",
+      "판",
+      "바"
+    ]
+  },
+  "bowl": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "bowl"
+      },
+      {
+        "locale": "de",
+        "name": "Schale"
+      },
+      {
+        "locale": "nl",
+        "name": "kom"
+      },
+      {
+        "locale": "ko",
+        "name": "공기"
+      },
+      {
+        "locale": "da",
+        "name": "skål"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "bowls"
+      },
+      {
+        "locale": "de",
+        "name": "Schalen"
+      },
+      {
+        "locale": "nl",
+        "name": "kommen"
+      },
+      {
+        "locale": "ko",
+        "name": "공기"
+      },
+      {
+        "locale": "da",
+        "name": "skåle"
+      }
+    ],
+    "alternates": [
+      "schälchen",
+      "공기",
+      "그릇"
+    ]
+  },
+  "heaping_teaspoon": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "heaping tsp"
+      },
+      {
+        "locale": "de",
+        "name": "geh. TL"
+      },
+      {
+        "locale": "nl",
+        "name": "ruime tl"
+      },
+      {
+        "locale": "ko",
+        "name": "수북한 작은술"
+      },
+      {
+        "locale": "da",
+        "name": "toppet tsk"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "heaping teaspoons"
+      },
+      {
+        "locale": "de",
+        "name": "geh. TL"
+      },
+      {
+        "locale": "nl",
+        "name": "ruime theelepels"
+      },
+      {
+        "locale": "ko",
+        "name": "수북한 작은술"
+      },
+      {
+        "locale": "da",
+        "name": "toppede tsk"
+      }
+    ],
+    "alternates": [
+      "tl, gehäuft",
+      "tl, geh.",
+      "tl gehäuft",
+      "tl geh.",
+      "gehäufte teelöffel",
+      "gehäufter teelöffel",
+      "großzügige teelöffel",
+      "großzügige tl",
+      "großzügiger teelöffel",
+      "großzügiger tl",
+      "수북한 작은술",
+      "수북이 작은술",
+      "toppet tsk.",
+      "toppet teskefuld",
+      "teskefuld med top",
+      "teskefuld m. top",
+      "teske med top",
+      "tsk med top",
+      "tsk m. top",
+      "tsk. m. top"
+    ]
+  },
+  "scant_teaspoon": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "scant tsp"
+      },
+      {
+        "locale": "de",
+        "name": "gestr. TL"
+      },
+      {
+        "locale": "nl",
+        "name": "schaarse tl"
+      },
+      {
+        "locale": "ko",
+        "name": "깎은 작은술"
+      },
+      {
+        "locale": "da",
+        "name": "strøget tsk"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "scant teaspoons"
+      },
+      {
+        "locale": "de",
+        "name": "gestr. TL"
+      },
+      {
+        "locale": "nl",
+        "name": "schaarse theelepels"
+      },
+      {
+        "locale": "ko",
+        "name": "깎은 작은술"
+      },
+      {
+        "locale": "da",
+        "name": "strøget tsk"
+      }
+    ],
+    "alternates": [
+      "tl, gestr.",
+      "tl, gestrichen",
+      "tl gestr.",
+      "tl gestrichen",
+      "gestrichene teelöffel",
+      "gestrichene tl",
+      "gestrichener teelöffel",
+      "gestrichener tl",
+      "knapper tl",
+      "knappe teelöffel",
+      "knappe tl",
+      "knapper teelöffel",
+      "깎은 작은술",
+      "strøget tsk.",
+      "strøget teskefuld",
+      "strøget teske"
+    ]
+  },
+  "pot": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "pot"
+      },
+      {
+        "locale": "de",
+        "name": "Topf"
+      },
+      {
+        "locale": "nl",
+        "name": "pot"
+      },
+      {
+        "locale": "ko",
+        "name": "냄비"
+      },
+      {
+        "locale": "da",
+        "name": "gryde"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "pots"
+      },
+      {
+        "locale": "de",
+        "name": "Töpfe"
+      },
+      {
+        "locale": "nl",
+        "name": "potten"
+      },
+      {
+        "locale": "ko",
+        "name": "냄비"
+      },
+      {
+        "locale": "da",
+        "name": "gryder"
+      }
+    ],
+    "alternates": [
+      "냄비",
+      "솥"
+    ]
+  },
+  "drop": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "drop"
+      },
+      {
+        "locale": "de",
+        "name": "Tr."
+      },
+      {
+        "locale": "nl",
+        "name": "druppel"
+      },
+      {
+        "locale": "ko",
+        "name": "방울"
+      },
+      {
+        "locale": "da",
+        "name": "dråbe"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "drops"
+      },
+      {
+        "locale": "de",
+        "name": "Tr."
+      },
+      {
+        "locale": "nl",
+        "name": "druppels"
+      },
+      {
+        "locale": "ko",
+        "name": "방울"
+      },
+      {
+        "locale": "da",
+        "name": "dråber"
+      }
+    ],
+    "alternates": [
+      "tropfen",
+      "tropf",
+      "tr",
+      "tr.",
+      "trpf",
+      "trpf.",
+      "tröpfchen",
+      "방울",
+      "한방울"
+    ]
+  },
+  "ounce": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "oz"
+      },
+      {
+        "locale": "de",
+        "name": "Unze"
+      },
+      {
+        "locale": "nl",
+        "name": "ons"
+      },
+      {
+        "locale": "ko",
+        "name": "온스"
+      },
+      {
+        "locale": "da",
+        "name": "oz"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "ounces"
+      },
+      {
+        "locale": "de",
+        "name": "Unzen"
+      },
+      {
+        "locale": "nl",
+        "name": "ons"
+      },
+      {
+        "locale": "ko",
+        "name": "온스"
+      },
+      {
+        "locale": "da",
+        "name": "oz"
+      }
+    ],
+    "alternates": [
+      "oz",
+      "oz.",
+      "온스"
+    ]
+  },
+  "milliliter": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "ml"
+      },
+      {
+        "locale": "de",
+        "name": "ml"
+      },
+      {
+        "locale": "nl",
+        "name": "ml"
+      },
+      {
+        "locale": "ko",
+        "name": "ml"
+      },
+      {
+        "locale": "da",
+        "name": "ml"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "milliliters"
+      },
+      {
+        "locale": "de",
+        "name": "ml"
+      },
+      {
+        "locale": "nl",
+        "name": "milliliter"
+      },
+      {
+        "locale": "ko",
+        "name": "밀리리터"
+      },
+      {
+        "locale": "da",
+        "name": "milliliter"
+      }
+    ],
+    "alternates": [
+      "milliliter",
+      "milliliters",
+      "millilitre",
+      "millilitres",
+      "ml",
+      "ml.",
+      "밀리리터",
+      "밀리"
+    ]
+  },
+  "liter": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "l"
+      },
+      {
+        "locale": "de",
+        "name": "l"
+      },
+      {
+        "locale": "nl",
+        "name": "l"
+      },
+      {
+        "locale": "ko",
+        "name": "L"
+      },
+      {
+        "locale": "da",
+        "name": "l"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "liters"
+      },
+      {
+        "locale": "de",
+        "name": "l"
+      },
+      {
+        "locale": "nl",
+        "name": "liter"
+      },
+      {
+        "locale": "ko",
+        "name": "리터"
+      },
+      {
+        "locale": "da",
+        "name": "liter"
+      }
+    ],
+    "alternates": [
+      "liter",
+      "liters",
+      "litre",
+      "litres",
+      "l",
+      "l.",
+      "L",
+      "리터"
+    ]
+  },
+  "centimeter": {
+    "short": [
+      {
+        "locale": "en",
+        "name": "cm"
+      },
+      {
+        "locale": "de",
+        "name": "cm"
+      },
+      {
+        "locale": "nl",
+        "name": "cm"
+      },
+      {
+        "locale": "ko",
+        "name": "cm"
+      },
+      {
+        "locale": "da",
+        "name": "cm"
+      }
+    ],
+    "plural": [
+      {
+        "locale": "en",
+        "name": "centimeters"
+      },
+      {
+        "locale": "de",
+        "name": "cm"
+      },
+      {
+        "locale": "nl",
+        "name": "centimeter"
+      },
+      {
+        "locale": "ko",
+        "name": "센티미터"
+      },
+      {
+        "locale": "da",
+        "name": "cm"
+      }
+    ],
+    "alternates": [
+      "centimeter",
+      "centimeters",
+      "zentimeter",
+      "cm.",
+      "센치",
+      "센치미터"
+    ]
+  }
+}

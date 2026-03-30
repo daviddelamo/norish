@@ -1,0 +1,38 @@
+{
+  "enabled": true,
+  "hours": [
+    "hour",
+    "hours",
+    "hr",
+    "hrs",
+    "h",
+    "stunde",
+    "stunden",
+    "std",
+    "heure",
+    "heures",
+    "uur",
+    "uren",
+    "u",
+    "time",
+    "timer",
+    "시간",
+    "시"
+  ],
+  "minutes": ["minute", "minutes", "min", "mins", "m", "minuten", "minuut", "minut", "minutter", "분"],
+  "seconds": [
+    "second",
+    "seconds",
+    "sec",
+    "secs",
+    "s",
+    "sekunde",
+    "sekunden",
+    "sek",
+    "seconde",
+    "secondes",
+    "sekund",
+    "sekunder",
+    "초"
+  ]
+}

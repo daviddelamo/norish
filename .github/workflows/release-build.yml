@@ -11,6 +11,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: release-main
+  cancel-in-progress: true
+
 permissions:
   contents: write
   packages: write
@@ -25,27 +29,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24.13.1
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.30.1
-          run_install: false
-      - name: Verify pnpm installation
-        run: pnpm --version
-
-      - name: Install dependencies
-        run: pnpm install
+      - name: Setup toolchain and install dependencies
+        uses: ./tooling/github/setup
 
       - name: Run tests
-        run: pnpm test
+        run: pnpm run test:run
 
       - name: Build production
-        run: pnpm run build:prod
+        run: pnpm run build
 
       - name: Read version from package.json
         id: read_version
@@ -66,7 +57,7 @@ jobs:
         id: check_tag
         run: |
           TAG="${{ steps.compute_tag.outputs.tag }}"
-          if git tag --list "$TAG" | grep "$TAG" > /dev/null; then
+          if git show-ref --tags --verify --quiet "refs/tags/$TAG"; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
@@ -78,17 +69,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create tag
+      - name: Create and push tag
         if: steps.check_tag.outputs.exists == 'false'
         run: |
           TAG="${{ steps.compute_tag.outputs.tag }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            echo "Tag $TAG already exists on origin; skipping tag creation"
+            exit 0
+          fi
           git tag "$TAG"
-
-      - name: Push tag
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          TAG="${{ steps.compute_tag.outputs.tag }}"
-          git push origin "$TAG"
+          git push origin "refs/tags/$TAG"
 
       - name: Set image tags
         id: image_tags

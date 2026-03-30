@@ -1,0 +1,312 @@
+{
+  "locales": {
+    "en": {
+      "everyWords": ["every", "each"],
+      "otherWords": ["other"],
+      "onWords": ["on"],
+      "numberWords": {
+        "one": 1,
+        "two": 2,
+        "three": 3,
+        "four": 4,
+        "five": 5,
+        "six": 6,
+        "seven": 7,
+        "eight": 8,
+        "nine": 9,
+        "ten": 10
+      },
+      "unitWords": {
+        "day": ["day", "days", "daily"],
+        "week": ["week", "weeks", "weekly"],
+        "month": ["month", "months", "monthly"]
+      },
+      "weekdayWords": {
+        "sunday": 0,
+        "sun": 0,
+        "monday": 1,
+        "mon": 1,
+        "tuesday": 2,
+        "tue": 2,
+        "wednesday": 3,
+        "wed": 3,
+        "thursday": 4,
+        "thu": 4,
+        "friday": 5,
+        "fri": 5,
+        "saturday": 6,
+        "sat": 6
+      },
+      "intervalHints": []
+    },
+    "nl": {
+      "everyWords": ["elke", "ieder", "iedere"],
+      "otherWords": ["andere"],
+      "onWords": ["op"],
+      "numberWords": {
+        "een": 1,
+        "twee": 2,
+        "drie": 3,
+        "vier": 4,
+        "vijf": 5,
+        "zes": 6,
+        "zeven": 7,
+        "acht": 8,
+        "negen": 9,
+        "tien": 10
+      },
+      "unitWords": {
+        "day": ["dag", "dagen", "dagelijks"],
+        "week": ["week", "weken", "wekelijks", "weekelijks"],
+        "month": ["maand", "maanden", "maandelijks"]
+      },
+      "weekdayWords": {
+        "zondag": 0,
+        "zon": 0,
+        "maandag": 1,
+        "ma": 1,
+        "dinsdag": 2,
+        "di": 2,
+        "woensdag": 3,
+        "wo": 3,
+        "donderdag": 4,
+        "do": 4,
+        "vrijdag": 5,
+        "vr": 5,
+        "zaterdag": 6,
+        "za": 6
+      },
+      "intervalHints": [
+        {
+          "phrases": ["om de dag", "om de dagen"],
+          "interval": 2,
+          "rule": "day"
+        },
+        {
+          "phrases": ["om de week", "om de weken"],
+          "interval": 2,
+          "rule": "week"
+        }
+      ]
+    },
+    "ko": {
+      "everyWords": ["매", "마다", "각"],
+      "otherWords": ["격"],
+      "onWords": ["에", "마다"],
+      "numberWords": {
+        "한": 1,
+        "하나": 1,
+        "두": 2,
+        "둘": 2,
+        "세": 3,
+        "셋": 3,
+        "네": 4,
+        "넷": 4,
+        "다섯": 5,
+        "여섯": 6,
+        "일곱": 7,
+        "여덟": 8,
+        "아홉": 9,
+        "열": 10,
+        "일": 1,
+        "이": 2,
+        "삼": 3,
+        "사": 4,
+        "오": 5,
+        "육": 6,
+        "칠": 7,
+        "팔": 8,
+        "구": 9,
+        "십": 10
+      },
+      "unitWords": {
+        "day": ["일", "하루", "매일"],
+        "week": ["주", "매주", "주일"],
+        "month": ["월", "개월", "매월"]
+      },
+      "weekdayWords": {
+        "일요일": 0,
+        "일": 0,
+        "월요일": 1,
+        "월": 1,
+        "화요일": 2,
+        "화": 2,
+        "수요일": 3,
+        "수": 3,
+        "목요일": 4,
+        "목": 4,
+        "금요일": 5,
+        "금": 5,
+        "토요일": 6,
+        "토": 6
+      },
+      "intervalHints": [
+        {
+          "phrases": ["격일", "하루 걸러", "이틀마다"],
+          "interval": 2,
+          "rule": "day"
+        },
+        {
+          "phrases": ["격주", "2주마다"],
+          "interval": 2,
+          "rule": "week"
+        },
+        {
+          "phrases": ["격월", "2개월마다"],
+          "interval": 2,
+          "rule": "month"
+        }
+      ]
+    },
+    "es": {
+      "everyWords": ["cada"],
+      "otherWords": ["otro", "otra"],
+      "onWords": ["el", "los"],
+      "numberWords": {
+        "uno": 1,
+        "dos": 2,
+        "tres": 3,
+        "cuatro": 4,
+        "cinco": 5,
+        "seis": 6,
+        "siete": 7,
+        "ocho": 8,
+        "nueve": 9,
+        "diez": 10
+      },
+      "unitWords": {
+        "day": ["dia", "dias", "día", "días", "diario"],
+        "week": ["semana", "semanas", "semanal"],
+        "month": ["mes", "meses", "mensual"]
+      },
+      "weekdayWords": {
+        "domingo": 0,
+        "dom": 0,
+        "lunes": 1,
+        "lun": 1,
+        "martes": 2,
+        "mar": 2,
+        "miercoles": 3,
+        "miércoles": 3,
+        "mier": 3,
+        "miér": 3,
+        "jueves": 4,
+        "jue": 4,
+        "viernes": 5,
+        "vie": 5,
+        "sabado": 6,
+        "sábado": 6,
+        "sab": 6,
+        "sáb": 6
+      },
+      "intervalHints": [
+        {
+          "phrases": ["cada dos semanas"],
+          "interval": 2,
+          "rule": "week"
+        }
+      ]
+    },
+    "da": {
+      "everyWords": ["hver", "hvert"],
+      "otherWords": ["anden", "andet"],
+      "onWords": ["på", "om"],
+      "numberWords": {
+        "en": 1,
+        "et": 1,
+        "to": 2,
+        "tre": 3,
+        "fire": 4,
+        "fem": 5,
+        "seks": 6,
+        "syv": 7,
+        "otte": 8,
+        "ni": 9,
+        "ti": 10
+      },
+      "unitWords": {
+        "day": ["dag", "dage", "dagligt", "daglig"],
+        "week": ["uge", "uger", "ugentligt", "ugentlig"],
+        "month": ["måned", "måneder", "månedligt", "månedlig"]
+      },
+      "weekdayWords": {
+        "søndag": 0,
+        "søn": 0,
+        "mandag": 1,
+        "man": 1,
+        "tirsdag": 2,
+        "tir": 2,
+        "onsdag": 3,
+        "ons": 3,
+        "torsdag": 4,
+        "tor": 4,
+        "fredag": 5,
+        "fre": 5,
+        "lørdag": 6,
+        "lør": 6
+      },
+      "intervalHints": [
+        {
+          "phrases": ["hver anden dag"],
+          "interval": 2,
+          "rule": "day"
+        },
+        {
+          "phrases": ["hver anden uge"],
+          "interval": 2,
+          "rule": "week"
+        },
+        {
+          "phrases": ["hver anden måned"],
+          "interval": 2,
+          "rule": "month"
+        }
+      ]
+    },
+    "fr": {
+      "everyWords": ["chaque"],
+      "otherWords": ["autre"],
+      "onWords": ["le", "les"],
+      "numberWords": {
+        "un": 1,
+        "deux": 2,
+        "trois": 3,
+        "quatre": 4,
+        "cinq": 5,
+        "six": 6,
+        "sept": 7,
+        "huit": 8,
+        "neuf": 9,
+        "dix": 10
+      },
+      "unitWords": {
+        "day": ["jour", "jours", "quotidien", "quotidienne"],
+        "week": ["semaine", "semaines", "hebdomadaire"],
+        "month": ["mois", "mensuel", "mensuelle"]
+      },
+      "weekdayWords": {
+        "dimanche": 0,
+        "dim": 0,
+        "lundi": 1,
+        "lun": 1,
+        "mardi": 2,
+        "mar": 2,
+        "mercredi": 3,
+        "mer": 3,
+        "jeudi": 4,
+        "jeu": 4,
+        "vendredi": 5,
+        "ven": 5,
+        "samedi": 6,
+        "sam": 6
+      },
+      "intervalHints": [
+        {
+          "phrases": ["toutes les deux semaines"],
+          "interval": 2,
+          "rule": "week"
+        }
+      ]
+    }
+  }
+}

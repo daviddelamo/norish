@@ -1,0 +1,56 @@
+{
+  "name": "@norish/api",
+  "version": "0.17.3-beta",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./parser": "./src/parser/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json --noCheck",
+    "lint": "eslint --flag unstable_native_nodejs_ts_config",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "typecheck": "tsc --noEmit --noCheck",
+    "clean": "git clean -xdf .cache .turbo node_modules dist",
+    "test": "vitest run --config ./vitest.config.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/azure": "^3.0.31",
+    "@ai-sdk/groq": "^3.0.24",
+    "@ai-sdk/openai": "^3.0.30",
+    "@norish/auth": "workspace:*",
+    "@norish/config": "workspace:*",
+    "@norish/db": "workspace:*",
+    "@norish/i18n": "workspace:*",
+    "@norish/queue": "workspace:*",
+    "@norish/shared": "workspace:*",
+    "@norish/shared-server": "workspace:*",
+    "@norish/trpc": "workspace:*",
+    "@trpc/server": "catalog:",
+    "ai": "^6.0.95",
+    "cheerio": "1.2.0",
+    "drizzle-orm": "catalog:",
+    "ffmpeg-static": "^5.3.0",
+    "html-entities": "catalog:",
+    "ioredis": "catalog:",
+    "microdata-node": "2.0.0",
+    "mime": "4.1.0",
+    "next": "catalog:",
+    "openai": "6.22.0",
+    "playwright-core": "npm:rebrowser-playwright-core@^1.52.0",
+    "superjson": "catalog:",
+    "yt-dlp-wrap": "^2.3.12",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@norish/eslint-config": "workspace:*",
+    "@norish/prettier-config": "workspace:*",
+    "@norish/tsconfig": "workspace:*",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "vitest": "catalog:"
+  },
+  "prettier": "@norish/prettier-config"
+}

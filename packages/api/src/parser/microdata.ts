@@ -1,0 +1,70 @@
+/** Microdata helpers: parse HTML microdata and return normalized Recipe-like objects. */
+// microdata-node has no official types; import as any
+// @ts-expect-error microdata-node has no types
+import microdata from "microdata-node";
+import { normalizeRecipeFromJson } from "@norish/api/parser/normalize";
+import { extractImageCandidates } from "./parsers";
+import { FullRecipeInsertDTO } from "@norish/shared/contracts/dto/recipe";
+
+function hasImage(node: unknown): boolean {
+  if (!node || typeof node !== "object") return false;
+
+  const imageField = (node as { image?: unknown }).image;
+
+  if (typeof imageField === "string") return imageField.trim().length > 0;
+  if (Array.isArray(imageField)) return imageField.length > 0;
+  if (imageField && typeof imageField === "object") return true;
+
+  return false;
+}
+
+/**
+ * Extract microdata items and return a best-effort Recipe object array.
+ */
+export function extractMicrodataRecipes(htmlContent: string): any[] {
+  try {
+    const result = microdata.toJson(htmlContent);
+    const items = Array.isArray(result?.items) ? result.items : [];
+    const recipes = items.filter((item: any) => {
+      const types = Array.isArray(item?.type)
+        ? item.type.map((t: any) => String(t).toLowerCase())
+        : [];
+
+      return types.some((t: string) => t.includes("schema.org/recipe") || t === "recipe");
+    });
+
+    return recipes.map((r: any) => {
+      const props = (r?.properties ?? {}) as Record<string, any>;
+
+      return { "@type": "Recipe", ...props };
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function tryExtractRecipeFromMicrodata(
+  url: string,
+  htmlContent: string,
+  recipeId: string
+): Promise<FullRecipeInsertDTO | null> {
+  const nodes = extractMicrodataRecipes(htmlContent);
+
+  if (!nodes || nodes.length === 0) return null;
+
+  const firstNode = nodes[0] as Record<string, unknown>;
+
+  if (!hasImage(firstNode)) {
+    const candidates = extractImageCandidates(htmlContent, url);
+
+    if (candidates.length > 0) {
+      firstNode.image = candidates;
+    }
+  }
+
+  const parsed = await normalizeRecipeFromJson(firstNode, recipeId);
+
+  parsed && (parsed.url = url);
+
+  return parsed;
+}
