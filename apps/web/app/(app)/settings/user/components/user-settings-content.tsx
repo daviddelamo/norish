@@ -3,7 +3,6 @@
 import { UserSettingsProvider } from "../context";
 
 import AllergiesCard from "./allergies-card";
-import LanguageSelectorCard from "./language-selector-card";
 import ApiTokenCard from "./api-token-card";
 import ArchiveImportCard from "./archive-import-card";
 import DangerZoneCard from "./danger-zone-card";
@@ -17,7 +16,6 @@ function UserSettingsContent() {
       <ProfileCard />
       <PreferencesCard />
       <AllergiesCard />
-      <LanguageSelectorCard />
       <ApiTokenCard />
       <SiteAuthTokensCard />
       <ArchiveImportCard />
