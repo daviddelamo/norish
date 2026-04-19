@@ -426,6 +426,41 @@ pnpm run dev:mobile
 | `pnpm run docker:up`     | Start local dependency stack via Compose                  |
 | `pnpm run docker:down`   | Stop local dependency stack                               |
 
+### Updating with Upstream
+
+To keep your local fork up-to-date with the main repository (`norish-recipes/norish`), follow these steps:
+
+1. **Add the upstream remote** (you only need to do this once):
+   ```bash
+   git remote add upstream https://github.com/norish-recipes/norish.git
+   ```
+
+2. **Fetch the latest changes from upstream**:
+   ```bash
+   git fetch upstream main
+   ```
+
+3. **Merge the upstream changes into your local main branch**:
+   ```bash
+   # Ensure you are on the main branch
+   git checkout main
+   
+   # Merge upstream
+   git merge upstream/main
+   ```
+
+4. **Resolve any merge conflicts**:
+   If there are conflicts (e.g. from local customizations), resolve them in your code editor, then add the files and commit:
+   ```bash
+   git add <conflicted-files>
+   git commit -m "Merge remote-tracking branch 'upstream/main'"
+   ```
+
+5. **Push the updated branch to your fork**:
+   ```bash
+   git push origin main
+   ```
+
 ---
 
 ## API
