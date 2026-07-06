@@ -8,8 +8,8 @@ description: The technologies Norish is built on.
 
 ## Frontend
 
-- **Web**: Next.js 16 App Router, React 19, HeroUI v2, Tailwind CSS v4, Motion, TanStack Query
-- **Mobile**: Expo SDK 55, Expo Router, React Native 0.83, React 19, HeroUI Native v1 RC3, Uniwind, Tailwind CSS v4 theme tokens
+- **Web**: Next.js 16 App Router, React 19, HeroUI v3 (MIT), Tailwind CSS v4, Motion, TanStack Query
+- **Mobile**: Expo SDK 56, Expo Router, React Native 0.85, React 19, HeroUI Native v1, Uniwind, Tailwind CSS v4 theme tokens
 
 ## Backend
 

@@ -2,7 +2,6 @@
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/fira-code";
 @import "@heroui/styles";
-@import "@heroui-pro/react/css";
 @import "@norish/tailwind-config/heroui-theme";
 @source "../../../node_modules/@heroui/styles/dist/**/*.{css,js,ts,jsx,tsx}";
 
@@ -47,6 +46,24 @@
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* Free @heroui/styles makes tertiary chips transparent; give unselected
+   filter/tag chips a visible background like the previous design. */
+.chip--tertiary {
+  --chip-bg: var(--default);
+}
+
+/* React Aria renders each form control's real <input> in a visually-hidden
+   absolutely-positioned span. Without a positioned ancestor on the control
+   itself, that input anchors to the nearest positioned container (e.g. a
+   panel dialog), so clicking a row focuses an input hundreds of pixels away
+   and the browser scroll-jumps the list to it. Anchor it to the control. */
+.checkbox,
+.radio,
+.switch,
+.slider {
+  position: relative;
 }
 
 @layer components {

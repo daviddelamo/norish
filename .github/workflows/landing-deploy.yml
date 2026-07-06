@@ -24,8 +24,6 @@ jobs:
       # norish.dev serves from the root, so no basePath.
       # For a subpath deploy (e.g. a *.pages.dev preview path), set this to e.g. "/norish".
       NEXT_PUBLIC_BASE_PATH: ""
-      # The shared install fetches the private @heroui-pro/react used by apps/web.
-      HEROUI_AUTH_TOKEN: ${{ secrets.HEROUI_AUTH_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7

@@ -24,9 +24,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      # apps/docs is isolated from the monorepo workspace (own lockfile, no
-      # private @heroui-pro/react), so we install it standalone — we do NOT
-      # reuse ./tooling/github/setup and need no HEROUI_AUTH_TOKEN.
+      # apps/docs is isolated from the monorepo workspace (own lockfile), so we
+      # install it standalone instead of reusing ./tooling/github/setup.
       - name: Install pnpm
         uses: pnpm/action-setup@v6
 
