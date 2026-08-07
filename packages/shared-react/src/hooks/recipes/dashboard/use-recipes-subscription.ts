@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSubscription } from "@trpc/tanstack-react-query";
 
 import type { FullRecipeDTO, RecipeDashboardDTO } from "@norish/shared/contracts";
+import { patchDashboardRecipeFromFull } from "@norish/shared/contracts/zod";
 
 import type { CreateRecipeHooksOptions } from "../types";
 import type { InfiniteRecipeData, RecipesCacheHelpers } from "./use-recipes-cache";
@@ -10,7 +11,6 @@ export type RecipesSubscriptionCallbacks = {
   onImported?: (payload: unknown) => void;
   onConverted?: (payload: unknown) => void;
   onFailed?: (payload: unknown) => void;
-  onProcessingToast?: (payload: unknown) => void;
 };
 
 export function createUseRecipesSubscription(
@@ -28,10 +28,6 @@ export function createUseRecipesSubscription(
       invalidate,
       replaceOldestOptimisticPendingRecipe,
       removePendingRecipe,
-      addAutoTaggingRecipe,
-      removeAutoTaggingRecipe,
-      addAllergyDetectionRecipe,
-      removeAllergyDetectionRecipe,
     } = dependencies.useRecipesCacheHelpers();
 
     const asSubscriptionOptions = (options: unknown): Parameters<typeof useSubscription>[0] => {
@@ -74,21 +70,7 @@ export function createUseRecipesSubscription(
           pages: prev.pages.map((page) => ({
             ...page,
             recipes: page.recipes.map((r) =>
-              r.id === updatedRecipe.id
-                ? {
-                    ...r,
-                    name: updatedRecipe.name,
-                    description: updatedRecipe.description,
-                    image: updatedRecipe.image,
-                    servings: updatedRecipe.servings,
-                    prepMinutes: updatedRecipe.prepMinutes,
-                    cookMinutes: updatedRecipe.cookMinutes,
-                    totalMinutes: updatedRecipe.totalMinutes,
-                    tags: updatedRecipe.tags,
-                    categories: updatedRecipe.categories,
-                    updatedAt: updatedRecipe.updatedAt,
-                  }
-                : r
+              r.id === updatedRecipe.id ? patchDashboardRecipeFromFull(r, updatedRecipe) : r
             ),
           })),
         };
@@ -155,10 +137,14 @@ export function createUseRecipesSubscription(
         trpc.recipes.onUpdated.subscriptionOptions(undefined, {
           onData: ({ payload }: any) => {
             updateRecipeInList(payload.recipe);
-            queryClient.invalidateQueries({
-              queryKey: [["recipes", "get"], { input: { id: payload.recipe.id }, type: "query" }],
-            });
-            queryClient.invalidateQueries({ queryKey: [["calendar", "listRecipes"]] });
+            queryClient.setQueryData(
+              trpc.recipes.get.queryKey({ id: payload.recipe.id }),
+              payload.recipe
+            );
+
+            if (payload.source !== "enrichment") {
+              queryClient.invalidateQueries({ queryKey: [["calendar", "listRecipes"]] });
+            }
           },
         })
       )
@@ -198,62 +184,10 @@ export function createUseRecipesSubscription(
             if (payload.recipeId) {
               replaceOldestOptimisticPendingRecipe(payload.recipeId);
               removePendingRecipe(payload.recipeId);
-              removeAutoTaggingRecipe(payload.recipeId);
-              removeAllergyDetectionRecipe(payload.recipeId);
             }
 
             invalidate();
             callbacks.onFailed?.(payload);
-          },
-        })
-      )
-    );
-
-    useSubscription(
-      asSubscriptionOptions(
-        trpc.recipes.onAutoTaggingStarted.subscriptionOptions(undefined, {
-          onData: ({ payload }: any) => {
-            addAutoTaggingRecipe(payload.recipeId);
-          },
-        })
-      )
-    );
-
-    useSubscription(
-      asSubscriptionOptions(
-        trpc.recipes.onAllergyDetectionStarted.subscriptionOptions(undefined, {
-          onData: ({ payload }: any) => {
-            addAllergyDetectionRecipe(payload.recipeId);
-          },
-        })
-      )
-    );
-
-    useSubscription(
-      asSubscriptionOptions(
-        trpc.recipes.onAutoTaggingCompleted.subscriptionOptions(undefined, {
-          onData: ({ payload }: any) => {
-            removeAutoTaggingRecipe(payload.recipeId);
-          },
-        })
-      )
-    );
-
-    useSubscription(
-      asSubscriptionOptions(
-        trpc.recipes.onAllergyDetectionCompleted.subscriptionOptions(undefined, {
-          onData: ({ payload }: any) => {
-            removeAllergyDetectionRecipe(payload.recipeId);
-          },
-        })
-      )
-    );
-
-    useSubscription(
-      asSubscriptionOptions(
-        trpc.recipes.onProcessingToast.subscriptionOptions(undefined, {
-          onData: ({ payload }: any) => {
-            callbacks.onProcessingToast?.(payload);
           },
         })
       )

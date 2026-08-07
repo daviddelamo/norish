@@ -521,14 +521,22 @@
         "title": "Prompts",
         "subtitle": "Personaliza las instrucciones de IA para el procesamiento de recetas"
       },
-      "bulkCategorization": {
-        "title": "Categorización masiva",
-        "subtitle": "Categorizar recetas sin categoría usando IA",
-        "description": "Encola todas las recetas sin categoría para detección automática de categoría por IA. Las categorías incluyen Desayuno, Comida, Cena y Tentempié.",
-        "button": "Categorizar todas las recetas",
-        "queued": "{count, plural, =0 {No hay recetas para categorizar} one {# receta en cola} other {# recetas en cola}}",
-        "success": "Categorización iniciada",
-        "error": "No se pudo iniciar la categorización"
+      "cuisines": {
+        "title": "Cocinas",
+        "subtitle": "El vocabulario del que eligen las recetas y la IA"
+      },
+      "bulkEnrichment": {
+        "title": "Enriquecimiento masivo",
+        "subtitle": "Ejecutar el enriquecimiento habilitado en todas las recetas",
+        "description": "Encola, para todas las recetas de este servidor, cada tipo de enriquecimiento cuyo interruptor automático esté habilitado. Las recetas conservan los datos que ya tienen: solo se rellenan los huecos.",
+        "button": "Enriquecer todas las recetas",
+        "confirmTitle": "¿Ejecutar el enriquecimiento en todas las recetas?",
+        "confirmMessage": "Esto encola trabajo de IA para cada receta de este servidor. Cada tipo de enriquecimiento cuyo interruptor automático esté habilitado se ejecuta donde falten datos.",
+        "costWarning": "Puede ser una operación costosa: con muchas recetas puede tardar mucho y, con un proveedor de IA de pago, consumir una cantidad significativa de créditos.",
+        "confirmButton": "Ejecutar en todas las recetas",
+        "queued": "{queued, plural, =0 {Ninguna ejecución en cola} one {# ejecución en cola} other {# ejecuciones en cola}} para {recipes, plural, one {# receta} other {# recetas}}",
+        "aiDisabled": "La IA está deshabilitada en este servidor. Habilita la IA primero.",
+        "error": "No se pudo iniciar el enriquecimiento masivo"
       }
     },
     "aiConfig": {
@@ -561,25 +569,44 @@
       "temperatureHint": "Más bajo = más centrado, Más alto = más creativo",
       "maxTokens": "Máx. tokens",
       "requestTimeout": "Tiempo de espera de la solicitud (ms)",
-      "autoTagAllergies": "Detectar etiquetas de alergias automáticamente",
-      "autoTagAllergiesDescription": "Añadir etiquetas relacionadas con alergias automáticamente al importar recetas",
       "alwaysUseAI": "Usar siempre IA para importar",
       "alwaysUseAIDescription": "Omitir los analizadores estructurados y extraer recetas solo con IA",
-      "autoTaggingMode": "Modo de etiquetado automático",
-      "autoTaggingModeDescription": "Asignar etiquetas/palabras clave automáticamente a recetas importadas usando IA",
-      "autoTaggingModes": {
-        "disabled": "Desactivado",
+      "connectionSuccess": "Conexión correcta",
+      "testConnection": "Probar conexión",
+      "vision": "visión",
+      "automaticEnrichment": "Enriquecimiento automático de recetas",
+      "automaticEnrichmentDescription": "Elige qué enriquecimiento con IA se ejecuta automáticamente en las recetas nuevas. Los miembros pueden ejecutar cada uno manualmente mientras la IA esté activada.",
+      "automaticEnrichmentKinds": {
+        "autoTagging": "Etiquetado automático",
+        "autoTaggingDescription": "Añade etiquetas sugeridas por IA a las recetas nuevas sin eliminar las existentes",
+        "allergyDetection": "Detección de alergias",
+        "allergyDetectionDescription": "Añadir etiquetas relacionadas con alergias automáticamente al importar recetas",
+        "autoCategorization": "Categorización automática",
+        "autoCategorizationDescription": "Asigna categorías de comida a las recetas nuevas que no tengan ninguna",
+        "nutritionEstimation": "Estimación nutricional",
+        "nutritionEstimationDescription": "Estima calorías, grasas, carbohidratos y proteínas en recetas nuevas sin datos",
+        "recipeProvenance": "Procedencia de la receta",
+        "recipeProvenanceDescription": "Deducir el país, la región, las cocinas y una nota breve para recetas nuevas, solo se completa lo que falta, lo que ya indicaste se conserva",
+        "ingredientLinking": "Vinculación de ingredientes",
+        "ingredientLinkingDescription": "Vincula cada paso a las líneas de ingredientes que usa, para pasos sin vínculos"
+      },
+      "tagStrategy": "Estrategia de etiquetas",
+      "tagStrategyDescription": "Qué etiquetas puede usar el etiquetado automático, se ejecute automática o manualmente",
+      "tagStrategies": {
         "predefined": "Solo etiquetas predefinidas",
         "predefinedDb": "Predefinidas + etiquetas existentes",
         "freeform": "IA puede crear nuevas etiquetas"
       },
-      "connectionSuccess": "Conexión correcta",
-      "testConnection": "Probar conexión",
-      "vision": "visión"
+      "cuisineStrategy": "Estrategia de cocina",
+      "cuisineStrategyDescription": "Si la inferencia de procedencia puede añadir cocinas a tu vocabulario o solo elegir de él",
+      "cuisineStrategies": {
+        "existing": "Solo cocinas existentes",
+        "extend": "La IA puede crear cocinas nuevas"
+      }
     },
     "videoConfig": {
       "enableVideo": "Activar analizador de vídeo",
-      "enableVideoDescription": "Extraer recetas de TikTok, Instagram, YouTube Shorts o Facebook",
+      "enableVideoDescription": "Extraer recetas de TikTok, Instagram, YouTube Shorts, Facebook, Pinterest y más",
       "configureWarning": "Configura un proveedor de transcripción abajo para habilitar el procesamiento de vídeo.",
       "aiDisabledWarning": "Activa la configuración de IA antes de activar el procesamiento de vídeo.",
       "maxLength": "Longitud máxima del vídeo (segundos)",
@@ -587,7 +614,10 @@
       "maxFileSize": "Tamaño máximo del archivo de vídeo",
       "maxFileSizeDescription": "Tamaño máximo para archivos de vídeo descargados",
       "ytDlpVersion": "Versión de yt-dlp",
-      "ytDlpVersionDescription": "Versión de yt-dlp a usar para descargas de vídeo",
+      "ytDlpVersionDescription": "Versión de yt-dlp que ejecuta este servidor. No se puede cambiar aquí.",
+      "ytDlpVersionMissing": "No se encontró el binario de yt-dlp",
+      "ytDlpVersionUnknown": "No se pudo comprobar",
+      "ytDlpVersionLoading": "Comprobando …",
       "ytDlpProxy": "yt-dlp Proxy",
       "ytDlpProxyDescription": "Proxy HTTP/SOCKS5 para yt-dlp",
       "transcription": "Transcripción",
@@ -618,6 +648,9 @@
       "recipeExtraction": "Prompt de extracción de recetas",
       "recipeExtractionDescription": "Este prompt se usa al extraer datos de recetas desde páginas web o transcripciones de vídeo.",
       "recipeExtractionPlaceholder": "Introduce el prompt de extracción de recetas...",
+      "imageExtraction": "Prompt de extracción de imágenes",
+      "imageExtractionDescription": "Este prompt se usa al extraer datos de recetas de imágenes subidas, como fotos de un libro de cocina o una tarjeta de receta.",
+      "imageExtractionPlaceholder": "Introduce el prompt de extracción de imágenes...",
       "unitConversion": "Prompt de conversión de unidades",
       "unitConversionDescription": "Este prompt se usa al convertir medidas entre sistemas métrico y US. Variables disponibles: sourceSystem, targetSystem, units",
       "unitConversionPlaceholder": "Introduce el prompt de conversión de unidades...",
@@ -626,7 +659,19 @@
       "nutritionEstimationPlaceholder": "Introduce el prompt de estimación nutricional...",
       "autoTagging": "Prompt de etiquetado automático",
       "autoTaggingDescription": "Este prompt se usa para generar etiquetas al importar recetas. Define reglas de etiquetado y la lista de etiquetas predefinidas.",
-      "autoTaggingPlaceholder": "Introduce el prompt de etiquetado automático..."
+      "autoTaggingPlaceholder": "Introduce el prompt de etiquetado automático...",
+      "autoCategorization": "Prompt de categorización automática",
+      "autoCategorizationDescription": "Este prompt se usa para clasificar recetas en categorías de comidas (desayuno, almuerzo, cena, tentempié).",
+      "autoCategorizationPlaceholder": "Introduce el prompt de categorización automática...",
+      "allergyDetection": "Prompt de detección de alérgenos",
+      "allergyDetectionDescription": "Este prompt se usa para detectar los alérgenos configurados del hogar en los ingredientes de una receta.",
+      "allergyDetectionPlaceholder": "Introduce el prompt de detección de alérgenos...",
+      "recipeProvenance": "Prompt de procedencia de la receta",
+      "recipeProvenanceDescription": "Este prompt deduce de dónde viene una receta. La nota resultante se escribe en el idioma de la propia receta. Variables disponibles: recipeName, description, ingredients",
+      "recipeProvenancePlaceholder": "Introduce el prompt de procedencia de la receta...",
+      "ingredientLinking": "Prompt de vinculación de ingredientes",
+      "ingredientLinkingDescription": "Se usa al vincular cada paso a las líneas de ingredientes que utiliza",
+      "ingredientLinkingPlaceholder": "Prompt para vincular ingredientes a los pasos..."
     },
     "unsavedChanges": "Cambios sin guardar",
     "jsonEditor": {
@@ -684,6 +729,8 @@
         "auto-tagging": "Auto-tagging",
         "auto-categorization": "Auto-categorization",
         "allergy-detection": "Allergy detection",
+        "recipe-provenance": "Procedencia de la receta",
+        "ingredient-linking": "Vinculación de ingredientes",
         "caldav-sync": "CalDAV sync",
         "scheduled-tasks": "Scheduled tasks"
       },
@@ -740,6 +787,17 @@
         "description": "How many finished jobs to keep per queue for monitoring. Changes require a server restart."
       },
       "pagination": "Page {current} of {total}"
+    },
+    "cuisineVocabulary": {
+      "description": "Las cocinas son un vocabulario curado que tú controlas. Los nombres se muestran tal como se escriben aquí, en todos los idiomas.",
+      "namePlaceholder": "Nombre de la cocina",
+      "addLabel": "Añadir cocina",
+      "renameLabel": "Renombrar {name}",
+      "deleteLabel": "Eliminar {name}",
+      "deleteConfirm": "¿Eliminar «{name}»? Las recetas que la usan la perderán.",
+      "empty": "Aún no hay cocinas.",
+      "duplicate": "Ya existe una cocina con ese nombre.",
+      "saveFailed": "No se pudo guardar esa cocina."
     }
   }
 }

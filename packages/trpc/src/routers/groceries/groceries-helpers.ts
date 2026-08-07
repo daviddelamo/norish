@@ -117,7 +117,8 @@ export async function createGroceriesData(
       storeId: string | null;
     };
   }> = [];
-  const groceriesToUpdate: Array<{ id: string; amount: number | null }> = [];
+  const groceriesToUpdate: Array<{ id: string; amount: number | null; storeId?: string | null }> =
+    [];
   const returnIds: string[] = [];
 
   for (const grocery of input) {
@@ -135,13 +136,23 @@ export async function createGroceriesData(
       const newAmount = grocery.amount ?? 1;
       const mergedAmount = existingAmount + newAmount;
 
-      groceriesToUpdate.push({ id: existing.id, amount: mergedAmount });
+      const mergedStoreId = grocery.storeId ?? existing.storeId;
+
+      groceriesToUpdate.push({
+        id: existing.id,
+        amount: mergedAmount,
+        storeId: mergedStoreId,
+      });
       returnIds.push(existing.id);
-      existingByKey.set(lookupKey!, { ...existing, amount: mergedAmount });
+      existingByKey.set(lookupKey!, {
+        ...existing,
+        amount: mergedAmount,
+        storeId: mergedStoreId,
+      });
       continue;
     }
 
-    const id = crypto.randomUUID();
+    const id = grocery.id ?? crypto.randomUUID();
     let storeId: string | null = grocery.storeId ?? null;
 
     if (!storeId && grocery.name) {

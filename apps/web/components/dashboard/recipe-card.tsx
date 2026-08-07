@@ -4,6 +4,7 @@ import type { MouseEvent } from "react";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MiniCalendar, MiniGroceries } from "@/components/Panel/consumers";
+import OriginFlag from "@/components/recipes/origin-flag";
 import HeartButton from "@/components/shared/heart-button";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
 import { usePermissionsContext } from "@/context/permissions-context";
@@ -24,6 +25,7 @@ import { Button, Card, Chip, Tooltip, useOverlayState } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import { RecipeDashboardDTO } from "@norish/shared/contracts";
+import { RECIPE_DASHBOARD_KEYS } from "@norish/shared/contracts/zod";
 import { formatMinutesHM } from "@norish/shared/lib/helpers";
 import {
   getShowFavoritesPreference,
@@ -67,8 +69,38 @@ function normalizeRecipeTagNames(tags: readonly RecipeTagValue[] | null | undefi
   return names;
 }
 
-function getRecipeTagsSignature(tags: RecipeDashboardDTO["tags"] | null | undefined) {
-  return normalizeRecipeTagNames(tags).join("\u0000");
+// Structural equality for card-sized values: Dates by timestamp, arrays and
+// plain objects element-wise. Only runs when the cached recipe object identity
+// changed, so the recursion cost is confined to actual cache writes.
+function dashboardFieldEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a instanceof Date || b instanceof Date) {
+    return a instanceof Date && b instanceof Date && a.getTime() === b.getTime();
+  }
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((value, index) => dashboardFieldEqual(value, b[index]))
+    );
+  }
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+
+    return (
+      keysA.length === keysB.length &&
+      keysA.every((key) =>
+        dashboardFieldEqual(
+          (a as Record<string, unknown>)[key],
+          (b as Record<string, unknown>)[key]
+        )
+      )
+    );
+  }
+
+  return false;
 }
 
 function RecipeCardComponent({
@@ -340,6 +372,7 @@ function RecipeCardComponent({
                       className={`text-foreground truncate text-base leading-5 font-semibold ${open ? "" : "group-hover/row:underline"} `}
                       title={recipe.name}
                     >
+                      <OriginFlag className="mr-1.5" originCountry={recipe.originCountry} />
                       {recipe.name}
                     </h3>
                     {description && (
@@ -415,6 +448,7 @@ function RecipeCardComponent({
                 className={`text-foreground truncate text-base font-semibold ${open ? "" : "group-hover/row:underline"} `}
                 title={recipe.name}
               >
+                <OriginFlag className="mr-1.5" originCountry={recipe.originCountry} />
                 {recipe.name}
               </h3>
 
@@ -485,20 +519,11 @@ const RecipeCard = memo(RecipeCardComponent, (prevProps, nextProps) => {
   const prev = prevProps.recipe;
   const next = nextProps.recipe;
 
-  // Compare essential fields that would require a re-render
-  return (
-    prev.id === next.id &&
-    prev.name === next.name &&
-    prev.description === next.description &&
-    prev.image === next.image &&
-    prev.servings === next.servings &&
-    prev.prepMinutes === next.prepMinutes &&
-    prev.cookMinutes === next.cookMinutes &&
-    prev.totalMinutes === next.totalMinutes &&
-    prev.averageRating === next.averageRating &&
-    prev.updatedAt?.getTime() === next.updatedAt?.getTime() &&
-    getRecipeTagsSignature(prev.tags) === getRecipeTagsSignature(next.tags)
-  );
+  if (prev === next) return true;
+
+  // Walk the dashboard contract instead of a hand-list, so a field added to
+  // RecipeDashboardSchema re-renders automatically (originCountry was missed).
+  return RECIPE_DASHBOARD_KEYS.every((key) => dashboardFieldEqual(prev[key], next[key]));
 });
 
 RecipeCard.displayName = "RecipeCard";

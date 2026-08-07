@@ -7,26 +7,24 @@ const mockIsVideoUrl = vi.fn(() => false);
 const mockFetchViaPlaywright = vi.fn();
 const mockCallRecipeScrapersParser = vi.fn();
 const mockAdaptRecipeScrapersResponse = vi.fn();
-const mockTryLegacyStructuredRecipeParsing = vi.fn();
 const mockProcessVideoRecipe = vi.fn();
 const mockIsAIEnabled = vi.fn();
 const mockShouldAlwaysUseAI = vi.fn();
 const mockIsVideoParsingEnabled = vi.fn();
 const mockGetContentIndicators = vi.fn();
-const mockShouldUseLegacyRecipeParserRollback = vi.fn();
 const mockServerConfig = {
-  LEGACY_RECIPE_PARSER_ROLLBACK: false,
   UPLOADS_DIR: "/tmp/uploads",
   MAX_IMAGE_FILE_SIZE: 10 * 1024 * 1024,
   YT_DLP_BIN_DIR: "/tmp/bin",
   YT_DLP_VERSION: "2025.11.12",
 };
 
-vi.mock("@norish/api/ai/recipe-parser", () => ({
+vi.mock("@norish/api/parser/recipe-extraction", () => ({
   extractRecipeWithAI: mockExtractRecipeWithAI,
 }));
 
-vi.mock("@norish/api/helpers", () => ({
+vi.mock("@norish/shared/lib/helpers", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@norish/shared/lib/helpers")>()),
   isVideoUrl: mockIsVideoUrl,
 }));
 
@@ -42,10 +40,6 @@ vi.mock("@norish/api/parser/python/adapter", () => ({
   adaptRecipeScrapersResponse: mockAdaptRecipeScrapersResponse,
 }));
 
-vi.mock("@norish/api/parser/legacy", () => ({
-  tryLegacyStructuredRecipeParsing: mockTryLegacyStructuredRecipeParsing,
-}));
-
 vi.mock("@norish/api/video/processor", () => ({
   processVideoRecipe: mockProcessVideoRecipe,
 }));
@@ -55,7 +49,6 @@ vi.mock("@norish/shared-server/config/server-config-loader", () => ({
   isAIEnabled: mockIsAIEnabled,
   isVideoParsingEnabled: mockIsVideoParsingEnabled,
   shouldAlwaysUseAI: mockShouldAlwaysUseAI,
-  shouldUseLegacyRecipeParserRollback: mockShouldUseLegacyRecipeParserRollback,
 }));
 
 vi.mock("@norish/config/env-config-server", () => ({
@@ -128,8 +121,6 @@ describe("parseRecipeFromUrl import flow", () => {
       schemaIndicators: ["recipe"],
       contentIndicators: ["ingredient", "instructions"],
     });
-    mockShouldUseLegacyRecipeParserRollback.mockReturnValue(false);
-    mockServerConfig.LEGACY_RECIPE_PARSER_ROLLBACK = false;
     mockCallRecipeScrapersParser.mockResolvedValue({
       ok: true,
       canonicalUrl: "https://example.com/recipe",
@@ -144,9 +135,8 @@ describe("parseRecipeFromUrl import flow", () => {
       media: { images: [], videos: [] },
     });
     mockAdaptRecipeScrapersResponse.mockResolvedValue(structuredRecipe);
-    mockTryLegacyStructuredRecipeParsing.mockResolvedValue(null);
     mockProcessVideoRecipe.mockResolvedValue(structuredRecipe);
-    mockExtractRecipeWithAI.mockResolvedValue({ success: true, data: aiRecipe });
+    mockExtractRecipeWithAI.mockResolvedValue(aiRecipe);
   });
 
   it("uses the existing video pipeline for video imports", { timeout: 15000 }, async () => {
@@ -154,18 +144,45 @@ describe("parseRecipeFromUrl import flow", () => {
     mockIsVideoParsingEnabled.mockResolvedValue(true);
 
     const { parseRecipeFromUrl } = await import("@norish/api/parser");
-    const result = await parseRecipeFromUrl("https://example.com/video", "recipe-1", ["dairy"]);
+    const result = await parseRecipeFromUrl("https://example.com/video", "recipe-1");
 
     expect(result).toEqual({ recipe: structuredRecipe, usedAI: true });
     expect(mockProcessVideoRecipe).toHaveBeenCalledWith(
       "https://example.com/video",
       "recipe-1",
-      ["dairy"],
       undefined
     );
     expect(mockFetchViaPlaywright).not.toHaveBeenCalled();
     expect(mockCallRecipeScrapersParser).not.toHaveBeenCalled();
     expect(mockExtractRecipeWithAI).not.toHaveBeenCalled();
+  });
+
+  it("refuses a video import naming AI before anything is downloaded when AI is disabled", async () => {
+    mockIsVideoUrl.mockReturnValue(true);
+    mockIsAIEnabled.mockResolvedValue(false);
+    mockIsVideoParsingEnabled.mockResolvedValue(false);
+
+    const { parseRecipeFromUrl } = await import("@norish/api/parser");
+
+    await expect(parseRecipeFromUrl("https://example.com/video", "recipe-1")).rejects.toThrow(
+      /AI features are not enabled/
+    );
+    expect(mockProcessVideoRecipe).not.toHaveBeenCalled();
+    expect(mockFetchViaPlaywright).not.toHaveBeenCalled();
+    expect(mockExtractRecipeWithAI).not.toHaveBeenCalled();
+  });
+
+  it("refuses a video import naming video parsing when AI is on but video parsing is off", async () => {
+    mockIsVideoUrl.mockReturnValue(true);
+    mockIsAIEnabled.mockResolvedValue(true);
+    mockIsVideoParsingEnabled.mockResolvedValue(false);
+
+    const { parseRecipeFromUrl } = await import("@norish/api/parser");
+
+    await expect(parseRecipeFromUrl("https://example.com/video", "recipe-1")).rejects.toThrow(
+      "Video recipe parsing is not enabled."
+    );
+    expect(mockProcessVideoRecipe).not.toHaveBeenCalled();
   });
 
   it("uses AI directly when forceAI is true", async () => {
@@ -254,18 +271,5 @@ describe("parseRecipeFromUrl import flow", () => {
       "Page does not appear to contain a recipe."
     );
     expect(mockExtractRecipeWithAI).not.toHaveBeenCalled();
-  });
-
-  it("uses the deprecated legacy parser only when the rollback flag is enabled", async () => {
-    mockShouldUseLegacyRecipeParserRollback.mockReturnValue(true);
-    mockServerConfig.LEGACY_RECIPE_PARSER_ROLLBACK = true;
-    mockTryLegacyStructuredRecipeParsing.mockResolvedValue(structuredRecipe);
-
-    const { parseRecipeFromUrl } = await import("@norish/api/parser");
-    const result = await parseRecipeFromUrl("https://example.com/recipe", "recipe-1");
-
-    expect(result).toEqual({ recipe: structuredRecipe, usedAI: false });
-    expect(mockTryLegacyStructuredRecipeParsing).toHaveBeenCalled();
-    expect(mockCallRecipeScrapersParser).not.toHaveBeenCalled();
   });
 });

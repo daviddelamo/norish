@@ -197,6 +197,7 @@ git checkout -b fix/your-bug-fix
 - Write clear, focused commits
 - Follow the code style guidelines
 - Add tests for new functionality
+- Add browser E2E coverage when a user-visible workflow depends on browser behavior for its acceptance criteria
 
 ### 3. Test Your Changes
 
@@ -207,16 +208,27 @@ pnpm i18n:check
 pnpm build
 ```
 
+For an affected web workflow, the browser E2E suites are also a required gate and must pass before the work is complete. One command builds and runs them all (it is also enforced by CI on every PR and before every RC/release image):
+
+```bash
+pnpm test:e2e
+```
+
+An unavailable or environmentally blocked browser run is reported as blocked, not treated as passing acceptance evidence.
+
 ### 4. Submit a Pull Request
 
 - Follow the PR template
 - Link the PR to an issue (`Fixes #...` in the PR body)
 - PRs without a linked issue will be closed, except translation-only PRs
+  (maintainer PRs may reference a Linear issue id — e.g. `GEZ-46` — instead)
 - Ensure CI checks pass
 
 ## Testing
 
 Tests are colocated in workspace `__tests__/` directories (e.g., `apps/web/__tests__/...`, `packages/shared/__tests__/...`). We use Vitest with React Testing Library.
+
+User-visible workflows whose acceptance criteria depend on browser behavior require production-like browser E2E coverage. Keep third-party dependencies deterministic at their narrow external boundary while exercising the real Norish application path. Backend-only changes do not require browser E2E unless their acceptance criteria explicitly cross that boundary.
 
 ```bash
 # Run all tests
@@ -227,6 +239,13 @@ pnpm --filter @norish/web run test
 
 # Run a specific test file (from within the workspace directory)
 cd apps/web && pnpm exec vitest run __tests__/hooks/recipes/use-recipes-query.test.ts
+
+# Build once and run the complete browser E2E gate (Offline + AI projects)
+pnpm test:e2e
+
+# Run one project against an existing production build
+pnpm --filter @norish/web run test:e2e --project=offline
+pnpm --filter @norish/web run test:e2e --project=ai
 ```
 
 ## Adding Translations

@@ -70,7 +70,13 @@
     "estimatingNutrition": "Estimerer næring...",
     "screenOn": "Skærm tændt",
     "keepScreenOn": "Hold skærm tændt",
-    "actionsLabel": "Handlinger"
+    "actionsLabel": "Handlinger",
+    "autoCategorizing": "Kategoriserer…",
+    "inferProvenance": "Find oprindelsen",
+    "inferringProvenance": "Finder oprindelsen …",
+    "linkIngredients": "Tilknyt ingredienser til trin",
+    "linkingIngredients": "Tilknytter ingredienser…",
+    "enrichmentFailed": "Sidste forsøg mislykkedes"
   },
   "sharePanel": {
     "title": "Del opskrift",
@@ -162,6 +168,16 @@
     "fat": "Fedt (g)",
     "carbs": "Kulhydrater (g)",
     "protein": "Protein (g)",
+    "provenance": "Oprindelse",
+    "provenanceHelp": "Hvor denne opskrift kommer fra.",
+    "originCountry": "Land",
+    "originCountryPlaceholder": "Intet land",
+    "originRegion": "Region",
+    "originRegionPlaceholder": "f.eks. Sicilien",
+    "cuisines": "Køkkener",
+    "cuisinesHelp": "Vælg fra din installations liste. Flere giver mening ved en fusionsret.",
+    "provenanceNote": "Note",
+    "provenanceNotePlaceholder": "Et par sætninger om, hvor denne ret kommer fra …",
     "servings": "Portioner",
     "cookingTimes": "Tilberedningstider",
     "optional": "(valgfrit)",
@@ -227,6 +243,23 @@
     "stepPlaceholder": "Trin {number}: Beskriv trinnet...",
     "stepPlaceholderShort": "Trin {number}"
   },
+  "stepIngredients": {
+    "rowLabel": "Tilknyttede ingredienser",
+    "addLabel": "Tilknyt ingrediens",
+    "pickerLabel": "Tilknyt en ingrediens til dette trin",
+    "shareLabel": "Ændr andelen af {name}",
+    "share": {
+      "full": "Hele linjen",
+      "half": "Halvdelen",
+      "third": "En tredjedel",
+      "quarter": "En fjerdedel",
+      "custom": "Tilpasset…",
+      "amount": "Mængde…"
+    },
+    "customShareLabel": "Tilpasset andel",
+    "customAmountLabel": "Mængde",
+    "removeLabel": "Fjern {name}"
+  },
   "ingredientInput": {
     "placeholder": "f.eks. 2 dl mel"
   },
@@ -238,12 +271,6 @@
     "ariaLabel": "Hold skærm tændt"
   },
   "toasts": {
-    "processingBoth": "Behandler tags og allergener",
-    "processingTags": "Genererer tags",
-    "processingAllergies": "Registrerer allergener",
-    "bothComplete": "Tags og allergener opdateret",
-    "tagsComplete": "Tags genereret",
-    "allergiesComplete": "Allergener registreret",
     "imported": "Opskrift importeret",
     "converted": "Mål konverteret",
     "convertedDescription": "Opskrift konverteret til {system}-enheder",
@@ -270,5 +297,34 @@
     "swipeSteps": "Swipe for at navigere mellem trin",
     "swipeIngredients": "Swipe til venstre for ingredienser",
     "swipeBackToSteps": "Swipe til højre for trin"
+  },
+  "enrichment": {
+    "failed": "Berigelse mislykkedes",
+    "states": {
+      "queued": "I kø",
+      "processing": "I gang",
+      "succeeded": "Fuldført",
+      "failed": "Sidste forsøg mislykkedes"
+    },
+    "kinds": {
+      "auto-tagging": "Automatiske tags",
+      "allergy-detection": "Allergiregistrering",
+      "auto-categorization": "Automatisk kategorisering",
+      "nutrition-estimation": "Estimering af næringsindhold",
+      "recipe-provenance": "Opskriftens oprindelse",
+      "ingredient-linking": "Ingredienstilknytning"
+    }
+  },
+  "provenance": {
+    "title": "Oprindelse",
+    "region": "Region",
+    "cuisines": "Køkkener",
+    "inferring": "Finder ud af, hvor denne opskrift kommer fra …",
+    "noInfo": "Ingen oprindelsesoplysninger endnu",
+    "inferWithAI": "Find ud af det med AI"
+  },
+  "import": {
+    "alreadyExists": "Du har allerede denne opskrift",
+    "openExisting": "Åbn"
   }
 }

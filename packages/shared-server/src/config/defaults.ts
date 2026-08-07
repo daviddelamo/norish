@@ -11,8 +11,6 @@ import {
 } from "@norish/db/zodSchemas/server-config";
 import { DEFAULT_LOCALE_CONFIG } from "@norish/shared-server/config/server-config-loader";
 
-import { loadDefaultPrompts } from "../ai/prompts/loader";
-
 export function getDefaultConfigValue(key: ServerConfigKey): unknown {
   switch (key) {
     case ServerConfigKeys.REGISTRATION_ENABLED:
@@ -40,7 +38,6 @@ export function getDefaultConfigValue(key: ServerConfigKey): unknown {
         enabled: false,
         maxLengthSeconds: 120,
         maxVideoFileSize: SERVER_CONFIG.MAX_VIDEO_FILE_SIZE,
-        ytDlpVersion: "2026.07.04",
         ytDlpProxy: undefined,
         transcriptionProvider: "disabled",
         transcriptionModel: "whisper-1",
@@ -48,7 +45,8 @@ export function getDefaultConfigValue(key: ServerConfigKey): unknown {
     case ServerConfigKeys.RECIPE_PERMISSION_POLICY:
       return DEFAULT_RECIPE_PERMISSION_POLICY;
     case ServerConfigKeys.PROMPTS:
-      return { ...loadDefaultPrompts(), isOverridden: false };
+      // No overrides: every prompt follows the shipped default again.
+      return {};
     case ServerConfigKeys.LOCALE_CONFIG:
       return DEFAULT_LOCALE_CONFIG;
     case ServerConfigKeys.TIMER_KEYWORDS:

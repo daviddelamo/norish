@@ -3,6 +3,8 @@ import path from "node:path";
 import { config } from "dotenv";
 import { z } from "zod";
 
+import { DEFAULT_YT_DLP_VERSION } from "./zod/server-config";
+
 // Import server-only to ensure this file is only used on the server
 // Using dynamic import wrapped in IIFE for compatibility
 (async () => {
@@ -174,7 +176,7 @@ const ServerConfigSchema = z.object({
     .default(false),
   VIDEO_MAX_LENGTH_SECONDS: z.coerce.number().default(120),
   YT_DLP_PROXY: z.string().optional(),
-  YT_DLP_VERSION: z.string().default("2026.07.04"),
+  YT_DLP_VERSION: z.string().default(DEFAULT_YT_DLP_VERSION),
   YT_DLP_BIN_DIR: z.string().default(defaultYtDlpBinDir),
 
   // Transcription Configuration (separate from AI_PROVIDER)
@@ -195,11 +197,6 @@ const ServerConfigSchema = z.object({
     .default("ws://chrome-headless:3000"),
 
   PARSER_API_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
-  LEGACY_RECIPE_PARSER_ROLLBACK: z
-    .string()
-    .transform((val) => val === "true" || val === "1")
-    .pipe(z.boolean())
-    .default(false),
 
   // Scheduler Configuration
   SCHEDULER_CLEANUP_MONTHS: z.coerce.number().default(3),

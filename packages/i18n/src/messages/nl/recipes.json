@@ -70,7 +70,13 @@
     "estimatingNutrition": "Voedingswaarde schatten...",
     "screenOn": "Scherm Aan",
     "keepScreenOn": "Scherm Aan Houden",
-    "actionsLabel": "Acties"
+    "actionsLabel": "Acties",
+    "autoCategorizing": "Automatisch categoriseren…",
+    "inferProvenance": "Herkomst bepalen",
+    "inferringProvenance": "Herkomst bepalen…",
+    "linkIngredients": "Ingrediënten aan stappen koppelen",
+    "linkingIngredients": "Ingrediënten koppelen…",
+    "enrichmentFailed": "Laatste poging mislukt"
   },
   "sharePanel": {
     "title": "Recept delen",
@@ -162,6 +168,16 @@
     "fat": "Vet (g)",
     "carbs": "Koolhydraten (g)",
     "protein": "Eiwit (g)",
+    "provenance": "Herkomst",
+    "provenanceHelp": "Waar dit recept vandaan komt.",
+    "originCountry": "Land",
+    "originCountryPlaceholder": "Geen land",
+    "originRegion": "Streek",
+    "originRegionPlaceholder": "bijv. Sicilië",
+    "cuisines": "Keukens",
+    "cuisinesHelp": "Kies uit de lijst van je installatie. Meerdere is logisch bij een fusiongerecht.",
+    "provenanceNote": "Toelichting",
+    "provenanceNotePlaceholder": "Een paar zinnen over waar dit gerecht vandaan komt…",
     "servings": "Porties",
     "cookingTimes": "Kooktijden",
     "optional": "(optioneel)",
@@ -227,6 +243,23 @@
     "stepPlaceholder": "Stap {number}: Beschrijf de stap...",
     "stepPlaceholderShort": "Stap {number}"
   },
+  "stepIngredients": {
+    "rowLabel": "Gekoppelde ingrediënten",
+    "addLabel": "Ingrediënt koppelen",
+    "pickerLabel": "Koppel een ingrediënt aan deze stap",
+    "shareLabel": "Deel van {name} aanpassen",
+    "share": {
+      "full": "Hele regel",
+      "half": "De helft",
+      "third": "Een derde",
+      "quarter": "Een kwart",
+      "custom": "Aangepast…",
+      "amount": "Hoeveelheid…"
+    },
+    "customShareLabel": "Aangepast deel",
+    "customAmountLabel": "Hoeveelheid",
+    "removeLabel": "{name} verwijderen"
+  },
   "ingredientInput": {
     "placeholder": "bijv. 2 kopjes bloem"
   },
@@ -238,12 +271,6 @@
     "ariaLabel": "Scherm wakker houden"
   },
   "toasts": {
-    "processingBoth": "Tags & allergieën verwerken",
-    "processingTags": "Tags genereren",
-    "processingAllergies": "Allergieën detecteren",
-    "bothComplete": "Tags & allergieën bijgewerkt",
-    "tagsComplete": "Tags gegenereerd",
-    "allergiesComplete": "Allergieën gedetecteerd",
     "imported": "Recept geïmporteerd",
     "converted": "Maateenheden omgezet",
     "convertedDescription": "Recept omgezet naar {system} eenheden",
@@ -270,5 +297,34 @@
     "swipeSteps": "Veeg om door stappen te navigeren",
     "swipeIngredients": "Veeg links voor ingrediënten",
     "swipeBackToSteps": "Veeg rechts voor stappen"
+  },
+  "enrichment": {
+    "failed": "Verrijking mislukt",
+    "states": {
+      "queued": "In de wachtrij",
+      "processing": "Bezig",
+      "succeeded": "Voltooid",
+      "failed": "Laatste poging mislukt"
+    },
+    "kinds": {
+      "auto-tagging": "Automatisch taggen",
+      "allergy-detection": "Allergiedetectie",
+      "auto-categorization": "Automatisch categoriseren",
+      "nutrition-estimation": "Voedingswaarde schatten",
+      "recipe-provenance": "Receptherkomst",
+      "ingredient-linking": "Ingrediëntkoppeling"
+    }
+  },
+  "provenance": {
+    "title": "Herkomst",
+    "region": "Streek",
+    "cuisines": "Keukens",
+    "inferring": "Bezig met bepalen waar dit recept vandaan komt…",
+    "noInfo": "Nog geen herkomstinformatie",
+    "inferWithAI": "Bepalen met AI"
+  },
+  "import": {
+    "alreadyExists": "Je hebt dit recept al",
+    "openExisting": "Openen"
   }
 }

@@ -121,18 +121,37 @@ export type TimerKeywordsInput = z.infer<typeof TimerKeywordsInputSchema>;
 // Prompts Schema
 // ============================================================================
 
+/**
+ * The stored prompts row holds only administrator overrides: a field is
+ * present exactly when the administrator's prompt differs from the shipped
+ * default. Defaults live in the shipped prompt files and are merged in at
+ * read time, so a new release's prompts reach every deployment that never
+ * customized them.
+ *
+ * `isOverridden` is the pre-0.20 row-level flag. It froze all prompts after
+ * any save; rows still carrying it are pruned to real overrides at boot, and
+ * it is never written again.
+ */
 export const PromptsConfigSchema = z.object({
-  recipeExtraction: z.string(),
-  unitConversion: z.string(),
-  nutritionEstimation: z.string(),
-  autoTagging: z.string(),
-  isOverridden: z.boolean().default(false),
+  recipeExtraction: z.string().optional(),
+  unitConversion: z.string().optional(),
+  nutritionEstimation: z.string().optional(),
+  autoTagging: z.string().optional(),
+  recipeProvenance: z.string().optional(),
+  ingredientLinking: z.string().optional(),
+  imageExtraction: z.string().optional(),
+  autoCategorization: z.string().optional(),
+  allergyDetection: z.string().optional(),
+  isOverridden: z.boolean().optional(),
 });
 
 export type PromptsConfig = z.infer<typeof PromptsConfigSchema>;
 
 export const PromptsConfigInputSchema = PromptsConfigSchema.omit({ isOverridden: true });
 export type PromptsConfigInput = z.infer<typeof PromptsConfigInputSchema>;
+
+/** One text per prompt, nothing missing: the shape of shipped defaults and of the merged admin view. */
+export type PromptValues = Required<PromptsConfigInput>;
 
 // ============================================================================
 // i18n Locale Configuration Schema
@@ -232,6 +251,10 @@ export const AIProviderSchema = z.enum([
 
 export type AIProvider = z.infer<typeof AIProviderSchema>;
 
+/**
+ * Legacy auto-tagging mode. Superseded by the independent `automaticEnrichment.autoTagging`
+ * switch plus `tagStrategy`; still accepted on read so stored config migrates in place.
+ */
 export const AutoTaggingModeSchema = z.enum([
   "disabled",
   "predefined",
@@ -241,7 +264,62 @@ export const AutoTaggingModeSchema = z.enum([
 
 export type AutoTaggingMode = z.infer<typeof AutoTaggingModeSchema>;
 
-export const AIConfigSchema = z.object({
+/** How auto-tagging picks tag names. Independent of whether auto-tagging runs automatically. */
+export const TagStrategySchema = z.enum(["predefined", "predefined_db", "freeform"]);
+
+export type TagStrategy = z.infer<typeof TagStrategySchema>;
+
+/**
+ * How provenance inference picks Cuisine names: `existing` restricts it to the
+ * administrator's current vocabulary, `extend` permits it to add rows.
+ *
+ * The tag strategy's value names are deliberately not reused — that enum has
+ * three values and its `predefined` mode names a compile-time list with no
+ * cuisine equivalent. Like the tag strategy, this is independent of whether the
+ * kind runs automatically: how names are picked and whether the kind runs are
+ * orthogonal axes.
+ */
+export const CuisineStrategySchema = z.enum(["existing", "extend"]);
+
+export type CuisineStrategy = z.infer<typeof CuisineStrategySchema>;
+
+/**
+ * One independent switch per Recipe Enrichment kind. Each only decides whether the
+ * kind is enrolled automatically for a newly usable recipe; Manual Recipe Enrichment
+ * stays available whenever AI is enabled.
+ */
+export const AutomaticEnrichmentSchema = z.object({
+  autoTagging: z.boolean(),
+  allergyDetection: z.boolean(),
+  autoCategorization: z.boolean(),
+  nutritionEstimation: z.boolean(),
+  recipeProvenance: z.boolean(),
+  ingredientLinking: z.boolean(),
+});
+
+export type AutomaticEnrichmentConfig = z.infer<typeof AutomaticEnrichmentSchema>;
+
+/**
+ * Auto-tagging and allergy detection keep the effective enabledness of the settings
+ * they replace. Auto-categorization, nutrition estimation, and Recipe Provenance are
+ * newly automatic, so they stay off until an administrator opts in — an upgrade must
+ * not silently spend AI.
+ */
+export const DEFAULT_AUTOMATIC_ENRICHMENT: AutomaticEnrichmentConfig = {
+  autoTagging: false,
+  allergyDetection: true,
+  autoCategorization: false,
+  nutritionEstimation: false,
+  recipeProvenance: false,
+  ingredientLinking: false,
+};
+
+export const DEFAULT_TAG_STRATEGY: TagStrategy = "predefined";
+
+/** Restrictive by default: an administrator opts in to letting AI mint Cuisines. */
+export const DEFAULT_CUISINE_STRATEGY: CuisineStrategy = "existing";
+
+export const AIConfigInputSchema = z.object({
   enabled: z.boolean(),
   provider: AIProviderSchema,
   endpoint: z.url("Endpoint must be a valid URL").optional(),
@@ -251,12 +329,65 @@ export const AIConfigSchema = z.object({
   temperature: z.number().min(0).max(2),
   maxTokens: z.number().int().positive(),
   timeoutMs: z.number().int().positive().optional().default(300000),
-  autoTagAllergies: z.boolean().default(true),
   alwaysUseAI: z.boolean().default(false),
-  autoTaggingMode: AutoTaggingModeSchema.default("disabled"),
+  tagStrategy: TagStrategySchema.optional(),
+  cuisineStrategy: CuisineStrategySchema.optional(),
+  automaticEnrichment: AutomaticEnrichmentSchema.partial().optional(),
+  /** @deprecated Migrated into `automaticEnrichment.autoTagging` + `tagStrategy`. */
+  autoTaggingMode: AutoTaggingModeSchema.optional(),
+  /** @deprecated Migrated into `automaticEnrichment.allergyDetection`. */
+  autoTagAllergies: z.boolean().optional(),
 });
 
-export type AIConfig = z.infer<typeof AIConfigSchema>;
+/**
+ * The canonical AI configuration contract. Stored config written before the
+ * unified enrichment flow still parses: legacy fields migrate without changing
+ * effective enabledness, and canonical values always win over legacy ones.
+ */
+export const AIConfigSchema = AIConfigInputSchema.transform(
+  ({
+    autoTaggingMode,
+    autoTagAllergies,
+    tagStrategy,
+    cuisineStrategy,
+    automaticEnrichment,
+    ...rest
+  }) => {
+    const legacyAutoTaggingOn =
+      autoTaggingMode === undefined ? undefined : autoTaggingMode !== "disabled";
+    const legacyStrategy =
+      autoTaggingMode === undefined || autoTaggingMode === "disabled" ? undefined : autoTaggingMode;
+
+    return {
+      ...rest,
+      tagStrategy: tagStrategy ?? legacyStrategy ?? DEFAULT_TAG_STRATEGY,
+      cuisineStrategy: cuisineStrategy ?? DEFAULT_CUISINE_STRATEGY,
+      automaticEnrichment: {
+        autoTagging:
+          automaticEnrichment?.autoTagging ??
+          legacyAutoTaggingOn ??
+          DEFAULT_AUTOMATIC_ENRICHMENT.autoTagging,
+        allergyDetection:
+          automaticEnrichment?.allergyDetection ??
+          autoTagAllergies ??
+          DEFAULT_AUTOMATIC_ENRICHMENT.allergyDetection,
+        autoCategorization:
+          automaticEnrichment?.autoCategorization ??
+          DEFAULT_AUTOMATIC_ENRICHMENT.autoCategorization,
+        nutritionEstimation:
+          automaticEnrichment?.nutritionEstimation ??
+          DEFAULT_AUTOMATIC_ENRICHMENT.nutritionEstimation,
+        recipeProvenance:
+          automaticEnrichment?.recipeProvenance ?? DEFAULT_AUTOMATIC_ENRICHMENT.recipeProvenance,
+        ingredientLinking:
+          automaticEnrichment?.ingredientLinking ?? DEFAULT_AUTOMATIC_ENRICHMENT.ingredientLinking,
+      },
+    };
+  }
+);
+
+export type AIConfig = z.output<typeof AIConfigSchema>;
+export type AIConfigInput = z.input<typeof AIConfigSchema>;
 
 // ============================================================================
 // Video Configuration Schema (includes transcription settings)
@@ -321,11 +452,28 @@ export function transcriptionProviderSupportsModelListing(
   return (TRANSCRIPTION_PROVIDERS_WITH_MODEL_LISTING as readonly string[]).includes(provider);
 }
 
+/**
+ * yt-dlp release Norish ships against.
+ *
+ * The single source for the `YT_DLP_VERSION` default, which is what a
+ * development server downloads on its first import. The Docker build takes the
+ * same value through its `YT_DLP_VERSION` build arg and must be moved with it;
+ * a repo-invariant test pins the two together.
+ *
+ * It is not what the admin screen shows. That is a report of the binary the
+ * server is actually running, asked of the binary - quoting this constant there
+ * is how the UI came to name a release the server had not used for two
+ * upgrades.
+ *
+ * Sites that break as a site changes (Instagram most of all) are fixed in yt-dlp
+ * releases, so this trails the newest release rather than leading it.
+ */
+export const DEFAULT_YT_DLP_VERSION = "2026.07.04";
+
 export const VideoConfigSchema = z.object({
   enabled: z.boolean(),
   maxLengthSeconds: z.number().int().positive(),
   maxVideoFileSize: z.number().int().positive(), // Max video file size in bytes
-  ytDlpVersion: z.string().min(1),
   ytDlpProxy: z.string().optional(),
   // Transcription settings (required for video processing)
   transcriptionProvider: TranscriptionProviderSchema,

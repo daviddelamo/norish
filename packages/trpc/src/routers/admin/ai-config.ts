@@ -1,19 +1,22 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import type { AIConfig, VideoConfig } from "@norish/config/zod/server-config";
 import { testAIEndpoint as testAIEndpointFn } from "@norish/auth/connection-tests";
 import {
+  AIConfigInputSchema,
   AIConfigSchema,
   ServerConfigKeys,
   TranscriptionProviderSchema,
   VideoConfigSchema,
 } from "@norish/config/zod/server-config";
-import { getRecipesWithoutCategories } from "@norish/db/repositories/recipes";
 import { getConfig, setConfig } from "@norish/db/repositories/server-config";
-import { addAutoCategorizationJob } from "@norish/queue/auto-categorization/producer";
-import { getQueues } from "@norish/queue/registry";
-import { listModels, listTranscriptionModels } from "@norish/shared-server/ai/providers";
-import { getRecipePermissionPolicy } from "@norish/shared-server/config/server-config-loader";
+import { enrollEnrichmentForAllRecipes } from "@norish/queue";
+import { listModels, listTranscriptionModels } from "@norish/shared-server/ai/providers/listing";
+import {
+  getRecipePermissionPolicy,
+  isAIEnabled,
+} from "@norish/shared-server/config/server-config-loader";
 import { trpcLogger as log } from "@norish/shared-server/logger";
 
 import { adminProcedure } from "../../middleware";
@@ -73,7 +76,7 @@ const updateVideoConfig = adminProcedure
 const testAIEndpoint = adminProcedure
   .input(
     z.object({
-      provider: AIConfigSchema.shape.provider,
+      provider: AIConfigInputSchema.shape.provider,
       endpoint: z.string().url().optional(),
       apiKey: z.string().optional(),
     })
@@ -99,7 +102,7 @@ const testAIEndpoint = adminProcedure
 const listAvailableModels = adminProcedure
   .input(
     z.object({
-      provider: AIConfigSchema.shape.provider,
+      provider: AIConfigInputSchema.shape.provider,
       endpoint: z.string().optional(),
       apiKey: z.string().optional(),
     })
@@ -180,30 +183,31 @@ const listAvailableTranscriptionModels = adminProcedure
     return { models };
   });
 
-const categorizeAllRecipes = adminProcedure.mutation(async ({ ctx }) => {
-  log.info({ userId: ctx.user.id }, "Bulk categorization requested");
+/**
+ * Enroll every enabled enrichment kind for every recipe on the server.
+ *
+ * Deliberately the automatic origin: the automatic switches decide which kinds
+ * run, and Supplied Recipe Data keeps winning, so the sweep fills gaps without
+ * replacing anything a person or an import source already provided.
+ */
+const enrichAllRecipes = adminProcedure.mutation(async ({ ctx }) => {
+  log.info({ userId: ctx.user.id }, "Bulk enrichment requested");
 
-  const uncategorized = await getRecipesWithoutCategories();
-
-  if (uncategorized.length === 0) {
-    log.info("No uncategorized recipes found");
-
-    return { queued: 0 };
-  }
-
-  const queues = getQueues();
-
-  for (const recipe of uncategorized) {
-    await addAutoCategorizationJob(queues.autoCategorization, {
-      recipeId: recipe.id,
-      userId: ctx.user.id,
-      householdKey: ctx.household?.id ?? "",
+  if (!(await isAIEnabled())) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "AI is disabled on this server. Enable AI before running enrichment.",
     });
   }
 
-  log.info({ count: uncategorized.length }, "Bulk categorization jobs queued");
+  const result = await enrollEnrichmentForAllRecipes({
+    userId: ctx.user.id,
+    householdKey: ctx.household?.id ?? "",
+  });
 
-  return { queued: uncategorized.length };
+  log.info(result, "Bulk enrichment jobs queued");
+
+  return result;
 });
 
 export const aiConfigProcedures = router({
@@ -212,5 +216,5 @@ export const aiConfigProcedures = router({
   testAIEndpoint,
   listAvailableModels,
   listAvailableTranscriptionModels,
-  categorizeAllRecipes,
+  enrichAllRecipes,
 });

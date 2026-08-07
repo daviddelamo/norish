@@ -6,7 +6,8 @@ import { Accordion, Card } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import AIConfigForm from "./ai-config-form";
-import BulkCategorizationForm from "./bulk-categorization-form";
+import BulkEnrichmentForm from "./bulk-enrichment-form";
+import CuisineVocabularyForm from "./cuisine-vocabulary-form";
 import PromptsForm from "./prompts-form";
 import { UnsavedChangesChip } from "./unsaved-changes-chip";
 import VideoProcessingForm from "./video-processing-form";
@@ -95,19 +96,36 @@ export default function AIProcessingCard() {
             </Accordion.Panel>
           </Accordion.Item>
 
-          <Accordion.Item id="bulkCategorization">
+          <Accordion.Item id="cuisines">
             <Accordion.Heading>
               <Accordion.Trigger>
                 <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">{t("bulkCategorization.title")}</div>
-                  <span className="text-muted text-sm">{t("bulkCategorization.subtitle")}</span>
+                  <div className="flex items-center gap-2">{t("cuisines.title")}</div>
+                  <span className="text-muted text-sm">{t("cuisines.subtitle")}</span>
                 </div>
                 <Accordion.Indicator />
               </Accordion.Trigger>
             </Accordion.Heading>
             <Accordion.Panel>
               <Accordion.Body>
-                <BulkCategorizationForm />
+                <CuisineVocabularyForm />
+              </Accordion.Body>
+            </Accordion.Panel>
+          </Accordion.Item>
+
+          <Accordion.Item id="bulkEnrichment">
+            <Accordion.Heading>
+              <Accordion.Trigger>
+                <div className="flex flex-col items-start gap-1">
+                  <div className="flex items-center gap-2">{t("bulkEnrichment.title")}</div>
+                  <span className="text-muted text-sm">{t("bulkEnrichment.subtitle")}</span>
+                </div>
+                <Accordion.Indicator />
+              </Accordion.Trigger>
+            </Accordion.Heading>
+            <Accordion.Panel>
+              <Accordion.Body>
+                <BulkEnrichmentForm />
               </Accordion.Body>
             </Accordion.Panel>
           </Accordion.Item>

@@ -1,4 +1,3 @@
-import type { AIResult } from "@norish/shared-server/ai/types/result";
 import type { RecipeCategory, Slot } from "@norish/shared/contracts";
 import type { FullRecipeInsertDTO } from "@norish/shared/contracts/dto/recipe";
 import type { SiteAuthTokenDecryptedDto } from "@norish/shared/contracts/dto/site-auth-tokens";
@@ -8,19 +7,6 @@ import type { ImageImportFile } from "./contracts/job-types";
 export interface QueueParseRecipeResult {
   recipe: FullRecipeInsertDTO;
   usedAI: boolean;
-}
-
-export interface QueueNutritionEstimate {
-  calories: number;
-  fat: number;
-  carbs: number;
-  protein: number;
-}
-
-export interface QueueRecipeSummary {
-  title: string;
-  description: string | null;
-  ingredients: string[];
 }
 
 export interface QueueSyncResult {
@@ -33,6 +19,13 @@ export interface QueueMediaCleanupResult {
   errors: number;
 }
 
+/**
+ * The api-layer operations the queue workers call without importing
+ * `@norish/api` — extraction and parsing are import-pipeline features, and
+ * CalDAV sync and media cleanup are server concerns. Recipe Enrichment is
+ * deliberately absent: those features live in `@norish/shared-server`, which
+ * the queue imports directly.
+ */
 export interface QueueApiHandlers {
   extractRecipeNodesFromJsonValue(input: unknown): Record<string, unknown>[];
   normalizeRecipeFromJson(json: unknown, recipeId: string): Promise<FullRecipeInsertDTO | null>;
@@ -42,36 +35,15 @@ export interface QueueApiHandlers {
     html: string,
     recipeId: string,
     url?: string,
-    allergies?: string[],
     originalHtml?: string
-  ): Promise<AIResult<FullRecipeInsertDTO>>;
+  ): Promise<FullRecipeInsertDTO>;
   parseRecipeFromUrl(
     url: string,
     recipeId: string,
-    allergies?: string[],
     forceAI?: boolean,
     tokens?: SiteAuthTokenDecryptedDto[]
   ): Promise<QueueParseRecipeResult>;
-  extractRecipeFromImages(
-    recipeId: string,
-    files: ImageImportFile[],
-    allergies?: string[]
-  ): Promise<AIResult<FullRecipeInsertDTO>>;
-  estimateNutritionFromIngredients(
-    recipeName: string,
-    servings: number,
-    ingredients: Array<{
-      ingredientName: string;
-      amount: number | null;
-      unit: string | null;
-    }>
-  ): Promise<AIResult<QueueNutritionEstimate>>;
-  generateTagsForRecipe(recipe: QueueRecipeSummary): Promise<AIResult<string[]>>;
-  categorizeRecipe(recipe: QueueRecipeSummary): Promise<AIResult<RecipeCategory[]>>;
-  detectAllergiesInRecipe(
-    recipe: QueueRecipeSummary,
-    allergiesToDetect: string[]
-  ): Promise<AIResult<string[]>>;
+  extractRecipeFromImages(recipeId: string, files: ImageImportFile[]): Promise<FullRecipeInsertDTO>;
   syncPlannedItem(
     userId: string,
     itemId: string,

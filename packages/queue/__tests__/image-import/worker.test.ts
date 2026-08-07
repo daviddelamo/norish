@@ -18,7 +18,14 @@ vi.mock("@norish/db", () => ({
 }));
 
 vi.mock("@norish/shared-server/config/server-config-loader", () => ({
-  getAIConfig: vi.fn().mockResolvedValue({ autoTagAllergies: false }),
+  getAIConfig: vi.fn().mockResolvedValue({
+    automaticEnrichment: {
+      autoTagging: false,
+      allergyDetection: false,
+      autoCategorization: false,
+      nutritionEstimation: false,
+    },
+  }),
   getRecipePermissionPolicy: vi.fn().mockResolvedValue({ view: "everyone" }),
 }));
 
@@ -48,41 +55,38 @@ describe("processImageImportJob", () => {
     vi.clearAllMocks();
 
     extractRecipeFromImages.mockResolvedValue({
-      success: true,
-      data: {
-        id: "recipe-123",
-        name: "Extracted Recipe",
-        description: null,
-        notes: null,
-        url: null,
-        image: null,
-        servings: 2,
-        prepMinutes: null,
-        cookMinutes: null,
-        totalMinutes: null,
-        calories: null,
-        fat: null,
-        carbs: null,
-        protein: null,
-        systemUsed: "metric",
-        recipeIngredients: [
-          {
-            ingredientId: null,
-            ingredientName: "Flour",
-            amount: 1,
-            unit: "cup",
-            systemUsed: "metric",
-            order: 0,
-          },
-        ],
-        steps: [{ step: "Mix", order: 1, systemUsed: "metric" }],
-        tags: [],
-        categories: [],
-        images: [],
-        videos: [],
-      },
+      id: "recipe-123",
+      name: "Extracted Recipe",
+      description: null,
+      notes: null,
+      url: null,
+      image: null,
+      servings: 2,
+      prepMinutes: null,
+      cookMinutes: null,
+      totalMinutes: null,
+      calories: null,
+      fat: null,
+      carbs: null,
+      protein: null,
+      systemUsed: "metric",
+      recipeIngredients: [
+        {
+          ingredientId: null,
+          ingredientName: "Flour",
+          amount: 1,
+          unit: "cup",
+          systemUsed: "metric",
+          order: 0,
+        },
+      ],
+      steps: [{ step: "Mix", order: 1, systemUsed: "metric" }],
+      tags: [],
+      categories: [],
+      images: [],
+      videos: [],
     });
-    createRecipeWithRefs.mockResolvedValue("recipe-123");
+    createRecipeWithRefs.mockResolvedValue({ status: "inserted", recipeId: "recipe-123" });
     dashboardRecipe.mockResolvedValue({ id: "recipe-123", name: "Extracted Recipe" });
     saveImageBytes.mockResolvedValue("/recipes/recipe-123/uploaded.jpg");
   });
@@ -109,11 +113,7 @@ describe("processImageImportJob", () => {
       },
     } as any);
 
-    expect(extractRecipeFromImages).toHaveBeenCalledWith(
-      "recipe-123",
-      expect.any(Array),
-      undefined
-    );
+    expect(extractRecipeFromImages).toHaveBeenCalledWith("recipe-123", expect.any(Array));
     expect(createRecipeWithRefs).toHaveBeenCalledWith(
       "recipe-123",
       "user-1",

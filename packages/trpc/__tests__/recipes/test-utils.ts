@@ -111,10 +111,15 @@ export function createMockFullRecipe(overrides: Partial<FullRecipeDTO> = {}): Fu
     fat: null,
     carbs: null,
     protein: null,
+    originCountry: null,
+    originCountryName: null,
+    originRegion: null,
+    provenanceNote: null,
     systemUsed: "metric",
     createdAt: now,
     updatedAt: now,
     tags: [{ name: "dinner" }],
+    cuisines: [],
     categories: ["Dinner"],
     recipeIngredients: [
       {
@@ -127,7 +132,15 @@ export function createMockFullRecipe(overrides: Partial<FullRecipeDTO> = {}): Fu
         order: 0,
       },
     ],
-    steps: [{ step: "Mix all ingredients", systemUsed: "metric", order: 0, images: [] }],
+    steps: [
+      {
+        step: "Mix all ingredients",
+        systemUsed: "metric",
+        order: 0,
+        images: [],
+        stepIngredients: [],
+      },
+    ],
     author: { id: "test-user-id", name: "Test User", image: null },
     images: [],
     videos: [],

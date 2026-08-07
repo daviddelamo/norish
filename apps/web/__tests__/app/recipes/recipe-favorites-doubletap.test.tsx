@@ -12,6 +12,7 @@ const userPreferencesState = {
 };
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "en",
   useTranslations: () => (key: string) => key,
 }));
 
@@ -83,9 +84,16 @@ vi.mock("@/components/shared/media-carousel", () => ({
   buildMediaItems: () => [],
 }));
 
+vi.mock("@/app/(app)/recipes/[id]/components/provenance-card", () => ({
+  default: () => <div>provenance-card</div>,
+  ProvenanceSection: () => <div>provenance-section</div>,
+  useProvenanceSectionVisible: () => true,
+}));
+
 vi.mock("@/app/(app)/recipes/[id]/components/nutrition-card", () => ({
   default: () => <div>nutrition-card</div>,
   NutritionSection: () => <div>nutrition-section</div>,
+  useNutritionSectionVisible: () => true,
 }));
 
 vi.mock("@/app/(app)/recipes/[id]/components/actions-menu", () => ({

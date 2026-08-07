@@ -6,6 +6,7 @@ import AddToGroceries from "@/app/(app)/recipes/[id]/components/add-to-groceries
 import CookingMode from "@/app/(app)/recipes/[id]/components/cookingmode";
 import IngredientsList from "@/app/(app)/recipes/[id]/components/ingredient-list";
 import NutritionCard from "@/app/(app)/recipes/[id]/components/nutrition-card";
+import ProvenanceCard from "@/app/(app)/recipes/[id]/components/provenance-card";
 import StepsList from "@/app/(app)/recipes/[id]/components/steps-list";
 import SystemConvertMenu from "@/app/(app)/recipes/[id]/components/system-convert-menu";
 import AmountDisplayToggle from "@/components/recipes/amount-display-toggle";
@@ -20,7 +21,6 @@ import HeartButton from "@/components/shared/heart-button";
 import { useUserContext } from "@/context/user-context";
 import { useFavoritesMutation, useFavoritesQuery } from "@/hooks/favorites";
 import { useRatingQuery, useRatingsMutation } from "@/hooks/ratings";
-import { useIngredientLinkHighlight } from "@/hooks/use-ingredient-link-highlight";
 import { ArrowLeftIcon } from "@heroicons/react/16/solid";
 import { Card } from "@heroui/react";
 import { useTranslations } from "next-intl";
@@ -49,8 +49,6 @@ export default function RecipePageDesktop() {
   const t = useTranslations("recipes.detail");
   const showRatings = getShowRatingsPreference(user);
   const showFavorites = getShowFavoritesPreference(user);
-  const { highlightedIngredientKey, highlightIngredient, ingredientListRef } =
-    useIngredientLinkHighlight();
 
   const isFavorite = checkFavorite(recipe.id);
   const handleToggleFavorite = () => toggleFavorite(recipe.id);
@@ -100,10 +98,7 @@ export default function RecipePageDesktop() {
                 </div>
               </div>
 
-              <IngredientsList
-                highlightedIngredientKey={highlightedIngredientKey}
-                ingredientListRef={ingredientListRef}
-              />
+              <IngredientsList />
 
               {/* Add to groceries button */}
               <AddToGroceries recipeId={recipe.id} />
@@ -149,6 +144,10 @@ export default function RecipePageDesktop() {
             />
           </DoubleTapContainer>
 
+          {/* Recipe Provenance — above the notes, because where a dish comes
+              from frames the cook's own notes about it. */}
+          <ProvenanceCard />
+
           {/* Notes */}
           {recipe.notes && (
             <Card className="rounded-2xl">
@@ -167,7 +166,7 @@ export default function RecipePageDesktop() {
               <h2 className="text-lg font-semibold">{t("steps")}</h2>
             </Card.Header>
             <Card.Content className="px-3 pt-2 pb-0 text-left">
-              <StepsList onIngredientPress={highlightIngredient} />
+              <StepsList />
             </Card.Content>
 
             {/* Rating Section */}

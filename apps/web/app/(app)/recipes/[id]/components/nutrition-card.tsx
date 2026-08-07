@@ -4,15 +4,36 @@ import { useMemo, useState } from "react";
 import { useRecipeContext } from "@/app/(app)/recipes/[id]/context";
 import NutritionPortionControl from "@/components/recipes/nutrition-portion-control";
 import { getNutritionData, MACROS } from "@/components/recipes/readonly-nutrition";
-import AIActionButton from "@/components/shared/ai-action-button";
-import { usePermissionsContext } from "@/context/permissions-context";
-import { Card, Separator, Skeleton } from "@heroui/react";
+import { Card, Skeleton } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
+/**
+ * Whether the Nutrition Information section has anything to show: something
+ * stored, or a run in flight. Queued and processing both render as "working";
+ * a quiet automatic failure simply leaves the panel showing whatever is
+ * stored. The page layouts read this too, so the rules they draw between
+ * sections come from the same answer the section itself renders by.
+ */
+export function useNutritionSectionVisible(): boolean {
+  const { recipe, enrichment } = useRecipeContext();
+
+  if (!recipe) return false;
+
+  return getNutritionData(recipe, 1).hasData || enrichment.isBusy("nutrition-estimation");
+}
+
+/**
+ * Nutrition Information on the recipe page, following the Recipe Provenance
+ * rules: the section is absent when nothing is stored and nothing is running,
+ * a run in flight renders as working rather than naming its lifecycle state,
+ * and both asking for a run and seeing that one failed live in the actions
+ * menu — the card itself never reports enrichment state.
+ */
 function NutritionDisplay({ inCard = true }: { inCard?: boolean }) {
-  const { recipe, isEstimatingNutrition, estimateNutrition } = useRecipeContext();
-  const { isAIEnabled } = usePermissionsContext();
+  const { recipe, enrichment } = useRecipeContext();
+  const isEstimatingNutrition = enrichment.isBusy("nutrition-estimation");
   const t = useTranslations("recipes.nutrition");
+  const isVisible = useNutritionSectionVisible();
   // Independent portion state - defaults to 1 (per serving)
   const [portions, setPortions] = useState(1);
 
@@ -20,17 +41,14 @@ function NutritionDisplay({ inCard = true }: { inCard?: boolean }) {
     if (!recipe) return null;
 
     const values = getNutritionData(recipe, portions);
-    const hasData = values.hasData;
-
-    if (!hasData && !isAIEnabled) return null;
 
     return {
-      hasData,
+      hasData: values.hasData,
       values: values.values,
     };
-  }, [recipe, portions, isAIEnabled]);
+  }, [recipe, portions]);
 
-  if (!nutritionData) return null;
+  if (!nutritionData || !isVisible) return null;
 
   const content = (
     <>
@@ -52,7 +70,7 @@ function NutritionDisplay({ inCard = true }: { inCard?: boolean }) {
             </div>
           ))}
         </div>
-      ) : nutritionData.hasData ? (
+      ) : (
         <>
           <div className="divide-border divide-y">
             {MACROS.map(({ key, labelKey, unit, icon: Icon, color, bg }) => {
@@ -82,30 +100,18 @@ function NutritionDisplay({ inCard = true }: { inCard?: boolean }) {
             </p>
           )}
         </>
-      ) : (
-        <div className="flex flex-col items-center gap-3 py-2">
-          <p className="text-muted text-base">{t("noInfo")}</p>
-          {isAIEnabled && (
-            <AIActionButton
-              isLoading={isEstimatingNutrition}
-              label={t("estimateWithAI")}
-              onPress={estimateNutrition}
-            />
-          )}
-        </div>
       )}
     </>
   );
 
+  // As a section the display draws no rule of its own: the page owns the
+  // rhythm between sections.
   return inCard ? (
     <Card className="rounded-2xl">
       <Card.Content className="p-5">{content}</Card.Content>
     </Card>
   ) : (
-    <>
-      <Separator />
-      <div className="space-y-2">{content}</div>
-    </>
+    <div className="space-y-2">{content}</div>
   );
 }
 

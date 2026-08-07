@@ -13,7 +13,6 @@ import {
   deleteRecipeById,
   getRecipeFull,
   getRecipeOwnerId,
-  getRecipesWithoutCategories,
   listRecipes,
   updateRecipeCategories,
 } from "../mocks/recipes-repository";
@@ -42,7 +41,6 @@ vi.mock("@norish/db", async (importOriginal) => {
     getRecipeFull: recipes.getRecipeFull,
     getRecipeOwnerId: recipes.getRecipeOwnerId,
     getRecipesByUrlsForPolicy: vi.fn(),
-    getRecipesWithoutCategories: recipes.getRecipesWithoutCategories,
     listRecipes: recipes.listRecipes,
     recipeExistsByUrlForPolicy: vi.fn(),
     updateRecipeCategories: recipes.updateRecipeCategories,
@@ -92,6 +90,7 @@ describe("recipes procedures", () => {
           systemUsed: "metric",
           order: 0,
           images: [],
+          stepIngredients: [],
           version: 1,
         },
       ],
@@ -507,7 +506,7 @@ describe("recipes procedures", () => {
     it("returns recipe ID and emits created event on success", async () => {
       const mockDashboard = createMockRecipeDashboard({ name: "New Recipe" });
 
-      createRecipeWithRefs.mockResolvedValue("new-recipe-id");
+      createRecipeWithRefs.mockResolvedValue({ status: "inserted", recipeId: "new-recipe-id" });
       dashboardRecipe.mockResolvedValue(mockDashboard);
 
       const testRouter = t.router({
@@ -597,27 +596,6 @@ describe("recipes procedures", () => {
         recipe: expect.objectContaining({ id: "recipe-1" }),
       });
       expect(result).toEqual({ success: true });
-    });
-
-    it("returns only recipes without categories", async () => {
-      const expected = [
-        { id: "recipe-1", name: "No Categories" },
-        { id: "recipe-2", name: "Still Empty" },
-      ];
-
-      getRecipesWithoutCategories.mockResolvedValue(expected);
-
-      const testRouter = t.router({
-        listWithoutCategories: t.procedure
-          .input((v: any) => v)
-          .query(async () => getRecipesWithoutCategories()),
-      });
-
-      const caller = t.createCallerFactory(testRouter)(ctx);
-      const result = await caller.listWithoutCategories(undefined);
-
-      expect(getRecipesWithoutCategories).toHaveBeenCalled();
-      expect(result).toEqual(expected);
     });
   });
 

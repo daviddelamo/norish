@@ -11,7 +11,8 @@ import { SERVER_CONFIG } from "@norish/config/env-config-server";
 import { getVideoConfig } from "@norish/shared-server/config/server-config-loader";
 import { videoLogger as log } from "@norish/shared-server/logger";
 
-import type { VideoMetadata } from "./types";
+import type { VideoMetadata, VideoStream } from "./types";
+import { MediaUnavailableError } from "./errors";
 
 // Handle CJS/ESM interop - the module may be wrapped in a default property
 const YTDlpWrap =
@@ -146,6 +147,32 @@ async function execYtDlp(args: string[], cwd?: string): Promise<void> {
   }
 }
 
+/**
+ * Restate a failed download as "the media could not be had", keeping the
+ * operator-facing wording yt-dlp's own diagnostics earned.
+ */
+function asMediaUnavailable(error: unknown): MediaUnavailableError {
+  const message = error instanceof Error ? error.message : "";
+
+  if (message.includes("Unsupported URL")) {
+    return new MediaUnavailableError("Video platform not supported or URL is invalid.", {
+      cause: error,
+    });
+  }
+  if (message.includes("Video unavailable") || message.includes("private")) {
+    return new MediaUnavailableError("Video is unavailable or private.", { cause: error });
+  }
+  if (message.includes("HTTP Error 429")) {
+    return new MediaUnavailableError("Rate limited by video platform. Please try again later.", {
+      cause: error,
+    });
+  }
+
+  return new MediaUnavailableError(`Failed to download video: ${message || "Unknown error"}`, {
+    cause: error,
+  });
+}
+
 async function getProxyArgs(): Promise<string[]> {
   const videoConfig = await getVideoConfig();
   const proxy = videoConfig?.ytDlpProxy || SERVER_CONFIG.YT_DLP_PROXY;
@@ -269,6 +296,73 @@ export async function buildAuthArgs(
   return { args, cleanup };
 }
 
+/** The slice of yt-dlp's info dict this module reads. */
+export type YtDlpInfo = {
+  title?: string;
+  description?: string;
+  duration?: number | null;
+  thumbnail?: string;
+  uploader?: string;
+  channel?: string;
+  upload_date?: string;
+  language?: string;
+  vcodec?: string | null;
+  ext?: string;
+  formats?: { vcodec?: string | null }[];
+  entries?: YtDlpInfo[];
+};
+
+/** Extensions yt-dlp reports for the still images of a photo or carousel post. */
+const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "heic", "gif"]);
+
+function toInfo(rawInfo: unknown): YtDlpInfo {
+  if (Array.isArray(rawInfo)) return { entries: rawInfo as YtDlpInfo[] };
+
+  return (rawInfo ?? {}) as YtDlpInfo;
+}
+
+/**
+ * What an info dict says about a video stream.
+ *
+ * `"unknown"` is the normal answer for a playlist wrapper, which knows nothing
+ * about the media it wraps.
+ */
+export function videoStreamOf(info: YtDlpInfo): VideoStream {
+  if (typeof info.vcodec === "string") return info.vcodec === "none" ? "absent" : "present";
+
+  if (Array.isArray(info.formats) && info.formats.length > 0) {
+    const known = info.formats.filter((format) => typeof format.vcodec === "string");
+
+    if (known.length > 0) {
+      return known.some((format) => format.vcodec !== "none") ? "present" : "absent";
+    }
+  }
+
+  if (typeof info.ext === "string") {
+    return IMAGE_EXTENSIONS.has(info.ext.toLowerCase()) ? "absent" : "present";
+  }
+
+  return "unknown";
+}
+
+/**
+ * Collapse yt-dlp's answer to the entry that carries the media.
+ *
+ * The same reel comes back as the post itself, as a bare array, or wrapped in a
+ * playlist, depending on the yt-dlp version and which extractor path ran - and
+ * only the entry carries duration, uploader and thumbnail. Reading the wrapper
+ * instead leaves a reel looking durationless and authorless, which downstream
+ * mistook for an image post (#513). A carousel can mix stills and clips, so the
+ * clip wins when there is one.
+ */
+export function selectMediaEntry(info: YtDlpInfo): YtDlpInfo {
+  const entries = info.entries;
+
+  if (!Array.isArray(entries) || entries.length === 0) return info;
+
+  return entries.find((entry) => videoStreamOf(entry) === "present") ?? entries[0] ?? {};
+}
+
 export async function getVideoMetadata(
   url: string,
   tokens?: SiteAuthTokenDecryptedDto[]
@@ -281,20 +375,28 @@ export async function getVideoMetadata(
   try {
     const proxyArgs = await getProxyArgs();
     const rawInfo = await ytDlpWrap.getVideoInfo([url, ...(auth?.args ?? []), ...proxyArgs]);
+    const container = toInfo(rawInfo);
+    const primary = selectMediaEntry(container);
 
-    // yt-dlp returns an array for Instagram carousel/image posts (one entry per image)
-    // For single videos, it returns an object directly
-    // Normalize to always work with the first/main entry
-    const info = Array.isArray(rawInfo) ? (rawInfo[0] ?? {}) : rawInfo;
+    // Read the media entry first and the wrapper second: a playlist carries the
+    // caption and title, but only the entry knows the duration and uploader.
+    const pick = <K extends keyof YtDlpInfo>(key: K): YtDlpInfo[K] =>
+      primary[key] ?? container[key];
+
+    // The wrapper only gets a say when the entry had none.
+    const entryStream = videoStreamOf(primary);
+    const videoStream: VideoStream =
+      entryStream === "unknown" ? videoStreamOf(container) : entryStream;
 
     return {
-      title: info.title || "Untitled Video",
-      description: info.description || "",
-      duration: info.duration || 0,
-      thumbnail: info.thumbnail || "",
-      uploader: info.uploader || info.channel || undefined,
-      uploadDate: info.upload_date || undefined,
-      language: info.language || undefined,
+      title: pick("title") || "Untitled Video",
+      description: pick("description") || "",
+      duration: pick("duration") || 0,
+      thumbnail: pick("thumbnail") || "",
+      uploader: pick("uploader") || pick("channel") || undefined,
+      uploadDate: pick("upload_date") || undefined,
+      language: pick("language") || undefined,
+      videoStream,
     };
   } catch (error: unknown) {
     log.error({ err: error }, "Failed to get video metadata");
@@ -394,7 +496,7 @@ export async function downloadVideoAudio(
     }
 
     throw lastError instanceof Error ? lastError : new Error("Could not create audio file.");
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error({ err: error }, "Failed to download video audio");
 
     // Cleanup on failure
@@ -404,19 +506,7 @@ export async function downloadVideoAudio(
       log.error({ err: cleanupErr }, "Failed to cleanup temp file");
     }
 
-    if (error.message?.includes("Unsupported URL")) {
-      throw new Error("Video platform not supported or URL is invalid.");
-    }
-    if (error.message?.includes("Video unavailable") || error.message?.includes("private")) {
-      throw new Error("Video is unavailable or private.");
-    }
-    if (error.message?.includes("HTTP Error 429")) {
-      throw new Error("Rate limited by video platform. Please try again later.");
-    }
-
-    const errorMessage = error.message || "Unknown error";
-
-    throw new Error(`Failed to download video: ${errorMessage}`);
+    throw asMediaUnavailable(error);
   } finally {
     await auth?.cleanup();
   }
@@ -439,7 +529,9 @@ export async function validateVideoLength(
     const maxTime = `${maxMinutes}:${maxSeconds.toString().padStart(2, "0")}`;
     const actualTime = `${actualMinutes}:${actualSeconds.toString().padStart(2, "0")}`;
 
-    throw new Error(`Video exceeds maximum length of ${maxTime} (actual: ${actualTime})`);
+    throw new MediaUnavailableError(
+      `Video exceeds maximum length of ${maxTime} (actual: ${actualTime})`
+    );
   }
 }
 
@@ -655,22 +747,10 @@ export async function downloadVideo(
     log.info({ filePath, extension, size: stats.size }, "Video downloaded successfully");
 
     return { filePath, extension };
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error({ err: error }, "Failed to download video");
 
-    if (error.message?.includes("Unsupported URL")) {
-      throw new Error("Video platform not supported or URL is invalid.");
-    }
-    if (error.message?.includes("Video unavailable") || error.message?.includes("private")) {
-      throw new Error("Video is unavailable or private.");
-    }
-    if (error.message?.includes("HTTP Error 429")) {
-      throw new Error("Rate limited by video platform. Please try again later.");
-    }
-
-    const errorMessage = error.message || "Unknown error";
-
-    throw new Error(`Failed to download video: ${errorMessage}`);
+    throw asMediaUnavailable(error);
   } finally {
     await auth?.cleanup();
   }
