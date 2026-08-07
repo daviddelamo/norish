@@ -33,7 +33,9 @@ export function createUseArchiveMutation({
 
       formData.append("file", file);
 
-      startMutation.mutate(formData as any, {
+      // The router validates FormData at runtime but exposes a portable
+      // structural upload input type for declaration emit.
+      startMutation.mutate(formData as unknown as Parameters<typeof startMutation.mutate>[0], {
         onSuccess: (result) => {
           if (result.success) {
             setImportState(() => ({

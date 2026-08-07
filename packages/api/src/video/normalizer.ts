@@ -9,7 +9,6 @@ import {
 } from "@norish/api/ai/features/recipe-extraction/normalizer";
 import { buildVideoExtractionPrompt } from "@norish/api/ai/prompts/builder";
 import { recipeExtractionSchema } from "@norish/api/ai/schemas/recipe.schema";
-import { isAIEnabled } from "@norish/config/server-config-loader";
 import { getGenerationSettings, getModels } from "@norish/shared-server/ai/providers";
 import {
   aiError,
@@ -17,6 +16,7 @@ import {
   getErrorMessage,
   mapErrorToCode,
 } from "@norish/shared-server/ai/types/result";
+import { isAIEnabled } from "@norish/shared-server/config/server-config-loader";
 import { videoLogger } from "@norish/shared-server/logger";
 import { downloadImage } from "@norish/shared-server/media/storage";
 

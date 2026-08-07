@@ -14,6 +14,11 @@
       "ingredients": "Ингредиенты",
       "steps": "Шаги",
       "tags": "Теги"
+    },
+    "viewMode": {
+      "label": "Вид рецептов",
+      "grid": "Сетка",
+      "list": "Список"
     }
   },
   "empty": {
@@ -26,7 +31,8 @@
     "noImage": "Изображение недоступно",
     "viewGroceries": "Открыть список покупок",
     "addToCalendar": "Добавить в календарь",
-    "deleteRecipe": "Удалить рецепт"
+    "deleteRecipe": "Удалить рецепт",
+    "recipeOptions": "Параметры рецепта"
   },
   "detail": {
     "backToRecipes": "Назад к рецептам",
@@ -168,7 +174,8 @@
     "uploading": "Загрузка...",
     "clickToUpload": "Нажмите, чтобы загрузить, или перетащите файл",
     "pasteToUpload": "для вставки",
-    "imageFormats": "PNG, JPG, WEBP до 5 МБ"
+    "imageFormats": "PNG, JPG, WEBP до 5 МБ",
+    "discardChangesConfirm": "У вас есть несохранённые изменения. Отменить их и покинуть эту страницу?"
   },
   "gallery": {
     "addImage": "Добавить изображение",
@@ -254,7 +261,6 @@
       "duplicateTag": "Такой тег уже существует"
     }
   },
-
   "cookMode": {
     "steps": "Шаги",
     "ingredients": "Ингредиенты",

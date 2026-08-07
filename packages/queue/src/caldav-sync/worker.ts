@@ -1,9 +1,9 @@
 import type { Job } from "bullmq";
 
 import type { CaldavSyncJobData } from "@norish/queue/contracts/job-types";
+import type { CaldavSubscriptionEvents } from "@norish/shared-server/realtime/caldav";
 import type { Slot } from "@norish/shared/contracts";
 import type { CaldavSyncStatusInsertDto } from "@norish/shared/contracts/dto/caldav-sync-status";
-import type { CaldavSubscriptionEvents } from "@norish/trpc";
 import {
   createCaldavSyncStatus,
   getCaldavSyncStatusByItemId,
@@ -12,9 +12,10 @@ import {
 import { requireQueueApiHandler } from "@norish/queue/api-handlers";
 import { getBullClient } from "@norish/queue/redis/bullmq";
 import { createLogger } from "@norish/shared-server/logger";
-import { caldavEmitter } from "@norish/trpc/routers/caldav/emitter";
+import { caldavEmitter } from "@norish/shared-server/realtime/caldav";
 
 import { baseWorkerOptions, QUEUE_NAMES, STALLED_INTERVAL, WORKER_CONCURRENCY } from "../config";
+import { reportStep } from "../job-steps";
 import { createLazyWorker, stopLazyWorker } from "../lazy-worker-manager";
 
 const log = createLogger("worker:caldav-sync");
@@ -53,6 +54,7 @@ async function processCaldavSyncJob(job: Job<CaldavSyncJobData>): Promise<void> 
   }
 
   if (operation === "delete") {
+    await reportStep(job, "deleting-event");
     await deletePlannedItem(userId, itemId);
 
     return;
@@ -65,6 +67,7 @@ async function processCaldavSyncJob(job: Job<CaldavSyncJobData>): Promise<void> 
   const isNewRecord = !existingStatus;
 
   // Perform the CalDAV sync (throws on error)
+  await reportStep(job, "syncing-event");
   const { uid } = await syncPlannedItem(userId, itemId, eventTitle, date, slot as Slot, recipeId);
 
   const persistedStatus = isNewRecord

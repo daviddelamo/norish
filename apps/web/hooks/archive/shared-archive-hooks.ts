@@ -2,7 +2,7 @@
 
 import { useTRPC } from "@/app/providers/trpc-provider";
 import { showSafeErrorToast } from "@/lib/ui/safe-error-toast";
-import { addToast } from "@heroui/react";
+import { toast } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import { createArchiveHooks } from "@norish/shared-react/hooks";
@@ -14,12 +14,9 @@ export const sharedArchiveHooks = createArchiveHooks({
 
     return {
       showStartToast: (total: number) => {
-        addToast({
-          severity: "default",
-          title: "Recipe import started",
+        toast("Recipe import started", {
           description: `Importing ${total} recipes...`,
-          shouldShowTimeoutProgress: true,
-          radius: "full",
+          variant: "default",
         });
       },
       showErrorToast: (error: unknown) => {
@@ -50,12 +47,9 @@ export const sharedArchiveHooks = createArchiveHooks({
           description = `Imported ${imported} recipes`;
         }
 
-        addToast({
-          severity: hasErrors ? "warning" : "success",
-          title: "Recipe import complete",
-          description,
-          shouldShowTimeoutProgress: true,
-          radius: "full",
+        toast("Recipe import complete", {
+          description: description,
+          variant: hasErrors ? "warning" : "success",
         });
       },
     };

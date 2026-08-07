@@ -9,8 +9,7 @@
 import type { Job } from "bullmq";
 
 import type { ImageImportJobData } from "@norish/queue/contracts/job-types";
-import type { PolicyEmitContext } from "@norish/trpc/helpers";
-import { getAIConfig, getRecipePermissionPolicy } from "@norish/config/server-config-loader";
+import type { PolicyEmitContext } from "@norish/shared-server/realtime/policy";
 import {
   addRecipeImages,
   createRecipeWithRefs,
@@ -19,12 +18,17 @@ import {
 } from "@norish/db";
 import { requireQueueApiHandler } from "@norish/queue/api-handlers";
 import { getBullClient } from "@norish/queue/redis/bullmq";
+import {
+  getAIConfig,
+  getRecipePermissionPolicy,
+} from "@norish/shared-server/config/server-config-loader";
 import { createLogger } from "@norish/shared-server/logger";
 import { deleteRecipeImagesDir, saveImageBytes } from "@norish/shared-server/media/storage";
-import { emitByPolicy } from "@norish/trpc/helpers";
-import { recipeEmitter } from "@norish/trpc/routers/recipes/emitter";
+import { emitByPolicy } from "@norish/shared-server/realtime/policy";
+import { recipeEmitter } from "@norish/shared-server/realtime/recipes";
 
 import { baseWorkerOptions, QUEUE_NAMES, STALLED_INTERVAL, WORKER_CONCURRENCY } from "../config";
+import { reportStep } from "../job-steps";
 import { createLazyWorker, stopLazyWorker } from "../lazy-worker-manager";
 
 const log = createLogger("worker:image-import");
@@ -49,6 +53,7 @@ export async function processImageImportJob(job: Job<ImageImportJobData>): Promi
   });
 
   // Fetch household allergies for targeted allergy detection
+  await reportStep(job, "preparing-images");
   const aiConfig = await getAIConfig();
   let allergyNames: string[] | undefined;
 
@@ -63,6 +68,7 @@ export async function processImageImportJob(job: Job<ImageImportJobData>): Promi
   }
 
   // Extract recipe from images using AI vision
+  await reportStep(job, "ai-extraction");
   const result = await extractRecipeFromImages(recipeId, files, allergyNames);
 
   if (!result.success) {
@@ -75,6 +81,7 @@ export async function processImageImportJob(job: Job<ImageImportJobData>): Promi
   const parsedRecipe = result.data;
 
   // Save the recipe
+  await reportStep(job, "saving");
   const createdId = await createRecipeWithRefs(recipeId, userId, parsedRecipe);
 
   if (!createdId) {

@@ -1,9 +1,9 @@
-import { getRecipePermissionPolicy } from "@norish/config/server-config-loader";
 import {
   getAverageRating,
   getUserRatingWithVersion,
   rateRecipe,
 } from "@norish/db/repositories/ratings";
+import { getRecipePermissionPolicy } from "@norish/shared-server/config/server-config-loader";
 import { trpcLogger as log } from "@norish/shared-server/logger";
 import { RatingGetInputSchema, RatingInputSchema } from "@norish/shared/contracts/zod";
 

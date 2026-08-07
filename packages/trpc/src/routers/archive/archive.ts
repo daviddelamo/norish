@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import type {
   ArchiveImportError,
   ArchiveSkippedItem,
@@ -13,6 +11,7 @@ import {
 } from "@norish/shared-server/archive/parser";
 import { trpcLogger as log } from "@norish/shared-server/logger";
 
+import { formDataInputSchema, getUploadedFile } from "../../form-data";
 import { authedProcedure } from "../../middleware";
 import { router } from "../../trpc";
 import { recipeEmitter } from "../recipes/emitter";
@@ -23,11 +22,11 @@ import { recipeEmitter } from "../recipes/emitter";
  * Recipe data is emitted via recipeBatchCreated subscription
  */
 const importArchive = authedProcedure
-  .input(z.instanceof(FormData))
+  .input(formDataInputSchema)
   .mutation(async ({ ctx, input }) => {
     log.debug({ userId: ctx.user.id }, "Starting archive import");
 
-    const file = input.get("file") as File | null;
+    const file = getUploadedFile(input, "file");
 
     if (!file) {
       log.warn({ userId: ctx.user.id }, "Archive import: no file in FormData");

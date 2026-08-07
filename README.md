@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="./.github/assets/mockup-norish.png" width="100%" alt="Norish mockup" />
+  <img src="./.github/assets/logo.svg" width="100%" alt="Norish Logo" />
 </p>
 
 <p align="center">
+  <a href="https://norish.dev"><img src="https://img.shields.io/badge/Website-norish.dev-22c55e?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website" /></a>
+  <a href="https://docs.norish.dev"><img src="https://img.shields.io/badge/Docs-docs.norish.dev-22c55e?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Documentation" /></a>
   <a href="https://github.com/norish-recipes/Norish/blob/main/LICENSE"><img src="https://img.shields.io/github/license/norish-recipes/Norish?style=for-the-badge" alt="License" /></a>
   <a href="https://github.com/norish-recipes/Norish/actions"><img src="https://img.shields.io/github/actions/workflow/status/norish-recipes/Norish/release-build.yml?style=for-the-badge&logo=github" alt="Build Status" /></a>
   <a href="https://hub.docker.com/r/norishapp/norish"><img src="https://img.shields.io/docker/pulls/norishapp/norish?style=for-the-badge&logo=docker" alt="Docker Pulls" /></a>
@@ -16,88 +18,14 @@
 
 Norish is a real-time, household-first recipe app for planning meals, sharing groceries, and cooking together.
 
-## Table of Contents
+**For the website and documentation see: [norish.dev](https://norish.dev) and [docs.norish.dev](https://docs.norish.dev)**
 
-- [Norish](#norish)
-  - [Table of Contents](#table-of-contents)
-  - [Vision](#vision)
-  - [Why Norish](#why-norish)
-  - [Core Features](#core-features)
-  - [Deploying](#deploying)
-    - [Minimal Docker Compose](#minimal-docker-compose)
-    - [First-User Setup](#first-user-setup)
-  - [Admin Settings](#admin-settings)
-  - [Environment Variables](#environment-variables)
-    - [Required by schema](#required-by-schema)
-    - [Commonly set in production](#commonly-set-in-production)
-    - [Optional general Runtime](#optional-general-runtime)
-    - [Optional auth setup](#optional-auth-setup)
-    - [Optional OIDC Claim Mapping](#optional-oidc-claim-mapping)
-    - [Optional AI Provider](#optional-ai-provider)
-    - [Optional Video + Transcription](#optional-video--transcription)
-    - [Optional (Parsing + Content Detection)](#optional-parsing--content-detection)
-    - [Optional (Scheduler + Upload Limits)](#optional-scheduler--upload-limits)
-    - [Optional (Internationalization)](#optional-internationalization)
-  - [Development Setup](#development-setup)
-    - [Devcontainer Development](#devcontainer-development)
-    - [Local Development](#local-development)
-    - [Development Commands](#development-commands)
-  - [Recipe API](#recipe-api)
-  - [Tech Stack](#tech-stack)
-    - [Frontend](#frontend)
-    - [Backend](#backend)
-    - [Database](#database)
-    - [AI and Processing](#ai-and-processing)
-    - [Testing and Tooling](#testing-and-tooling)
-  - [License](#license)
-  - [FOSS Alternatives](#foss-alternatives)
-- [Nora](#nora)
+## Quick start
 
----
+The fastest way to try Norish is Docker Compose. At a minimum you need a `DATABASE_URL` and a `MASTER_KEY`:
 
-## Vision
-
-The vision for Norish is a shared recipe app built for friends, families, and households that want to share a recipe catalogue.
-
-The name comes from Nora (our dog) + dish. Coincidentally, it also sounds like "nourish".
-
----
-
-## Why Norish
-
-Norish started because we wanted a cooking app that felt intuitive and easy to use. The existing apps we tested sadly did not meet our requirements in ease of use and aestethics.
-
-Norish is intentionally minimal. It focuses on practical day-to-day use.
-
----
-
-## Core Features
-
-- **Easy recipe import** from URL, with AI fallback if configured.
-- **Video recipe import** from YouTube Shorts, Instagram Reels, TikTok, and more (requires AI provider).
-- **Image recipe import** from screenshots/photos of recipes (requires AI provider).
-- **Nutritional information** generation (requires AI provider).
-- **Allergy detection and warnings** for recipe ingredients (detection requires AI provider).
-- **Unit conversion** metric <-> US (requires AI provider).
-- **Recurring groceries** via NLP or manual setup.
-- **Real-time sync** of recipes, groceries, and meal planning data.
-- **Households** with shared groceries and planning.
-- **CalDAV sync** for calendar integration.
-- **Mobile-first design** with light/dark mode support.
-- **Authentication options**: OIDC, OAuth providers, and first-time password auth fallback.
-- **Admin settings UI** for runtime configuration.
-- **Permission policies** for recipe visibility/edit/delete scopes.
-- **Internationalization (i18n)** currently supporting EN, NL, DE, FR, ES, RU, KO, PL, DA, and IT
-
-_Note: AI feature speed can vary by provider, model, and region._
-
----
-
-## Deploying
-
-### Minimal Docker Compose
-
-For a full template, see [docker-compose.example.yml](docker/docker-compose.example.yml).
+> [!TIP]
+> Generate a `MASTER_KEY` with `openssl rand -base64 32`. Keep it secret and stable — it derives the encryption keys, so changing it later invalidates previously encrypted data.
 
 ```yaml
 services:
@@ -111,28 +39,13 @@ services:
     volumes:
       - norish_data:/app/uploads
     environment:
-      AUTH_URL: http://norish.example.com
+      AUTH_URL: http://localhost:3000
       DATABASE_URL: postgres://postgres:norish@db:5432/norish
       MASTER_KEY: <32-byte-base64-key> # openssl rand -base64 32
       CHROME_WS_ENDPOINT: ws://chrome-headless:3000
       REDIS_URL: redis://redis:6379
       UPLOADS_DIR: /app/uploads
-
-      # Optional
-      # NEXT_PUBLIC_LOG_LEVEL: info
-      # TRUSTED_ORIGINS: http://192.168.1.100:3000,https://norish.example.com
-      # YT_DLP_BIN_DIR: /app/bin
-
-      # First-user auth setup (choose one)
-      # OIDC_NAME: NoraId
-      # OIDC_ISSUER: https://auth.example.com
-      # OIDC_CLIENT_ID: <client-id>
-      # OIDC_CLIENT_SECRET: <client-secret>
-      # OIDC_WELLKNOWN: https://auth.example.com/.well-known/openid-configuration
-      # GITHUB_CLIENT_ID: <github-client-id>
-      # GITHUB_CLIENT_SECRET: <github-client-secret>
-      # GOOGLE_CLIENT_ID: <google-client-id>
-      # GOOGLE_CLIENT_SECRET: <google-client-secret>
+      
     healthcheck:
       test:
         [
@@ -183,8 +96,11 @@ volumes:
   redis_data:
 ```
 
-### First-User Setup
+## Contributing
 
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) or the [development docs](https://docs.norish.dev/development/setup) to get started.
+
+### First-User Setup
 The first user to sign in becomes server owner + server admin. After first sign-in:
 
 - User registration is disabled automatically.
@@ -544,13 +460,6 @@ Notes:
 ## License
 
 Norish is licensed under [AGPL-3.0](LICENSE).
-
-## FOSS Alternatives
-
-This list is not limited to the below but the ones I know:
-
-- [Mealie](https://mealie.io/)
-- [Tandoor](https://tandoor.dev/)
 
 ---
 

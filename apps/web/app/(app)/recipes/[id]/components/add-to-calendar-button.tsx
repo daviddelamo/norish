@@ -10,21 +10,19 @@ import { useTranslations } from "next-intl";
 type Props = {
   recipeId: string;
 };
-
 export default function AddToCalendarButton({ recipeId }: Props) {
   const { recipe } = useRecipeQuery(recipeId);
   const [open, setOpen] = useState(false);
   const t = useTranslations("recipes.detail");
-
   return (
     <>
       <Button
         isIconOnly
-        className="text-default-500"
+        className="text-muted"
         size="sm"
         title={t("planMeal")}
-        variant="light"
         onPress={() => setOpen(true)}
+        variant="tertiary"
       >
         <CalendarDaysIcon className="h-5 w-5" />
       </Button>

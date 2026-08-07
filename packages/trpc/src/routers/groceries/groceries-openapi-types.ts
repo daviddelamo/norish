@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { GroceryDto } from "@norish/shared/contracts";
 import { GrocerySelectBaseSchema } from "@norish/db";
 
 export const createGroceryApiInputSchema = z.object({
@@ -20,7 +21,12 @@ export const deleteGroceryOutputSchema = z.object({
   stale: z.boolean(),
 });
 
-export const groceryMutationOutputSchema = z.object({
+type GroceryMutationOutput = {
+  grocery: GroceryDto | null;
+  stale: boolean;
+};
+
+export const groceryMutationOutputSchema: z.ZodType<GroceryMutationOutput> = z.object({
   grocery: GrocerySelectBaseSchema.nullable(),
   stale: z.boolean(),
 });

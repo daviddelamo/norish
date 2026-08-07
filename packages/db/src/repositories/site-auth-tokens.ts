@@ -7,7 +7,7 @@ import type {
   SiteAuthTokenSafeDto,
   UpdateSiteAuthTokenInputDto,
 } from "@norish/shared/contracts/dto/site-auth-tokens";
-import { decrypt, encrypt } from "@norish/auth/crypto";
+import { decrypt, encrypt } from "@norish/config/crypto";
 import { db } from "@norish/db/drizzle";
 import { siteAuthTokens } from "@norish/db/schema";
 import {

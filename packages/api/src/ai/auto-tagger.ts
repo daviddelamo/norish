@@ -1,8 +1,8 @@
 import { generateText, Output } from "ai";
 
-import { getAutoTaggingMode, isAIEnabled } from "@norish/config/server-config-loader";
 import { listAllTagNames } from "@norish/db/repositories/tags";
 import { getGenerationSettings, getModels } from "@norish/shared-server/ai/providers";
+import { getAutoTaggingMode, isAIEnabled } from "@norish/shared-server/config/server-config-loader";
 import { aiLogger } from "@norish/shared-server/logger";
 
 import type { AIResult } from "./core/types";

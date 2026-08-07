@@ -8,8 +8,7 @@
 import type { Job } from "bullmq";
 
 import type { RecipeImportJobData } from "@norish/queue/contracts/job-types";
-import type { PolicyEmitContext } from "@norish/trpc/helpers";
-import { getAIConfig, getRecipePermissionPolicy } from "@norish/config/server-config-loader";
+import type { PolicyEmitContext } from "@norish/shared-server/realtime/policy";
 import {
   createRecipeWithRefs,
   dashboardRecipe,
@@ -23,10 +22,14 @@ import { addAutoCategorizationJob } from "@norish/queue/auto-categorization/prod
 import { addAutoTaggingJob } from "@norish/queue/auto-tagging/producer";
 import { getBullClient } from "@norish/queue/redis/bullmq";
 import { getQueues } from "@norish/queue/registry";
+import {
+  getAIConfig,
+  getRecipePermissionPolicy,
+} from "@norish/shared-server/config/server-config-loader";
 import { createLogger } from "@norish/shared-server/logger";
 import { deleteRecipeImagesDir } from "@norish/shared-server/media/storage";
-import { emitByPolicy } from "@norish/trpc/helpers";
-import { recipeEmitter } from "@norish/trpc/routers/recipes/emitter";
+import { emitByPolicy } from "@norish/shared-server/realtime/policy";
+import { recipeEmitter } from "@norish/shared-server/realtime/recipes";
 
 import {
   baseWorkerOptions,
@@ -36,6 +39,7 @@ import {
   WORKER_CONCURRENCY,
 } from "../config";
 import { withTimeout } from "../helpers";
+import { completeStep, reportStep } from "../job-steps";
 import { createLazyWorker, stopLazyWorker } from "../lazy-worker-manager";
 
 const log = createLogger("worker:recipe-import");
@@ -61,7 +65,10 @@ async function processImportJob(job: Job<RecipeImportJobData>): Promise<void> {
   emitByPolicy(recipeEmitter, viewPolicy, ctx, "importStarted", { recipeId, url });
 
   // Check if recipe already exists (policy-aware)
+  await reportStep(job, "dedupe-check");
   const existingCheck = await recipeExistsByUrlForPolicy(url, userId, householdUserIds, viewPolicy);
+
+  await completeStep(job, { alreadyExists: existingCheck.exists });
 
   if (existingCheck.exists && existingCheck.existingRecipeId) {
     const dashboardDto = await dashboardRecipe(existingCheck.existingRecipeId);
@@ -85,6 +92,7 @@ async function processImportJob(job: Job<RecipeImportJobData>): Promise<void> {
   }
 
   // Fetch household allergies for targeted allergy detection (only if autoTagAllergies is enabled)
+  await reportStep(job, "fetch-allergies");
   const aiConfig = await getAIConfig();
   let allergyNames: string[] | undefined;
 
@@ -100,7 +108,10 @@ async function processImportJob(job: Job<RecipeImportJobData>): Promise<void> {
     log.debug("Auto-tag allergies disabled, skipping allergy detection");
   }
 
+  await completeStep(job, { allergies: allergyNames ?? [], allergyCount: allergyNames?.length ?? 0 });
+
   // Parse and create recipe
+  await reportStep(job, "parsing");
   const userTokens = await getDecryptedTokensByUserId(userId);
   const parseResult = await withTimeout(
     () =>
@@ -120,6 +131,9 @@ async function processImportJob(job: Job<RecipeImportJobData>): Promise<void> {
     throw new Error("Failed to parse recipe from URL");
   }
 
+  await completeStep(job, { usedAI: parseResult.usedAI });
+
+  await reportStep(job, "saving");
   const createdId = await createRecipeWithRefs(recipeId, userId, parseResult.recipe);
 
   if (!createdId) {
@@ -145,6 +159,7 @@ async function processImportJob(job: Job<RecipeImportJobData>): Promise<void> {
     // Trigger auto-tagging only if AI was NOT used for extraction
     // (AI extraction already includes auto-tagging instructions in the prompt)
     if (!parseResult.usedAI) {
+      await reportStep(job, "post-processing");
       const queues = getQueues();
 
       await addAutoTaggingJob(queues.autoTagging, {

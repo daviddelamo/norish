@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 ##############################
 # Base image (minimal, no pnpm needed at runtime)
 ##############################
@@ -16,9 +18,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ##############################
 FROM base AS builder-base
 
-RUN npm install -g pnpm@10.30.1
+RUN npm install -g pnpm@10.33.2
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.4 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.11.8 /uv /uvx /bin/
 
 ENV UV_LINK_MODE=copy \
   UV_PYTHON_DOWNLOADS=0 \
@@ -44,6 +46,7 @@ COPY packages/api/package.json ./packages/api/package.json
 COPY packages/auth/package.json ./packages/auth/package.json
 COPY packages/config/package.json ./packages/config/package.json
 COPY packages/db/package.json ./packages/db/package.json
+COPY packages/db-schema/package.json ./packages/db-schema/package.json
 COPY packages/i18n/package.json ./packages/i18n/package.json
 COPY packages/queue/package.json ./packages/queue/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
@@ -56,10 +59,10 @@ COPY packages/ui/package.json ./packages/ui/package.json
 COPY tooling/eslint/package.json ./tooling/eslint/package.json
 COPY tooling/prettier/package.json ./tooling/prettier/package.json
 COPY tooling/tailwind/package.json ./tooling/tailwind/package.json
+COPY tooling/tailwind/heroui-theme.css ./tooling/tailwind/heroui-theme.css
+COPY tooling/tailwind/heroui-theme.js ./tooling/tailwind/heroui-theme.js
+COPY tooling/tailwind/postcss-config.js ./tooling/tailwind/postcss-config.js
 COPY tooling/typescript/package.json ./tooling/typescript/package.json
-
-# patches (required for patchedDependencies in pnpm-workspace.yaml)
-COPY patches/ ./patches/
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
   SKIP_PARSER_API_INSTALL=1 pnpm install --frozen-lockfile
@@ -156,7 +159,7 @@ RUN find /app/packages -type d -name '__tests__' -exec rm -rf {} + 2>/dev/null; 
 ##############################
 FROM base AS ytdlp
 
-ARG YT_DLP_VERSION=2026.03.17
+ARG YT_DLP_VERSION=2026.07.04
 ARG TARGETARCH
 
 RUN apk add --no-cache curl
@@ -197,6 +200,12 @@ ENV NODE_ENV=production \
   PORT=3000 \
   HOST="0.0.0.0"
 
+ARG NORISH_VERSION_REPORT_JSON
+
+RUN test -n "${NORISH_VERSION_REPORT_JSON}"
+
+ENV NORISH_VERSION_REPORT_JSON=${NORISH_VERSION_REPORT_JSON}
+
 # Use non-root user for runtime.
 # node:22-alpine already has user 'node' with UID/GID 1000.
 # For custom UID/GID, create a new user; otherwise reuse 'node'.
@@ -212,7 +221,6 @@ RUN if [ "${UID}" != "1000" ] || [ "${GID}" != "1000" ]; then \
 # We run our own bundled server from dist-server, so we only need the built
 # `.next` output plus the small config files Next reads at startup.
 COPY --from=build --chown=${UID}:${GID} /app/apps/web/.next/standalone/apps/web/.next/ ./apps/web/.next/
-COPY --from=build --chown=${UID}:${GID} /app/apps/web/package.json ./apps/web/package.json
 COPY --from=build --chown=${UID}:${GID} /app/apps/web/next.config.js ./apps/web/next.config.js
 COPY --from=build --chown=${UID}:${GID} /app/apps/web/config/next-intl-request-config-path.js ./apps/web/config/next-intl-request-config-path.js
 # Root package.json needed by next.config.js (reads version from ../../package.json)

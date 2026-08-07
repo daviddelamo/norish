@@ -14,6 +14,11 @@
       "ingredients": "Ingredienser",
       "steps": "Trin",
       "tags": "Tags"
+    },
+    "viewMode": {
+      "label": "Opskriftsvisning",
+      "grid": "Gitter",
+      "list": "Liste"
     }
   },
   "empty": {
@@ -26,7 +31,8 @@
     "noImage": "Intet billede tilgængeligt",
     "viewGroceries": "Se indkøbsliste",
     "addToCalendar": "Tilføj til kalender",
-    "deleteRecipe": "Slet opskrift"
+    "deleteRecipe": "Slet opskrift",
+    "recipeOptions": "Opskriftsindstillinger"
   },
   "detail": {
     "backToRecipes": "Tilbage til opskrifter",
@@ -168,7 +174,8 @@
     "uploading": "Uploader...",
     "clickToUpload": "Klik for at uploade eller træk og slip",
     "pasteToUpload": "for at indsætte",
-    "imageFormats": "PNG, JPG, WEBP op til 5 MB"
+    "imageFormats": "PNG, JPG, WEBP op til 5 MB",
+    "discardChangesConfirm": "Du har ændringer, der ikke er gemt. Vil du kassere dem og forlade siden?"
   },
   "gallery": {
     "addImage": "Tilføj billede",

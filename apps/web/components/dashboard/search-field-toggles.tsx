@@ -39,10 +39,13 @@ export default function SearchFieldToggles({
         return (
           <Chip
             key={field}
+            as="button"
+            aria-pressed={isSelected}
             className={`shrink-0 cursor-pointer select-none ${itemClassName}`}
-            color={isSelected ? "primary" : "default"}
+            color={isSelected ? "accent" : "default"}
             size="sm"
-            variant="solid"
+            type="button"
+            variant={isSelected ? "primary" : "tertiary"}
             onClick={() => handleClick(field)}
           >
             {t(`searchFields.${field}`)}

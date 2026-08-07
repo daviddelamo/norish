@@ -1,7 +1,7 @@
 import { createSelectSchema } from "drizzle-zod";
 import z from "zod";
 
-import { groceries } from "@norish/db/schema";
+import { groceries } from "@norish/db-schema/schema";
 
 export const GrocerySelectBaseSchema = createSelectSchema(groceries)
   .omit({
@@ -73,6 +73,16 @@ export const GroceryUpdateInputSchema = z.object({
   groceryId: z.string(),
   raw: z.string(),
   version: z.number().int().positive(),
+  storeId: z.string().uuid().nullable().optional(),
+});
+
+export const DetachRecurringGroceryInputSchema = z.object({
+  recurringGroceryId: z.uuid(),
+  recurringVersion: z.number().int().positive(),
+  groceryId: z.uuid(),
+  groceryVersion: z.number().int().positive(),
+  raw: z.string(),
+  storeId: z.string().uuid().nullable().optional(),
 });
 
 export const GroceryToggleSchema = z.object({

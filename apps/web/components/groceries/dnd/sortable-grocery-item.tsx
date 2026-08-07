@@ -42,7 +42,7 @@ export function SortableGroceryItem({ grocery, children }: SortableGroceryItemPr
         {...attributes}
         {...listeners}
       >
-        <Bars3Icon className="text-default-400 h-5 w-5" />
+        <Bars3Icon className="text-muted h-5 w-5" />
       </button>
 
       {/* The actual grocery item content */}

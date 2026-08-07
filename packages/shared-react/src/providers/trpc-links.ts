@@ -192,7 +192,7 @@ function createHttpMutationLink(
   return httpLink({
     url: `${getBaseUrl()}/api/trpc`,
     headers: createRequestHeadersResolver(getHeaders),
-    transformer: superjson as any,
+    transformer: superjson,
   });
 }
 
@@ -206,7 +206,7 @@ function createHttpFormDataMutationLink(
     transformer: {
       serialize: (data: unknown) => data,
       deserialize: superjson.deserialize,
-    } as any,
+    },
   });
 }
 
@@ -224,7 +224,7 @@ function createHttpTransportLink<TRouter extends AnyTRPCRouter>(
     false: httpBatchLink({
       url: `${getBaseUrl()}/api/trpc`,
       headers: createBatchRequestHeadersResolver(getHeaders),
-      transformer: superjson as any,
+      transformer: superjson,
     }),
   });
 }
@@ -292,7 +292,7 @@ export function createTRPCClientLinks<TRouter extends AnyTRPCRouter>({
         condition: (op) => op.type === "subscription",
         true: wsLink({
           client: webSocketClient!,
-          transformer: superjson as any,
+          transformer: superjson,
         }),
         false: createHttpTransportLink(getBaseUrl, getHeaders),
       })

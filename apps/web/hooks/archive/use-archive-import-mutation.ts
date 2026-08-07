@@ -2,7 +2,7 @@
 
 import { useTRPC } from "@/app/providers/trpc-provider";
 import { showSafeErrorToast } from "@/lib/ui/safe-error-toast";
-import { addToast } from "@heroui/react";
+import { toast } from "@heroui/react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
@@ -44,12 +44,9 @@ export function useArchiveImportMutation(): ArchiveImportMutationResult {
             errors: [],
           }));
 
-          addToast({
-            severity: "default",
-            title: "Recipe import started",
+          toast("Recipe import started", {
             description: `Importing ${result.total} recipes...`,
-            shouldShowTimeoutProgress: true,
-            radius: "full",
+            variant: "default",
           });
         } else {
           showSafeErrorToast({

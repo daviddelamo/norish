@@ -1,7 +1,7 @@
 import { generateText, Output } from "ai";
 
 import type { FullRecipeDTO, MeasurementSystem } from "@norish/shared/contracts";
-import { isAIEnabled } from "@norish/config/server-config-loader";
+import { isAIEnabled } from "@norish/shared-server/config/server-config-loader";
 import { aiLogger } from "@norish/shared-server/logger";
 import { RecipeIngredientInputSchema, StepStepSchema } from "@norish/shared/contracts/zod";
 

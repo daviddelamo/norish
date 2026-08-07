@@ -168,7 +168,7 @@ export function createRecipesContext({
     const wrappedCreateRecipe = useCallback(
       (input: FullRecipeInsertDTO) => {
         createRecipe(input);
-        navigation.toHome();
+        input.id ? navigation.toRecipe(input.id) : navigation.toHome();
       },
       [createRecipe, navigation]
     );

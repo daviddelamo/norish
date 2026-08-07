@@ -12,13 +12,8 @@ import type {
   PasteImportJobResult,
   StructuredPasteImportRecipe,
 } from "@norish/queue/contracts/job-types";
+import type { PolicyEmitContext } from "@norish/shared-server/realtime/policy";
 import type { FullRecipeInsertDTO } from "@norish/shared/contracts";
-import type { PolicyEmitContext } from "@norish/trpc/helpers";
-import {
-  getAIConfig,
-  getRecipePermissionPolicy,
-  isAIEnabled,
-} from "@norish/config/server-config-loader";
 import { createRecipeWithRefs, dashboardRecipe, getAllergiesForUsers } from "@norish/db";
 import { getAverageRating, rateRecipe } from "@norish/db/repositories/ratings";
 import { addAllergyDetectionJob } from "@norish/queue/allergy-detection/producer";
@@ -26,15 +21,21 @@ import { requireQueueApiHandler } from "@norish/queue/api-handlers";
 import { addAutoTaggingJob } from "@norish/queue/auto-tagging/producer";
 import { getBullClient } from "@norish/queue/redis/bullmq";
 import { getQueues } from "@norish/queue/registry";
+import {
+  getAIConfig,
+  getRecipePermissionPolicy,
+  isAIEnabled,
+} from "@norish/shared-server/config/server-config-loader";
 import { createLogger } from "@norish/shared-server/logger";
 import { deleteRecipeImagesDir } from "@norish/shared-server/media/storage";
+import { emitByPolicy } from "@norish/shared-server/realtime/policy";
+import { recipeEmitter } from "@norish/shared-server/realtime/recipes";
 import { MAX_RECIPE_PASTE_CHARS } from "@norish/shared/contracts/uploads";
 import { FullRecipeInsertSchema } from "@norish/shared/contracts/zod";
 import { hasRecipeNameIngredientsAndSteps } from "@norish/shared/lib/helpers";
-import { emitByPolicy } from "@norish/trpc/helpers";
-import { recipeEmitter } from "@norish/trpc/routers/recipes/emitter";
 
 import { baseWorkerOptions, QUEUE_NAMES, STALLED_INTERVAL, WORKER_CONCURRENCY } from "../config";
+import { completeStep, reportStep } from "../job-steps";
 import { createLazyWorker, stopLazyWorker } from "../lazy-worker-manager";
 
 const log = createLogger("worker:paste-import");
@@ -183,7 +184,11 @@ export async function processPasteImportJob(
   const createdRecipeIds: string[] = [];
 
   if (structuredRecipes && structuredRecipes.length > 0) {
+    let index = 0;
+
     for (const structuredRecipe of structuredRecipes) {
+      index++;
+      await reportStep(job, `creating-recipes:${index}/${structuredRecipes.length}`);
       const createdId = await createStructuredRecipe(structuredRecipe, userId, householdKey);
 
       if (!createdId) {
@@ -203,7 +208,10 @@ export async function processPasteImportJob(
       throw new Error("Missing recipe ID for paste import.");
     }
 
+    await reportStep(job, "parsing-text");
     const parseResult = await parseFromPastedText(text, recipeId, allergyNames, forceAI);
+
+    await reportStep(job, "saving");
     const createdId = await createRecipeWithRefs(recipeId, userId, parseResult.recipe);
 
     if (!createdId) {
@@ -212,6 +220,9 @@ export async function processPasteImportJob(
 
     createdRecipeIds.push(createdId);
   }
+
+  await completeStep(job, { createdCount: createdRecipeIds.length });
+  await reportStep(job, "post-processing");
 
   const queues = getQueues();
 

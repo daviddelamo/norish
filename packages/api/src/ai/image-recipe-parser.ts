@@ -3,7 +3,6 @@ import { generateText, Output } from "ai";
 import type { ImageImportFile } from "@norish/queue/contracts/job-types";
 import type { AIResult } from "@norish/shared-server/ai/types/result";
 import type { FullRecipeInsertDTO } from "@norish/shared/contracts/dto/recipe";
-import { isAIEnabled } from "@norish/config/server-config-loader";
 import { getGenerationSettings, getModels } from "@norish/shared-server/ai/providers";
 import {
   aiError,
@@ -11,6 +10,7 @@ import {
   getErrorMessage,
   mapErrorToCode,
 } from "@norish/shared-server/ai/types/result";
+import { isAIEnabled } from "@norish/shared-server/config/server-config-loader";
 import { aiLogger } from "@norish/shared-server/logger";
 
 import type { RecipeExtractionOutput } from "./schemas/recipe.schema";

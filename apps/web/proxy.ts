@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { shouldBypassAuthProxy } from "@/lib/recipe-share-access";
 
@@ -54,7 +53,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: request.headers,
   });
 
   if (session?.user) {
@@ -91,6 +90,6 @@ function getPublicOrigin(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api/auth|api/trpc|api/v1|trpc|_next|icons|images/splash|login|signup|auth-error|sw\\.js|favicon\\.ico|favicon\\.svg|favicon-16x16\\.png|favicon-32x32\\.png|favicon-96x96\\.png|apple-touch-icon\\.png|android-chrome-192x192\\.png|android-chrome-512x512\\.png|web-app-manifest-192x192\\.png|web-app-manifest-512x512\\.png|site\\.webmanifest|logo\\.svg|404\\.jpg|nora\\.jpg|mockup-norish\\.png|robots|sounds/).*)",
+    "/((?!api/auth|api/trpc|api/v1|trpc|_next|icons|images/splash|login|signup|auth-error|manifest\\.webmanifest|sw\\.js|favicon\\.ico|favicon\\.svg|favicon-16x16\\.png|favicon-32x32\\.png|favicon-96x96\\.png|apple-touch-icon\\.png|android-chrome-192x192\\.png|android-chrome-512x512\\.png|web-app-manifest-192x192\\.png|web-app-manifest-512x512\\.png|site\\.webmanifest|logo\\.svg|404\\.jpg|nora\\.jpg|mockup-norish\\.png|robots|sounds/).*)",
   ],
 };

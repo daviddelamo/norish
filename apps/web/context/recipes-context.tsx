@@ -7,7 +7,7 @@ import { useFavoritesMutation, useFavoritesQuery } from "@/hooks/favorites";
 import { useRecipesMutations, useRecipesQuery } from "@/hooks/recipes";
 import { sharedDashboardRecipeHooks } from "@/hooks/recipes/shared-recipe-hooks";
 import { useActiveAllergies, useUserAllergiesQuery } from "@/hooks/user";
-import { addToast } from "@heroui/react";
+import { toast } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import type {
@@ -57,16 +57,21 @@ const sharedRecipesContext = createRecipesContext({
     const tRecipes = useTranslations("recipes");
 
     return {
-      show: ({ severity, title, description, actionLabel, onActionPress }) =>
-        addToast({
-          severity,
-          title,
+      show: ({ severity, title, description, actionLabel, onActionPress }) => {
+        const variant = severity === "primary" || severity === "secondary" ? "accent" : severity;
+        const actionProps = actionLabel
+          ? {
+              children: actionLabel,
+              onPress: onActionPress,
+            }
+          : undefined;
+
+        toast(title, {
           description,
-          shouldShowTimeoutProgress: true,
-          radius: "full",
-          actionLabel,
-          onActionPress,
-        }),
+          variant,
+          ...(actionProps ? { actionProps } : {}),
+        });
+      },
       translate: createScopedMessageTranslator({
         common: (messageKey) => tCommon(messageKey as Parameters<typeof tCommon>[0]),
         recipes: (messageKey) => tRecipes(messageKey as Parameters<typeof tRecipes>[0]),

@@ -3,7 +3,7 @@ import z from "zod";
 
 import type { TagDto } from "@norish/shared/contracts/dto/tag";
 import { db } from "@norish/db/drizzle";
-import { recipeTags, tags } from "@norish/db/schema";
+import { recipes, recipeTags, tags } from "@norish/db/schema";
 import { TagSelectBaseSchema } from "@norish/shared/contracts/zod";
 import { stripHtmlTags } from "@norish/shared/lib/helpers";
 
@@ -17,6 +17,25 @@ export async function listAllTagNames(): Promise<string[]> {
     .selectDistinct({ name: tags.name, lowerName })
     .from(tags)
     .innerJoin(recipeTags, eq(tags.id, recipeTags.tagId))
+    .orderBy(lowerName);
+
+  return rows.map((r) => r.name).filter(Boolean);
+}
+
+/**
+ * List tag names used by recipes owned by the given users (typically the
+ * requesting user plus their household members).
+ */
+export async function listTagNamesForUsers(userIds: string[]): Promise<string[]> {
+  if (!userIds.length) return [];
+
+  const lowerName = sql<string>`lower(${tags.name})`.as("lower_name");
+  const rows = await db
+    .selectDistinct({ name: tags.name, lowerName })
+    .from(tags)
+    .innerJoin(recipeTags, eq(tags.id, recipeTags.tagId))
+    .innerJoin(recipes, eq(recipeTags.recipeId, recipes.id))
+    .where(inArray(recipes.userId, userIds))
     .orderBy(lowerName);
 
   return rows.map((r) => r.name).filter(Boolean);
@@ -121,6 +140,20 @@ export async function getOrCreateManyTagsTx(tx: any, names: string[]): Promise<T
   return parsed.data;
 }
 
+export async function deleteOrphanedTagsTx(tx: any): Promise<void> {
+  // Find tags that have no associated recipes (LEFT JOIN antipattern)
+  const orphanedTagIds = await tx
+    .select({ id: tags.id })
+    .from(tags)
+    .leftJoin(recipeTags, eq(tags.id, recipeTags.tagId))
+    .where(sql`${recipeTags.tagId} IS NULL`)
+    .then((rows: any[]) => rows.map((r) => r.id));
+
+  if (orphanedTagIds.length === 0) return;
+
+  await tx.delete(tags).where(inArray(tags.id, orphanedTagIds));
+}
+
 export async function attachTagsToRecipeTx(
   tx: any,
   recipeId: string,
@@ -146,7 +179,11 @@ export async function attachTagsToRecipeByInputTx(
   // Delete existing tags for this recipe first
   await tx.delete(recipeTags).where(eq(recipeTags.recipeId, recipeId));
 
-  if (!tagNames.length) return;
+  if (!tagNames.length) {
+    // Clean up any orphaned tags created by removing all tags from this recipe
+    await deleteOrphanedTagsTx(tx);
+    return;
+  }
 
   const created = await getOrCreateManyTagsTx(tx, tagNames);
 
@@ -171,6 +208,9 @@ export async function attachTagsToRecipeByInputTx(
   if (rows.length > 0) {
     await tx.insert(recipeTags).values(rows).onConflictDoNothing();
   }
+
+  // Clean up any orphaned tags (tags that were removed from all recipes)
+  await deleteOrphanedTagsTx(tx);
 }
 
 export async function getRecipeTagNames(recipeId: string): Promise<string[]> {
@@ -272,4 +312,26 @@ export async function removeTagFromRecipe(recipeId: string, tagName: string): Pr
     .where(sql`${recipeTags.recipeId} = ${recipeId} AND ${recipeTags.tagId} = ${tag.id}`);
 
   return (result.rowCount ?? 0) > 0;
+}
+
+/**
+ * Merge new tag names into a recipe's existing tags inside a single
+ * transaction (preserves manually added tags, deduplicates case-insensitively).
+ * Returns the tags that were actually added and the resulting full tag list.
+ */
+export async function mergeTagsIntoRecipe(
+  recipeId: string,
+  incomingTagNames: string[]
+): Promise<{ newTags: string[]; allTags: string[] }> {
+  return await db.transaction(async (tx) => {
+    const existingTags = await getRecipeTagNamesTx(tx, recipeId);
+
+    const existingLower = new Set(existingTags.map((t) => t.toLowerCase()));
+    const newTags = incomingTagNames.filter((t) => !existingLower.has(t.toLowerCase()));
+    const allTags = [...existingTags, ...newTags];
+
+    await attachTagsToRecipeByInputTx(tx, recipeId, allTags);
+
+    return { newTags, allTags };
+  });
 }

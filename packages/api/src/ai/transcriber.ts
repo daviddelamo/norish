@@ -24,7 +24,6 @@ import OpenAI from "openai";
 
 import type { TranscriptionProvider } from "@norish/config/zod/server-config";
 import type { AIResult } from "@norish/shared-server/ai/types/result";
-import { getAIConfig, getVideoConfig } from "@norish/config/server-config-loader";
 import { isCloudTranscriptionProvider } from "@norish/config/zod/server-config";
 import {
   aiError,
@@ -32,6 +31,7 @@ import {
   getErrorMessage,
   mapErrorToCode,
 } from "@norish/shared-server/ai/types/result";
+import { getAIConfig, getVideoConfig } from "@norish/shared-server/config/server-config-loader";
 import { aiLogger } from "@norish/shared-server/logger";
 
 // ============================================================================

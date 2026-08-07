@@ -5,12 +5,6 @@ import type {
   RecipeShareDto,
   RecipeShareLifecycleEventDto,
 } from "@norish/shared/contracts/dto/recipe-shares";
-import {
-  getRecipePermissionPolicy,
-  getTimerKeywords,
-  getUnits,
-  isTimersEnabled,
-} from "@norish/config/server-config-loader";
 import { UnitsMapSchema } from "@norish/config/zod/server-config";
 import {
   createRecipeShare,
@@ -25,6 +19,12 @@ import {
   revokeRecipeShare,
   updateRecipeShare,
 } from "@norish/db/repositories/recipe-shares";
+import {
+  getRecipePermissionPolicy,
+  getTimerKeywords,
+  getUnits,
+  isTimersEnabled,
+} from "@norish/shared-server/config/server-config-loader";
 import { trpcLogger as log } from "@norish/shared-server/logger";
 import { TimerKeywordsSchema } from "@norish/shared/contracts/zod";
 import {

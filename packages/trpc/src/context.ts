@@ -1,7 +1,7 @@
 import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import type { CreateWSSContextFnOptions } from "@trpc/server/adapters/ws";
 
-import type { SubscriptionMultiplexer } from "@norish/queue/redis/subscription-multiplexer";
+import type { SubscriptionMultiplexer } from "@norish/shared-server/redis/subscription-multiplexer";
 import type { User } from "@norish/shared/contracts";
 import type { OperationId } from "@norish/shared/contracts/realtime-envelope";
 import { auth } from "@norish/auth/auth";

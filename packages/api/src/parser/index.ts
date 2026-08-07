@@ -12,7 +12,7 @@ import {
   isAIEnabled,
   isVideoParsingEnabled,
   shouldAlwaysUseAI,
-} from "@norish/config/server-config-loader";
+} from "@norish/shared-server/config/server-config-loader";
 import { parserLogger as log } from "@norish/shared-server/logger";
 import { FullRecipeInsertDTO } from "@norish/shared/contracts/dto/recipe";
 import { hasRecipeName } from "@norish/shared/lib/helpers";

@@ -65,7 +65,7 @@ export function SortableStoreContainer({
     <div
       ref={setNodeRef}
       className={`overflow-hidden rounded-xl transition-all duration-200 ${
-        showDropIndicator ? "ring-primary ring-2" : ""
+        showDropIndicator ? "ring-accent ring-2" : ""
       }`}
       data-is-over={isOverContainer}
       data-store-id={containerId}

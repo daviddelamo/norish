@@ -14,6 +14,11 @@
       "ingredients": "Ingrédients",
       "steps": "Étapes",
       "tags": "Tags"
+    },
+    "viewMode": {
+      "label": "Vue des recettes",
+      "grid": "Grille",
+      "list": "Liste"
     }
   },
   "empty": {
@@ -26,7 +31,8 @@
     "noImage": "Aucune image disponible",
     "viewGroceries": "Voir les courses",
     "addToCalendar": "Ajouter au calendrier",
-    "deleteRecipe": "Supprimer la recette"
+    "deleteRecipe": "Supprimer la recette",
+    "recipeOptions": "Options de recette"
   },
   "detail": {
     "backToRecipes": "Retour aux recettes",
@@ -168,7 +174,8 @@
     "uploading": "Téléversement...",
     "clickToUpload": "Cliquez pour téléverser ou glissez-déposez",
     "pasteToUpload": "pour coller",
-    "imageFormats": "PNG, JPG, WEBP jusqu’à 5 Mo"
+    "imageFormats": "PNG, JPG, WEBP jusqu’à 5 Mo",
+    "discardChangesConfirm": "Vous avez des modifications non enregistrées. Les ignorer et quitter cette page ?"
   },
   "gallery": {
     "addImage": "Ajouter une image",
@@ -254,7 +261,6 @@
       "duplicateTag": "Ce tag existe déjà"
     }
   },
-
   "cookMode": {
     "steps": "Étapes",
     "ingredients": "Ingrédients",

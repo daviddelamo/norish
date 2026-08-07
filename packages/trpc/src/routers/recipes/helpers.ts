@@ -3,8 +3,8 @@ import { TRPCError } from "@trpc/server";
 import type { PermissionAction } from "@norish/auth/permissions";
 import type { FullRecipeDTO } from "@norish/shared/contracts";
 import { canAccessResource } from "@norish/auth/permissions";
-import { getRecipePermissionPolicy } from "@norish/config/server-config-loader";
 import { getRecipeFull, getRecipeOwnerId } from "@norish/db";
+import { getRecipePermissionPolicy } from "@norish/shared-server/config/server-config-loader";
 import { trpcLogger as log } from "@norish/shared-server/logger";
 
 import { emitByPolicy } from "../../helpers";
