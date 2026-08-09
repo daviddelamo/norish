@@ -9,7 +9,7 @@
     "DATABASE_URL",
     "MASTER_KEY",
     "AUTH_URL",
-    "CHROME_WS_ENDPOINT",
+    "OBSCURA_ENDPOINT",
     "REDIS_URL",
     "PARSER_API_TIMEOUT_MS"
   ],

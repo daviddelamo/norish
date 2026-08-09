@@ -22,8 +22,8 @@ function buildCompose(masterKey: string) {
       DATABASE_URL: postgres://postgres:norish@db:5432/norish
       MASTER_KEY: ${masterKey}
       REDIS_URL: redis://redis:6379
-      CHROME_WS_ENDPOINT: ws://chrome-headless:3000
-    depends_on: [db, redis, chrome-headless]
+      OBSCURA_ENDPOINT: ws://obscura:9222
+    depends_on: [db, redis, obscura]
 
   db:
     image: postgres:17-alpine
@@ -38,15 +38,9 @@ function buildCompose(masterKey: string) {
     volumes:
       - redis_data:/data
 
-  # Headless Chrome, used to scrape recipes from the web
-  chrome-headless:
-    image: zenika/alpine-chrome:latest
-    command:
-      - --no-sandbox
-      - --remote-debugging-address=0.0.0.0
-      - --remote-debugging-port=3000
-      - --headless
-    shm_size: 256m
+  # Renders recipe pages for URL imports
+  obscura:
+    image: norishapp/obscura:0.2.0-norish.1
 
 volumes:
   db_data:
