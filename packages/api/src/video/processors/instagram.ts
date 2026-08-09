@@ -109,9 +109,9 @@ export class InstagramProcessor extends BaseVideoProcessor {
 
     let description = metadata.description?.trim() || "";
 
-    // If yt-dlp returned empty description, try fetching via Playwright
+    // If yt-dlp returned empty description, render the post and read its caption
     if (description.length < 50) {
-      log.info({ url }, "Description too short, attempting Playwright scrape");
+      log.info({ url }, "Description too short, rendering the post in Obscura");
       try {
         const html = await fetchViaPlaywright(url, tokens);
 
@@ -119,11 +119,11 @@ export class InstagramProcessor extends BaseVideoProcessor {
           description = extractCaptionFromHtml(html);
           log.info(
             { url, descriptionLength: description.length },
-            "Extracted caption via Playwright"
+            "Extracted caption from the rendered page"
           );
         }
       } catch (err) {
-        log.warn({ url, err }, "Failed to fetch page via Playwright");
+        log.warn({ url, err }, "Failed to render the post in Obscura");
       }
     }
 

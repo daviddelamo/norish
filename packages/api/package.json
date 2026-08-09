@@ -34,7 +34,7 @@
     "ioredis": "catalog:",
     "mime": "4.1.0",
     "next": "catalog:",
-    "playwright-core": "npm:rebrowser-playwright-core@^1.52.0",
+    "playwright-core": "^1.61.1",
     "superjson": "catalog:",
     "yt-dlp-wrap": "^2.3.12",
     "zod": "catalog:"
