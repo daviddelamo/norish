@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.7
 
 # Norish's own build of Obscura (https://github.com/h4ckf0r0day/obscura), the
 # headless browser that renders pages for URL imports.

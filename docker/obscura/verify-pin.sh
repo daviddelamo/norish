@@ -50,13 +50,32 @@ pinned="${short_image}:${OBSCURA_IMAGE_TAG}"
 
 echo "Obscura pin: ${pinned} (upstream ${OBSCURA_VERSION:-?} @ ${OBSCURA_REVISION})"
 
-# Frozen documentation is a historical record of older releases and is excluded
-# on purpose; .scratch holds working tickets, not deployable configuration.
+# Everything excluded here is a record of a past release or of work in
+# progress, not configuration anyone deploys. Release notes matter as much as
+# the frozen docs: a shipped release's upgrade instructions name the tag *that*
+# release shipped, and rewriting them to match a later pin would be a lie.
 scan() {
-    git -C "$repo" grep "$@" -- ':!.scratch' ':!apps/docs/versioned_docs'
+    git -C "$repo" grep "$@" -- \
+        ':!.scratch' \
+        ':!apps/docs/versioned_docs' \
+        ':!apps/docs/docs/release-notes'
 }
 
 status=0
+
+# The Dockerfile carries the same revision as ARG defaults so a bare
+# `docker build docker/obscura` works. Defaults that drift from pin.env would
+# make this file's claim to be the single record false, so they are checked
+# rather than trusted to a comment.
+for var in OBSCURA_REPO OBSCURA_REVISION OBSCURA_VERSION; do
+    eval "expected=\$$var"
+    actual="$(sed -n "s/^ARG ${var}=//p" "$here/Dockerfile" | head -1)"
+    if [ "$actual" != "$expected" ]; then
+        echo "Dockerfile's ARG ${var}=${actual:-<unset>} does not match pin.env's ${expected}." >&2
+        status=1
+    fi
+done
+[ $status -eq 0 ] || exit $status
 
 if [ $check_refs -eq 1 ]; then
     refs="$(scan -hoE "${short_image}:[A-Za-z0-9_.-]+" | sort -u)"

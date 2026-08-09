@@ -29,17 +29,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to container registry
-        uses: ./tooling/github/registry-login
+      - name: Verify the pinned Obscura image
+        uses: ./tooling/github/verify-obscura-pin
         with:
           dockerhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
           dockerhub-password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-      - name: Verify the pinned Obscura image
-        run: ./docker/obscura/verify-pin.sh --registry
 
   prepare-release:
     name: Create release tag
