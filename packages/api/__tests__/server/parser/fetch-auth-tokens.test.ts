@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SiteAuthTokenDecryptedDto } from "@norish/shared/contracts/dto/site-auth-tokens";
-import { fetchViaPlaywright } from "@norish/api/parser/fetch";
+import { fetchRenderedPage } from "@norish/api/parser/fetch";
 
 // ---------------------------------------------------------------------------
 // Obscura is reached through Playwright; the browser object stays mocked so
@@ -33,7 +33,7 @@ const { mockAddCookies, mockNewContext, mockGetBrowser } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@norish/api/playwright", () => ({
+vi.mock("@norish/api/obscura", () => ({
   getBrowser: mockGetBrowser,
 }));
 
@@ -78,13 +78,13 @@ function getExtraHTTPHeaders(): Record<string, string> | undefined {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-describe("fetchViaPlaywright – auth token injection", () => {
+describe("fetchRenderedPage – auth token injection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("sends no headers at all when no tokens are provided", async () => {
-    await fetchViaPlaywright("https://example.com/recipe");
+    await fetchRenderedPage("https://example.com/recipe");
 
     // Obscura owns the browser identity, so a fetch with nothing to inject
     // customises nothing.
@@ -94,7 +94,7 @@ describe("fetchViaPlaywright – auth token injection", () => {
   });
 
   it("sends no headers at all when tokens is undefined", async () => {
-    await fetchViaPlaywright("https://example.com/recipe", undefined);
+    await fetchRenderedPage("https://example.com/recipe", undefined);
 
     expect(getExtraHTTPHeaders()).toBeUndefined();
 
@@ -107,7 +107,7 @@ describe("fetchViaPlaywright – auth token injection", () => {
       makeToken({ name: "X-Custom", value: "custom-val", type: "header" }),
     ];
 
-    await fetchViaPlaywright("https://example.com/recipe", tokens);
+    await fetchRenderedPage("https://example.com/recipe", tokens);
 
     const headers = getExtraHTTPHeaders()!;
 
@@ -124,7 +124,7 @@ describe("fetchViaPlaywright – auth token injection", () => {
   it("injects cookie tokens via context.addCookies with correct domain and path", async () => {
     const tokens = [makeToken({ name: "session_id", value: "sess-abc", type: "cookie" })];
 
-    await fetchViaPlaywright("https://recipes.example.com/page", tokens);
+    await fetchRenderedPage("https://recipes.example.com/page", tokens);
 
     expect(mockAddCookies).toHaveBeenCalledOnce();
     expect(mockAddCookies).toHaveBeenCalledWith([
@@ -148,7 +148,7 @@ describe("fetchViaPlaywright – auth token injection", () => {
       makeToken({ name: "prefs", value: "dark-mode", type: "cookie" }),
     ];
 
-    await fetchViaPlaywright("https://food.example.org/r/1", tokens);
+    await fetchRenderedPage("https://food.example.org/r/1", tokens);
 
     // Verify header tokens merged
     const headers = getExtraHTTPHeaders()!;
@@ -171,7 +171,7 @@ describe("fetchViaPlaywright – auth token injection", () => {
       makeToken({ name: "token_c", value: "val-c", type: "cookie" }),
     ];
 
-    await fetchViaPlaywright("https://example.com/page", tokens);
+    await fetchRenderedPage("https://example.com/page", tokens);
 
     expect(mockAddCookies).toHaveBeenCalledOnce();
     const cookies = mockAddCookies.mock.calls[0][0] as Array<{

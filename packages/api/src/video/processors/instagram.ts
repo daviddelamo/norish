@@ -1,6 +1,6 @@
 import type { FullRecipeInsertDTO } from "@norish/shared/contracts/dto/recipe";
 import type { SiteAuthTokenDecryptedDto } from "@norish/shared/contracts/dto/site-auth-tokens";
-import { fetchViaPlaywright } from "@norish/api/parser/fetch";
+import { fetchRenderedPage } from "@norish/api/parser/fetch";
 import { extractRecipeWithAI } from "@norish/api/parser/recipe-extraction";
 import { extractRecipeFromVideo } from "@norish/api/video/normalizer";
 import { transcribe } from "@norish/shared-server/ai/runtime/runtime";
@@ -113,7 +113,7 @@ export class InstagramProcessor extends BaseVideoProcessor {
     if (description.length < 50) {
       log.info({ url }, "Description too short, rendering the post in Obscura");
       try {
-        const html = await fetchViaPlaywright(url, tokens);
+        const html = await fetchRenderedPage(url, tokens);
 
         if (html) {
           description = extractCaptionFromHtml(html);

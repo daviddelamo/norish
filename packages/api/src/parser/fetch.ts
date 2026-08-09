@@ -1,7 +1,7 @@
 import type { BrowserContext } from "playwright-core";
 
 import type { SiteAuthTokenDecryptedDto } from "@norish/shared/contracts/dto/site-auth-tokens";
-import { getBrowser } from "@norish/api/playwright";
+import { getBrowser } from "@norish/api/obscura";
 import { parserLogger as log } from "@norish/shared-server/logger";
 
 /**
@@ -21,7 +21,7 @@ const NAVIGATION_TIMEOUT_MS = 30_000;
  * There is no second engine behind this. An empty string means Obscura
  * produced no usable HTML, and the import path reports that as a fetch failure.
  */
-export async function fetchViaPlaywright(
+export async function fetchRenderedPage(
   targetUrl: string,
   tokens?: SiteAuthTokenDecryptedDto[]
 ): Promise<string> {

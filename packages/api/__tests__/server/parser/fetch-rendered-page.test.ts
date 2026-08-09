@@ -13,7 +13,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SiteAuthTokenDecryptedDto } from "@norish/shared/contracts/dto/site-auth-tokens";
-import { fetchViaPlaywright } from "@norish/api/parser/fetch";
+import { fetchRenderedPage } from "@norish/api/parser/fetch";
 
 const { mockGetBrowser, mockNewContext, mockNewPage, mockGoto, mockContent, mockClose } =
   vi.hoisted(() => {
@@ -27,7 +27,7 @@ const { mockGetBrowser, mockNewContext, mockNewPage, mockGoto, mockContent, mock
     return { mockGetBrowser, mockNewContext, mockNewPage, mockGoto, mockContent, mockClose };
   });
 
-vi.mock("@norish/api/playwright", () => ({ getBrowser: mockGetBrowser }));
+vi.mock("@norish/api/obscura", () => ({ getBrowser: mockGetBrowser }));
 
 vi.mock("@norish/shared-server/logger", () => ({
   parserLogger: { debug: vi.fn(), warn: vi.fn(), info: vi.fn(), error: vi.fn() },
@@ -70,23 +70,23 @@ beforeEach(() => {
   mockGetBrowser.mockResolvedValue({ newContext: mockNewContext });
 });
 
-describe("fetchViaPlaywright – rendered-page contract", () => {
+describe("fetchRenderedPage – rendered-page contract", () => {
   it("returns the HTML Obscura rendered", async () => {
-    await expect(fetchViaPlaywright("https://example.com/recipe")).resolves.toBe(
+    await expect(fetchRenderedPage("https://example.com/recipe")).resolves.toBe(
       "<html>rendered</html>"
     );
   });
 
   it("gives every fetch its own isolated context and closes it", async () => {
-    await fetchViaPlaywright("https://example.com/one");
-    await fetchViaPlaywright("https://example.com/two");
+    await fetchRenderedPage("https://example.com/one");
+    await fetchRenderedPage("https://example.com/two");
 
     expect(mockNewContext).toHaveBeenCalledTimes(2);
     expect(mockClose).toHaveBeenCalledTimes(2);
   });
 
   it("navigates once, under one bounded deadline", async () => {
-    await fetchViaPlaywright("https://example.com/recipe");
+    await fetchRenderedPage("https://example.com/recipe");
 
     expect(mockGoto).toHaveBeenCalledOnce();
 
@@ -97,7 +97,7 @@ describe("fetchViaPlaywright – rendered-page contract", () => {
   });
 
   it("supplies no browser identity of its own", async () => {
-    await fetchViaPlaywright("https://example.com/recipe");
+    await fetchRenderedPage("https://example.com/recipe");
 
     // Not "no user-agent, no viewport, no locale" one key at a time: the point
     // is that Norish configures nothing here at all, so a header added back
@@ -106,7 +106,7 @@ describe("fetchViaPlaywright – rendered-page contract", () => {
   });
 
   it("adds no referer, client hints or fetch metadata alongside a user's headers", async () => {
-    await fetchViaPlaywright("https://example.com/recipe", [
+    await fetchRenderedPage("https://example.com/recipe", [
       makeToken({ name: "Authorization", value: "Bearer abc123", type: "header" }),
     ]);
 
@@ -116,21 +116,21 @@ describe("fetchViaPlaywright – rendered-page contract", () => {
   it("closes the context when navigation fails, and reports no HTML", async () => {
     mockGoto.mockRejectedValue(new Error("net::ERR_ABORTED"));
 
-    await expect(fetchViaPlaywright("https://example.com/recipe")).resolves.toBe("");
+    await expect(fetchRenderedPage("https://example.com/recipe")).resolves.toBe("");
     expect(mockClose).toHaveBeenCalledOnce();
   });
 
   it("reports no HTML when Obscura is unreachable", async () => {
     mockGetBrowser.mockRejectedValue(new Error("Obscura is not available."));
 
-    await expect(fetchViaPlaywright("https://example.com/recipe")).resolves.toBe("");
+    await expect(fetchRenderedPage("https://example.com/recipe")).resolves.toBe("");
     expect(mockNewContext).not.toHaveBeenCalled();
   });
 
   it("survives a context that fails to close", async () => {
     mockClose.mockRejectedValue(new Error("context already gone"));
 
-    await expect(fetchViaPlaywright("https://example.com/recipe")).resolves.toBe(
+    await expect(fetchRenderedPage("https://example.com/recipe")).resolves.toBe(
       "<html>rendered</html>"
     );
   });

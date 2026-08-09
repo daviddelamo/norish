@@ -25,7 +25,7 @@ vi.mock("@norish/shared-server/logger", () => ({
 async function loadModule() {
   vi.resetModules();
 
-  return import("@norish/api/playwright");
+  return import("@norish/api/obscura");
 }
 
 function connectedBrowser() {
@@ -58,6 +58,31 @@ describe("getBrowser – the Obscura connection", () => {
     const first = await getBrowser();
 
     await expect(getBrowser()).resolves.toBe(first);
+    expect(mockConnectOverCDP).toHaveBeenCalledOnce();
+  });
+
+  it("opens one connection when two imports arrive while Obscura is cold", async () => {
+    const browser = connectedBrowser();
+    let connect: (value: unknown) => void = () => {};
+
+    mockConnectOverCDP.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          connect = resolve;
+        })
+    );
+
+    const { getBrowser } = await loadModule();
+    // Both start before either finishes: without shared in-flight state the
+    // second connection would orphan the first, and shutdown would only know
+    // about one of them.
+    const first = getBrowser();
+    const second = getBrowser();
+
+    connect(browser);
+
+    await expect(first).resolves.toBe(browser);
+    await expect(second).resolves.toBe(browser);
     expect(mockConnectOverCDP).toHaveBeenCalledOnce();
   });
 
