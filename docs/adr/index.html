@@ -230,9 +230,10 @@
           >
         </h1>
         <p class="meta">
-          Updated July 29, 2026 · branch <code>feat/web-offline-safe</code> · source decisions in
+          Updated August 9, 2026 · branch <code>rc/0.21.0-beta</code> · source decisions in
           <code>docs/adr/offline</code> · <code>docs/adr/releases</code> ·
-          <code>docs/adr/recipes</code>
+          <code>docs/adr/recipes</code> · <code>docs/adr/ai</code> ·
+          <code>docs/adr/imports</code>
         </p>
         <p class="lede">
           Norish web targets flaky connectivity and backend-down page loads with a persisted Warm
@@ -655,6 +656,18 @@
             settled facts, and only a complete group suppresses the run. Rejects whole-group
             suppression by any single value, merging blind to the model, and append-merging
             supplied Cuisines.
+          </p>
+        </li>
+        <li>
+          <a href="imports/0019-obscura-is-the-only-rendered-page-engine.md"
+            >ADR-0019 — Obscura is the only rendered-page engine</a
+          >
+          <p>
+            <b>Accepted and implemented.</b> URL imports render in one Norish-built Obscura
+            sidecar, pinned to an upstream revision, built and started with stealth always
+            on, reached with official Playwright Core over CDP; private-network protection
+            is retained. Rejects upstream's render-only image, a Chrome fallback or per-site
+            engine policy, and any Norish-authored fingerprint beside Obscura's.
           </p>
         </li>
       </ul>
