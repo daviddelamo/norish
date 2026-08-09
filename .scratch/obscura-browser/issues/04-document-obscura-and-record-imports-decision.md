@@ -15,3 +15,20 @@
 - [x] ADR-0019 records the pinned Norish-owned sidecar, full always-on stealth, official Playwright Core, Obscura-only/no-fallback policy, simplified ownership boundary, and retained private-network protection, including their trade-offs.
 - [x] No unrelated existing ADR is rewritten, frozen versioned documentation remains unchanged, and `CONTEXT.md` gains no Obscura, CDP, or stealth glossary entry.
 - [x] Documentation formatting, generated snippets, links, and the docs build pass their existing validation.
+
+## Comments
+
+**2026-08-09 — the Target Version turned out to be `0.21.0-beta`, not
+`0.20.0-beta`.** `v0.20.0-beta` shipped on 2026-08-07 but no Release Checkpoint
+had run since, so the editable docs still carried a label operators already have
+installed — and the first draft of the Upgrade note landed there, telling people
+running 0.20.0-beta to change a setting that works fine in 0.20.0-beta.
+
+`pnpm docs_update 0.21.0-beta` was run per `docs/agents/feature-docs.md`
+("They don't exist yet … make the checkpoint first"). `0.20.0-beta` is frozen
+under `versioned_docs/` exactly as it shipped — still describing
+`chrome-headless`, which is the truth for that release — and the improvement
+entry and Upgrade note now live in `release-notes/0.21.0-beta.md`. The
+"frozen versioned documentation remains unchanged" criterion above still holds:
+freezing 0.20.0-beta is the checkpoint the convention requires, and the
+already-frozen 0.19.x snapshots were not touched.
