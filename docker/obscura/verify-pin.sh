@@ -42,6 +42,8 @@ set +a
 : "${OBSCURA_IMAGE:?pin.env must define OBSCURA_IMAGE}"
 : "${OBSCURA_IMAGE_TAG:?pin.env must define OBSCURA_IMAGE_TAG}"
 : "${OBSCURA_REVISION:?pin.env must define OBSCURA_REVISION}"
+: "${OBSCURA_SHA256_AMD64:?pin.env must define OBSCURA_SHA256_AMD64}"
+: "${OBSCURA_SHA256_ARM64:?pin.env must define OBSCURA_SHA256_ARM64}"
 
 # Registry-qualified in pin.env so `docker buildx imagetools` is unambiguous;
 # Compose files write the short form Docker Hub users recognise.
@@ -67,7 +69,7 @@ status=0
 # `docker build docker/obscura` works. Defaults that drift from pin.env would
 # make this file's claim to be the single record false, so they are checked
 # rather than trusted to a comment.
-for var in OBSCURA_REPO OBSCURA_REVISION OBSCURA_VERSION; do
+for var in OBSCURA_REPO OBSCURA_REVISION OBSCURA_VERSION OBSCURA_SHA256_AMD64 OBSCURA_SHA256_ARM64; do
     eval "expected=\$$var"
     actual="$(sed -n "s/^ARG ${var}=//p" "$here/Dockerfile" | head -1)"
     if [ "$actual" != "$expected" ]; then

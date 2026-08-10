@@ -15,8 +15,8 @@ on:
           instead of overwriting what operators are already running.
         type: boolean
         default: false
-  # Build-only validation. A PR that edits the image build gets it compiled on
-  # one architecture before merge; nothing is pushed.
+  # Build-only validation. A PR that edits the image build assembles it for
+  # both architectures before merge, checksums included; nothing is pushed.
   pull_request:
     paths:
       - "docker/obscura/**"
@@ -40,6 +40,8 @@ jobs:
       repo: ${{ steps.pin.outputs.repo }}
       revision: ${{ steps.pin.outputs.revision }}
       version: ${{ steps.pin.outputs.version }}
+      sha256-amd64: ${{ steps.pin.outputs.sha256-amd64 }}
+      sha256-arm64: ${{ steps.pin.outputs.sha256-arm64 }}
       arches: ${{ steps.pin.outputs.arches }}
     steps:
       - name: Checkout
@@ -47,8 +49,6 @@ jobs:
 
       - name: Read pin.env
         id: pin
-        env:
-          EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
           set -a
@@ -60,14 +60,13 @@ jobs:
             echo "repo=${OBSCURA_REPO}"
             echo "revision=${OBSCURA_REVISION}"
             echo "version=${OBSCURA_VERSION}"
+            echo "sha256-amd64=${OBSCURA_SHA256_AMD64}"
+            echo "sha256-arm64=${OBSCURA_SHA256_ARM64}"
           } >> "$GITHUB_OUTPUT"
-          # A PR only proves the Dockerfile still builds; the second
-          # architecture is exercised by the publish run.
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            echo 'arches=["amd64", "arm64"]' >> "$GITHUB_OUTPUT"
-          else
-            echo 'arches=["amd64"]' >> "$GITHUB_OUTPUT"
-          fi
+          # Both architectures either way: the job is a download and a
+          # checksum, so validating a PR against both costs a minute and
+          # catches a wrong arm64 checksum before it reaches a publish.
+          echo 'arches=["amd64", "arm64"]' >> "$GITHUB_OUTPUT"
 
       # Authenticated so an anonymous pull-rate limit cannot be mistaken for
       # "tag does not exist" by the check below.
@@ -96,11 +95,11 @@ jobs:
   build:
     name: linux/${{ matrix.arch }}
     needs: pin
-    # Native runners per architecture. Compiling a browser engine under QEMU is
-    # not a wait anyone should sit through.
+    # Native runners per architecture, so the fetch stage's shell runs directly
+    # rather than under QEMU.
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    # Obscura is built from source, including its stealth TLS stack.
-    timeout-minutes: 120
+    # Fetch, verify, repackage — there is no compile here.
+    timeout-minutes: 20
     env:
       HAS_REGISTRY_CREDS: ${{ secrets.DOCKERHUB_USERNAME != '' }}
     strategy:
@@ -111,19 +110,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Free up disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker system prune -af
-          df -h
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      # Non-push builds log in too: the Rust and distroless base images come
+      # Non-push builds log in too: the Debian and distroless base images come
       # from rate-limited registries that runners share an IP on. Guarded on the
       # secret so fork PRs pull anonymously instead of failing a login.
       - name: Login to container registry
@@ -144,7 +134,7 @@ jobs:
             echo "outputs=type=image,name=${IMAGE},push-by-digest=true,name-canonical=true,push=true" >> "$GITHUB_OUTPUT"
           else
             # cacheonly: the point of a PR build is that the Dockerfile still
-            # compiles, not the artifact.
+            # resolves and the checksums still match, not the artifact.
             echo "outputs=type=cacheonly" >> "$GITHUB_OUTPUT"
           fi
 
@@ -152,7 +142,7 @@ jobs:
         id: build
         uses: docker/build-push-action@v7
         with:
-          # The build clones Obscura itself, so the context is just this folder.
+          # The build downloads Obscura itself, so the context is just this folder.
           context: ./docker/obscura
           file: ./docker/obscura/Dockerfile
           platforms: linux/${{ matrix.arch }}
@@ -160,6 +150,8 @@ jobs:
             OBSCURA_REPO=${{ needs.pin.outputs.repo }}
             OBSCURA_REVISION=${{ needs.pin.outputs.revision }}
             OBSCURA_VERSION=${{ needs.pin.outputs.version }}
+            OBSCURA_SHA256_AMD64=${{ needs.pin.outputs.sha256-amd64 }}
+            OBSCURA_SHA256_ARM64=${{ needs.pin.outputs.sha256-arm64 }}
           outputs: ${{ steps.mode.outputs.outputs }}
 
       # buildx cannot hand digests between jobs directly, so each becomes an
