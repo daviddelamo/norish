@@ -12,13 +12,22 @@ This directory builds and publishes the image the shipped Compose examples use.
 
 Upstream publishes `h4ckf0r0day/obscura`, but Norish does not use it:
 
-- **Stealth is half a feature without the build.** Obscura's anti-detection
-  behaviour is a `stealth` cargo feature *and* a `--stealth` runtime flag.
-  Upstream's Dockerfile compiles `render` only, so its image accepts the flag
-  while the stealth transport — the TLS fingerprint an anti-bot check sees
-  first — was never compiled in. Upstream's *release archives* do ship a
-  render+stealth build, one per platform with a `-stealth` suffix, and that is
-  what this image takes.
+- **Stealth is half a feature without the build, and upstream's image is the
+  half without it.** Obscura's anti-detection behaviour is a `stealth` cargo
+  feature *and* a `--stealth` runtime flag. Upstream ships four *release
+  archives* per platform — the `-stealth` suffix being the render+stealth
+  build — but only **one Docker image**, built `--features render`.
+
+  This is the trap, and it is silent. Measured against `h4ckf0r0day/obscura:0.2.0`
+  on 2026-08-10: its `/obscura` binary contains **0 BoringSSL symbols**, against
+  152 in the `-stealth` archive this image uses — the TLS fingerprinting stack
+  simply is not in there. Start it as `serve --stealth` anyway and it prints its
+  normal banner and runs: no warning, no error, no hint that the flag did
+  nothing. An operator would have every reason to believe stealth was on.
+
+  So this image takes the `-stealth` archive. If upstream ever publishes a
+  stealth image, this whole directory should be deleted in favour of pulling
+  theirs by digest — that is the only thing keeping it alive.
 - **A release has to be able to name its browser.** The upstream image tags
   move, and release assets can be replaced in place, so the archive is pinned by
   SHA-256 rather than by version alone.
