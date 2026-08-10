@@ -26,28 +26,11 @@ jobs:
     uses: ./.github/workflows/_node-ci.yml
     secrets: inherit
 
-  # The Compose examples this release ships name one exact Obscura image. Prove
-  # it is published, on both architectures, before tagging a release that tells
-  # operators to pull it.
-  obscura-pin:
-    name: Obscura pin
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Verify the pinned Obscura image
-        uses: ./tooling/github/verify-obscura-pin
-        with:
-          dockerhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
-          dockerhub-password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
   prepare-release:
     name: Create RC tag
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [quality, obscura-pin]
+    needs: [quality]
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:

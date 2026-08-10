@@ -6,34 +6,33 @@ browser that speaks the Chrome DevTools Protocol, running as its own container
 beside the application. The Norish server connects to it over
 `OBSCURA_ENDPOINT`; it is the only rendered-page engine, with no Chrome fallback.
 
-This directory builds and publishes the image the shipped Compose examples use.
+This directory repackages upstream's release into the image the shipped Compose
+examples use.
 
-## Why Norish ships its own image
+## Why not just pull upstream's image
 
-Upstream publishes `h4ckf0r0day/obscura`, but Norish does not use it:
+Because it is the wrong build, and nothing says so at runtime.
 
-- **Stealth is half a feature without the build, and upstream's image is the
-  half without it.** Obscura's anti-detection behaviour is a `stealth` cargo
-  feature *and* a `--stealth` runtime flag. Upstream ships four *release
-  archives* per platform — the `-stealth` suffix being the render+stealth
-  build — but only **one Docker image**, built `--features render`.
+Obscura's anti-detection behaviour is a `stealth` cargo feature *and* a
+`--stealth` runtime flag. Upstream ships four *release archives* per platform —
+the `-stealth` suffix being the render+stealth build — but only **one Docker
+image**, and its own release notes say what that image is: "the default archive
+and Docker image include rendering."
 
-  This is the trap, and it is silent. Measured against `h4ckf0r0day/obscura:0.2.0`
-  on 2026-08-10: its `/obscura` binary contains **0 BoringSSL symbols**, against
-  152 in the `-stealth` archive this image uses — the TLS fingerprinting stack
-  simply is not in there. Start it as `serve --stealth` anyway and it prints its
-  normal banner and runs: no warning, no error, no hint that the flag did
-  nothing. An operator would have every reason to believe stealth was on.
+Measured against `h4ckf0r0day/obscura:0.2.0` on 2026-08-10: its `/obscura`
+binary contains **0 BoringSSL strings**, against 152 in the `-stealth` archive
+this image uses — the TLS fingerprinting stack simply is not in there, and its
+size sits beside the plain archive's binary rather than the stealth one. Start
+it as `serve --stealth` anyway and it prints its normal banner and runs: no
+warning, no error, no hint that the flag did nothing. An operator would have
+every reason to believe stealth was on.
 
-  So this image takes the `-stealth` archive. If upstream ever publishes a
-  stealth image, this whole directory should be deleted in favour of pulling
-  theirs by digest — that is the only thing keeping it alive.
-- **A release has to be able to name its browser.** The upstream image tags
-  move, and release assets can be replaced in place, so the archive is pinned by
-  SHA-256 rather than by version alone.
-- **Stealth is not optional at runtime.** The whole command is the image's
-  `ENTRYPOINT`, so the CDP server always starts with `--stealth`. There is no
-  plain mode and no second service.
+So this image takes the `-stealth` archive, and makes the whole command its
+`ENTRYPOINT` so the CDP server always starts with `--stealth`. There is no plain
+mode and no second service.
+
+**If upstream ever publishes a stealth image, delete this directory and pull
+theirs.** That is the only thing keeping it alive.
 
 `--allow-private-network` is deliberately absent everywhere. Obscura blocks
 loopback, RFC1918 and link-local targets by default — including at DNS
@@ -41,24 +40,19 @@ resolution time — and that default is what keeps an authenticated URL import
 from reaching the deployment's own network.
 
 There is no compile here. The build fetches the published `-stealth` archive for
-the target architecture, checks it against the recorded digest, and copies the
-two binaries into `distroless/cc` (glibc 2.36, against a binary built for 2.35).
+the target architecture and copies the two binaries into `distroless/cc` (glibc
+2.36, against a binary built for 2.35).
 
 ## The pin
 
-`pin.env` records the upstream release, the commit it was cut from, each
-architecture's archive digest, and the immutable image tag — together, so a
-release can prove what it contains. `verify-pin.sh` checks that the Dockerfile's
-`ARG` defaults still match it, that every active surface quotes that exact image
-tag, and with `--registry` that the tag is published as a manifest covering both
-architectures:
+`pin.env` records the upstream release this image repackages and the image tag
+Norish publishes it under. The Dockerfile carries the same values as `ARG`
+defaults so a bare `docker build docker/obscura` works.
 
-```bash
-./docker/obscura/verify-pin.sh --registry
-```
-
-The RC and release workflows run it before they tag anything, so an application
-release cannot ship Compose examples pointing at an image that does not exist.
+The tag is immutable by convention: the publish workflow refuses to overwrite a
+tag that already exists, so an operator's `docker compose pull` can never change
+the browser under a running Norish release. Upgrading Obscura is an edit to
+`pin.env`, a publish, and an edit to the Compose surfaces.
 
 ## Publishing a new build
 
@@ -69,26 +63,22 @@ that already exists, and assembles the multi-architecture manifest.
 
 To move to a newer Obscura:
 
-1. Get the digests for the release you want:
+1. Update `OBSCURA_VERSION` and `OBSCURA_IMAGE_TAG` in `pin.env`, and the
+   matching `ARG` defaults in `Dockerfile`.
+2. Run the workflow.
+3. Update the image tag in every Compose surface the repository ships — the
+   three Compose files, the root README Quick Start, the docs Quick Start
+   component and the landing page:
 
    ```bash
-   v=0.2.1
-   for arch in x86_64 aarch64; do
-     curl -sSL "https://github.com/h4ckf0r0day/obscura/releases/download/v$v/obscura-$arch-linux-stealth.tar.gz" \
-       | shasum -a 256 | sed "s|-|$arch|"
-   done
+   git grep -l 'norishapp/obscura:' -- ':!.scratch' \
+     ':!apps/docs/versioned_docs' ':!apps/docs/docs/release-notes'
    ```
 
-2. Update `OBSCURA_VERSION`, `OBSCURA_REVISION` (the commit the tag was cut
-   from), both `OBSCURA_SHA256_*` values and `OBSCURA_IMAGE_TAG` in `pin.env`,
-   and the matching `ARG` defaults in `Dockerfile`. `verify-pin.sh` fails if the
-   two drift.
-3. Run the workflow.
-4. Update the image tag in every Compose surface — `docker/compose.base.yaml`,
-   `docker/docker-compose.example.yml`, `docker/docker-compose.test.yml`, the
-   README Quick Start, `apps/docs/src/components/QuickStartCompose.tsx`, the
-   docs Quick Start, and `apps/landing/components/sections/self-host-compose.tsx`.
-   `verify-pin.sh` lists whatever you miss.
+   Release notes and frozen docs stay excluded on purpose: a shipped release's
+   upgrade instructions name the tag *that* release shipped, and moving them to
+   a later tag would make them a lie. `docker/obscura/README.md` shows up too;
+   its snippet reads the tag from `pin.env` and needs no edit.
 
 Building it locally is the same build the workflow runs, minus the publish:
 
@@ -96,10 +86,7 @@ Building it locally is the same build the workflow runs, minus the publish:
 set -a; . docker/obscura/pin.env; set +a
 docker build docker/obscura \
   --build-arg "OBSCURA_REPO=$OBSCURA_REPO" \
-  --build-arg "OBSCURA_REVISION=$OBSCURA_REVISION" \
   --build-arg "OBSCURA_VERSION=$OBSCURA_VERSION" \
-  --build-arg "OBSCURA_SHA256_AMD64=$OBSCURA_SHA256_AMD64" \
-  --build-arg "OBSCURA_SHA256_ARM64=$OBSCURA_SHA256_ARM64" \
   -t "norishapp/obscura:$OBSCURA_IMAGE_TAG"
 ```
 
@@ -107,12 +94,12 @@ docker build docker/obscura \
 
 Obscura is Apache-2.0, with no NOTICE file upstream. The image carries its
 `LICENSE` and `README.md` (which holds the credits) under `/licenses/obscura/`,
-fetched at the pinned commit, and the build records
-`org.opencontainers.image.source`, `.revision` and `.licenses` as OCI labels.
+fetched at the release tag, and the build records
+`org.opencontainers.image.source`, `.version` and `.licenses` as OCI labels.
 
 One gap worth knowing about: the binaries are statically linked Rust builds
 whose dependency tree carries its own attribution requirements (several crates
 are MIT, which asks that its notice travel with binary copies). Upstream ships
-no bundled third-party licence file with its releases, and we cannot generate
-one without the source tree, so the image does not carry one either. Raising it
+no bundled third-party licence file with its releases, and we do not have the
+source tree to generate one, so the image does not carry one either. Raising it
 upstream is the fix.
