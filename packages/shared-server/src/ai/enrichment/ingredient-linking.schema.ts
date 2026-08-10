@@ -7,6 +7,11 @@ import { z } from "zod";
  * prompt printed beside them, so the inferrer can map the claim back onto
  * rows without the model ever seeing an id.
  *
+ * A step's links are what that step brings into the dish, not what the dish
+ * contains by the time it runs: a step working on "the mixture" an earlier
+ * step assembled links nothing, so the ingredient lands on the step a cook
+ * actually reaches for it.
+ *
  * How much of a line a step uses arrives as one of two statements: a share
  * (proportional language — "half the water") or an amount (the step's own
  * number — 3 of the 5 eggs). The stored form is always a share; the inferrer
@@ -45,12 +50,14 @@ export const ingredientLinkingSchema = z
                   })
                   .strict()
               )
-              .describe("Every ingredient line this step uses."),
+              .describe(
+                "Every ingredient line this step brings into the dish itself — never the lines already inside a mixture an earlier step made."
+              ),
           })
           .strict()
       )
       .describe(
-        "One entry per step that clearly uses ingredient lines. Steps that use nothing are omitted."
+        "One entry per step that brings in ingredient lines. Steps that only carry on with what earlier steps assembled are omitted."
       ),
   })
   .strict();

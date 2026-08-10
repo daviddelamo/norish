@@ -47,7 +47,14 @@ export interface RecipeEnrichmentContext {
 }
 
 export type RecipeEnrichmentRequest =
-  | { origin: "automatic" }
+  /**
+   * `replaceExisting` is an administrator's bulk refresh asking automatic work
+   * to overwrite rather than fill gaps. It suspends the Supplied Recipe Data
+   * skips — a kind whose data is already present is exactly what a refresh
+   * exists to redo — and nothing else: the automatic switches still decide
+   * which kinds run, and a kind lacking its input is still skipped.
+   */
+  | { origin: "automatic"; replaceExisting?: boolean }
   | { origin: "manual"; kind: RecipeEnrichmentKind };
 
 type Eligibility = { eligible: true } | { eligible: false; reason: RecipeEnrichmentSkipReason };
@@ -86,12 +93,15 @@ export async function enrichRecipe(
 
   const automatic = await getAutomaticEnrichmentConfig();
 
+  const replaceExisting = request.origin === "automatic" && request.replaceExisting === true;
+
   const attempts = kinds.map(async (kind): Promise<RecipeEnrichmentEnrollment> => {
     const householdHasAllergies =
       kind === "allergy-detection" ? await loadHouseholdHasAllergies(context) : false;
     const eligibility = evaluate(kind, {
       recipe,
       origin: request.origin,
+      replaceExisting,
       automaticEnabled: automatic[SETTING_BY_KIND[kind]],
       householdHasAllergies,
     });
@@ -108,6 +118,7 @@ export async function enrichRecipe(
       householdUserIds: context.householdUserIds,
       origin: request.origin,
       requestedByUserId: request.origin === "manual" ? context.userId : undefined,
+      replaceExisting: replaceExisting ? true : undefined,
     };
 
     return await addEnrichmentJob(queueForKind(kind), data);
@@ -145,12 +156,19 @@ const SETTING_BY_KIND = {
 interface EvaluationInput {
   recipe: FullRecipeDTO;
   origin: "automatic" | "manual";
+  replaceExisting: boolean;
   automaticEnabled: boolean;
   householdHasAllergies: boolean;
 }
 
 function evaluate(kind: RecipeEnrichmentKind, input: EvaluationInput): Eligibility {
-  const { recipe, origin, automaticEnabled, householdHasAllergies } = input;
+  const { recipe, origin, replaceExisting, automaticEnabled, householdHasAllergies } = input;
+  // The kinds below defer to Supplied Recipe Data by asking whether their slot
+  // is already answered. A run that may overwrite that slot has no reason to
+  // ask, so the question is only put to an ordinary automatic run: a manual
+  // request has always been allowed past it, and an administrator's refresh is
+  // asking for exactly the work the question would suppress.
+  const defersToSuppliedData = origin === "automatic" && !replaceExisting;
 
   // Manual availability ignores the automatic switch on purpose: automation
   // policy must not remove an editing tool.
@@ -173,9 +191,9 @@ function evaluate(kind: RecipeEnrichmentKind, input: EvaluationInput): Eligibili
       return householdHasAllergies ? ELIGIBLE : ineligible("no-household-allergies");
 
     case "auto-categorization":
-      // Replacement work defers to Supplied Recipe Data; a manual request is a
-      // deliberate refresh and replaces regardless.
-      return origin === "automatic" && hasSubstantiveCategories(recipe.categories)
+      // Replacement work defers to Supplied Recipe Data; a manual request and
+      // an administrator's refresh are deliberate and replace regardless.
+      return defersToSuppliedData && hasSubstantiveCategories(recipe.categories)
         ? ineligible("supplied-data-present")
         : ELIGIBLE;
 
@@ -184,7 +202,7 @@ function evaluate(kind: RecipeEnrichmentKind, input: EvaluationInput): Eligibili
       // all four values — is authoritative. An incomplete group (an import
       // that stated calories alone) does not suppress estimation: the run
       // replaces it wholesale, so the four values always agree.
-      return origin === "automatic" && hasSubstantiveNutrition(recipe)
+      return defersToSuppliedData && hasSubstantiveNutrition(recipe)
         ? ineligible("supplied-data-present")
         : ELIGIBLE;
 
@@ -194,16 +212,18 @@ function evaluate(kind: RecipeEnrichmentKind, input: EvaluationInput): Eligibili
       // the write keeps every supplied slot. Only a complete group has
       // nothing left to ask for. The region is not counted, because its
       // absence is a valid answer and cannot demand a run by itself.
-      return origin === "automatic" && hasCompleteProvenance(recipe)
+      return defersToSuppliedData && hasCompleteProvenance(recipe)
         ? ineligible("supplied-data-present")
         : ELIGIBLE;
 
     case "ingredient-linking":
-      // A gap-filler for both origins: it only ever writes to steps that
-      // have no Step Ingredients, so a person's own links suppress it at the
-      // only granularity where suppression is true — per step, in the worker
-      // and the repository write. No recipe-level supplied-data check exists
-      // on purpose. Steps are its raw material, so none means nothing to do.
+      // Ordinarily a gap-filler whatever the origin: it only writes to steps
+      // that have no Step Ingredients, so a person's own links suppress it at
+      // the only granularity where suppression is true — per step, in the
+      // repository write. No recipe-level supplied-data check exists on
+      // purpose, which is also why a refresh needs no exception here: the
+      // replacing write is what differs, not the eligibility. Steps are its
+      // raw material, so none means nothing to do.
       return recipe.steps.length === 0 ? ineligible("insufficient-input") : ELIGIBLE;
   }
 }

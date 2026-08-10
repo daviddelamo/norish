@@ -528,12 +528,16 @@
       "bulkEnrichment": {
         "title": "Bulkverrijking",
         "subtitle": "Voer ingeschakelde verrijking uit op elk recept",
-        "description": "Zet voor alle recepten op deze server elke verrijkingssoort in de wachtrij waarvan de automatische schakelaar aanstaat. Recepten behouden wat ze al hebben, alleen ontbrekende gegevens worden aangevuld.",
+        "description": "Zet voor alle recepten op deze server elke verrijkingssoort in de wachtrij waarvan de automatische schakelaar aanstaat. Standaard worden alleen ontbrekende gegevens aangevuld; in de bevestiging kun je kiezen om bestaande gegevens te overschrijven.",
         "button": "Alle recepten verrijken",
         "confirmTitle": "Verrijking op alle recepten uitvoeren?",
         "confirmMessage": "Dit zet AI-werk in de wachtrij voor elk recept op deze server. Elke verrijkingssoort waarvan de automatische schakelaar aanstaat draait waar gegevens ontbreken.",
+        "replaceExisting": "Bestaande gegevens overschrijven",
+        "replaceExistingDescription": "Categorieën, voedingswaarden, herkomst en stapingrediënten opnieuw bepalen, ook als een recept ze al heeft. Tags en allergiemeldingen worden altijd alleen aangevuld.",
+        "replaceWarning": "Dit kan niet ongedaan worden gemaakt. Ook gegevens die je zelf hebt ingevoerd worden vervangen, inclusief stapingrediënten die je handmatig hebt gekoppeld: nergens is vastgelegd welke waarden van AI komen.",
         "costWarning": "Dit kan een kostbare bewerking zijn: met veel recepten kan het lang duren en bij een betaalde AI-provider veel tegoed verbruiken.",
         "confirmButton": "Op alle recepten uitvoeren",
+        "confirmButtonReplace": "Alle recepten overschrijven",
         "queued": "{queued, plural, =0 {Geen runs in wachtrij} one {# run in wachtrij} other {# runs in wachtrij}} voor {recipes, plural, one {# recept} other {# recepten}}",
         "aiDisabled": "AI is uitgeschakeld op deze server. Schakel eerst AI in.",
         "error": "Bulkverrijking starten mislukt"

@@ -15,7 +15,7 @@ import type { RecipeCategory } from "@norish/shared/contracts";
 import type {
   NutritionGroupInput,
   ProvenanceGroupInput,
-  RecipeEnrichmentOrigin,
+  RecipeEnrichmentWriteMode,
 } from "@norish/shared/lib/recipe-enrichment";
 import { db } from "@norish/db/drizzle";
 import {
@@ -71,11 +71,11 @@ function validateCategories(categories: readonly RecipeCategory[]): RecipeCatego
 /**
  * Replace a recipe's complete category list.
  *
- * The origin decides how the write guards itself, because that is the domain
- * rule rather than a caller's choice: an automatic run defers to Supplied
- * Recipe Data, and a manual run is a deliberate refresh that replaces.
+ * The write mode decides how the write guards itself, because that is the
+ * domain rule rather than a caller's choice: a gap-filling run defers to
+ * Supplied Recipe Data, and a replacing run is a deliberate refresh.
  *
- * For an automatic run the absence check is part of the UPDATE itself, so if a
+ * For a gap-filling run the absence check is part of the UPDATE itself, so if a
  * person supplied categories while the AI request was in flight this becomes a
  * successful no-op and the newer supplied data wins.
  *
@@ -84,12 +84,12 @@ function validateCategories(categories: readonly RecipeCategory[]): RecipeCatego
 export async function replaceRecipeCategories(
   recipeId: string,
   categories: readonly RecipeCategory[],
-  origin: RecipeEnrichmentOrigin
+  mode: RecipeEnrichmentWriteMode
 ): Promise<boolean> {
   const validated = validateCategories(categories);
   const guards = [eq(recipes.id, recipeId)];
 
-  if (origin === "automatic") guards.push(CATEGORIES_ABSENT);
+  if (mode === "gap-fill") guards.push(CATEGORIES_ABSENT);
 
   const updated = await db
     .update(recipes)
@@ -114,8 +114,8 @@ function validateNutrition(nutrition: NutritionGroupInput) {
 /**
  * Atomically replace all four Nutrition Information fields.
  *
- * As with categories, the origin decides the guard. Only a complete stored
- * group is authoritative, so an automatic run applies while any of the four
+ * As with categories, the write mode decides the guard. Only a complete stored
+ * group is authoritative, so a gap-filling run applies while any of the four
  * fields is absent and defers only to a group that already has all of them.
  *
  * @returns whether the replacement was applied
@@ -123,12 +123,12 @@ function validateNutrition(nutrition: NutritionGroupInput) {
 export async function replaceRecipeNutrition(
   recipeId: string,
   nutrition: NutritionGroupInput,
-  origin: RecipeEnrichmentOrigin
+  mode: RecipeEnrichmentWriteMode
 ): Promise<boolean> {
   const group = validateNutrition(nutrition);
   const guards = [eq(recipes.id, recipeId)];
 
-  if (origin === "automatic") guards.push(NUTRITION_INCOMPLETE);
+  if (mode === "gap-fill") guards.push(NUTRITION_INCOMPLETE);
 
   const updated = await db
     .update(recipes)
@@ -151,27 +151,46 @@ export interface StepIngredientLinkClaim {
   refs: readonly { ingredientOrder: number; share: number; order: number }[];
 }
 
+/** What one Step Ingredients write did. */
+export interface StepIngredientWriteResult {
+  /** Steps that received links. */
+  filled: number;
+  /** Steps whose existing links a replacing write removed first. */
+  cleared: number;
+}
+
 /**
- * Write inferred Step Ingredients to the recipe's bare steps.
+ * Write inferred Step Ingredients to a recipe's steps.
  *
- * Ingredient Linking is a gap-filler in every case — automatic or manual, it
- * only ever adds links to steps that have none, so it can never replace or
- * remove what a person attached. That per-step check is the suppression, at
- * the only granularity where it is true, and it lives here so no caller can
- * write past it. Heading rows on either side are never linked.
+ * A gap-filling write only ever adds links to steps that have none, so it can
+ * never replace or remove what a person attached. That per-step check is the
+ * suppression, at the only granularity where it is true, and it lives here so
+ * no caller can write past it. Heading rows on either side are never linked.
+ *
+ * A replacing write clears the recipe's Step Ingredients — every step, not
+ * only the ones the claim covers — and then writes the claim. Clearing the
+ * whole recipe is the point rather than a side effect: a claim that correctly
+ * omits a step is how a wrongly-linked step gets emptied, and per-step
+ * clearing would preserve exactly the links a refresh exists to remove. It
+ * cannot tell a link a person made from one an earlier run inferred, because
+ * nothing records that, so it removes both. Reachable only from an
+ * administrator's deliberate refresh.
+ *
+ * An empty claim writes nothing in either mode: a refresh that inferred
+ * nothing is indistinguishable from one whose model had a bad day, and the
+ * rest of this module refuses to let an empty proposal erase stored work.
  *
  * The claim is semantic — step orders and line orders, no system — and is
  * fanned out to every measurement system the recipe stores, matching rows by
  * order within each system. A reference whose line does not exist in some
  * system is dropped there rather than written wrong.
- *
- * @returns how many steps received links
  */
-export async function addStepIngredientsToBareSteps(
+export async function writeInferredStepIngredients(
   recipeId: string,
-  links: readonly StepIngredientLinkClaim[]
-): Promise<number> {
-  if (links.length === 0) return 0;
+  links: readonly StepIngredientLinkClaim[],
+  mode: RecipeEnrichmentWriteMode
+): Promise<StepIngredientWriteResult> {
+  if (links.length === 0) return { filled: 0, cleared: 0 };
 
   return await db.transaction(async (tx) => {
     const stepRows = await tx
@@ -190,7 +209,7 @@ export async function addStepIngredientsToBareSteps(
       .where(eq(recipeIngredients.recipeId, recipeId));
 
     const stepIds = stepRows.map((row) => row.id);
-    const occupied = new Set<string>(
+    const linked =
       stepIds.length > 0
         ? (
             await tx
@@ -198,11 +217,21 @@ export async function addStepIngredientsToBareSteps(
               .from(stepIngredients)
               .where(inArray(stepIngredients.stepId, stepIds))
           ).map((row) => row.stepId)
-        : []
-    );
+        : [];
+
+    // Gap-filling treats an already-linked step as occupied and leaves it
+    // alone; replacing empties them all first, so nothing is occupied by the
+    // time the claim is written.
+    const occupied = new Set<string>(mode === "gap-fill" ? linked : []);
+    let cleared = 0;
+
+    if (mode === "replace" && linked.length > 0) {
+      await tx.delete(stepIngredients).where(inArray(stepIngredients.stepId, linked));
+      cleared = linked.length;
+    }
 
     const systems = [...new Set(stepRows.map((row) => row.systemUsed))];
-    let written = 0;
+    let filled = 0;
 
     for (const system of systems) {
       const stepByOrder = new Map<number, (typeof stepRows)[number]>();
@@ -245,23 +274,23 @@ export async function addStepIngredientsToBareSteps(
         if (values.length === 0) continue;
 
         await tx.insert(stepIngredients).values(values);
-        written += 1;
+        filled += 1;
       }
     }
 
-    return written;
+    return { filled, cleared };
   });
 }
 
 /**
- * Write a Recipe Provenance claim, atomically, with the origin deciding what
- * "write" means (ADR-0018).
+ * Write a Recipe Provenance claim, atomically, with the write mode deciding
+ * what "write" means (ADR-0018).
  *
- * A manual run is a deliberate refresh: it replaces the whole group — the
+ * A replacing run is a deliberate refresh: it replaces the whole group — the
  * scalar fields, the note, and the Cuisine join rows — in one transaction,
  * regardless of what is stored.
  *
- * An automatic run fills the group's gaps: it re-reads the stored group under
+ * A gap-filling run fills the group's gaps: it re-reads the stored group under
  * a row lock, keeps every supplied slot byte-for-byte, and writes only what is
  * absent, per {@link fillProvenanceGaps}. The in-transaction re-read is the
  * absence recheck that lets newer supplied data win a race with AI — a value a
@@ -277,7 +306,7 @@ export async function addStepIngredientsToBareSteps(
 export async function replaceRecipeProvenance(
   recipeId: string,
   provenance: ProvenanceReplacement,
-  origin: RecipeEnrichmentOrigin
+  mode: RecipeEnrichmentWriteMode
 ): Promise<boolean> {
   const cuisineIds = [...new Set(provenance.cuisineIds ?? [])];
 
@@ -287,7 +316,7 @@ export async function replaceRecipeProvenance(
     throw new Error("Refusing to replace Recipe Provenance with an empty proposal");
   }
 
-  if (origin === "automatic") {
+  if (mode === "gap-fill") {
     return await fillProvenanceGapsFromClaim(recipeId, provenance, cuisineIds);
   }
 
@@ -309,10 +338,10 @@ export async function replaceRecipeProvenance(
 }
 
 /**
- * The automatic write: merge the claim into the stored group's gaps.
+ * The gap-filling write: merge the claim into the stored group's gaps.
  *
  * The row lock serializes this against every other writer of the recipe row —
- * an editor's save, a manual run — so the merge always reads the group it is
+ * an editor's save, a replacing run — so the merge always reads the group it is
  * about to complete, never a snapshot from before the race.
  */
 async function fillProvenanceGapsFromClaim(

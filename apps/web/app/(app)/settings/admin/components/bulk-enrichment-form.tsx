@@ -15,6 +15,9 @@ export default function BulkEnrichmentForm() {
   const tErrors = useTranslations("common.errors");
   const trpc = useTRPC();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  // Deliberately not remembered between openings: overwriting the library is a
+  // choice to make each time, not a setting that lies in wait.
+  const [replaceExisting, setReplaceExisting] = useState(false);
   const enrichAllMutation = useMutation(
     trpc.admin.enrichAllRecipes.mutationOptions({
       onError: (error) => {
@@ -33,9 +36,13 @@ export default function BulkEnrichmentForm() {
       },
     })
   );
+  const openConfirm = () => {
+    setReplaceExisting(false);
+    setIsConfirmOpen(true);
+  };
   const handleConfirm = () => {
     setIsConfirmOpen(false);
-    enrichAllMutation.mutate();
+    enrichAllMutation.mutate({ replaceExisting });
   };
 
   return (
@@ -50,18 +57,16 @@ export default function BulkEnrichmentForm() {
             })}
           </span>
         )}
-        <Button
-          isPending={enrichAllMutation.isPending}
-          variant="tertiary"
-          onPress={() => setIsConfirmOpen(true)}
-        >
+        <Button isPending={enrichAllMutation.isPending} variant="tertiary" onPress={openConfirm}>
           {t("button")}
         </Button>
       </div>
       <BulkEnrichmentConfirmationModal
         isOpen={isConfirmOpen}
+        replaceExisting={replaceExisting}
         onClose={() => setIsConfirmOpen(false)}
         onConfirm={handleConfirm}
+        onReplaceExistingChange={setReplaceExisting}
       />
     </div>
   );

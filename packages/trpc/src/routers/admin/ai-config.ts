@@ -187,28 +187,41 @@ const listAvailableTranscriptionModels = adminProcedure
  * Enroll every enabled enrichment kind for every recipe on the server.
  *
  * Deliberately the automatic origin: the automatic switches decide which kinds
- * run, and Supplied Recipe Data keeps winning, so the sweep fills gaps without
- * replacing anything a person or an import source already provided.
+ * run, and by default Supplied Recipe Data keeps winning, so the sweep fills
+ * gaps without replacing anything a person or an import source provided.
+ *
+ * `replaceExisting` is the destructive variant, and it is a per-request choice
+ * rather than stored configuration on purpose: a stored switch would also
+ * govern the automatic enrollment every newly imported recipe triggers, which
+ * would turn "enrich what is missing" into "overwrite what the source said".
  */
-const enrichAllRecipes = adminProcedure.mutation(async ({ ctx }) => {
-  log.info({ userId: ctx.user.id }, "Bulk enrichment requested");
+const enrichAllRecipes = adminProcedure
+  .input(z.object({ replaceExisting: z.boolean().default(false) }).default({}))
+  .mutation(async ({ input, ctx }) => {
+    log.info(
+      { userId: ctx.user.id, replaceExisting: input.replaceExisting },
+      "Bulk enrichment requested"
+    );
 
-  if (!(await isAIEnabled())) {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "AI is disabled on this server. Enable AI before running enrichment.",
-    });
-  }
+    if (!(await isAIEnabled())) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "AI is disabled on this server. Enable AI before running enrichment.",
+      });
+    }
 
-  const result = await enrollEnrichmentForAllRecipes({
-    userId: ctx.user.id,
-    householdKey: ctx.household?.id ?? "",
+    const result = await enrollEnrichmentForAllRecipes(
+      {
+        userId: ctx.user.id,
+        householdKey: ctx.household?.id ?? "",
+      },
+      { replaceExisting: input.replaceExisting }
+    );
+
+    log.info({ ...result, replaceExisting: input.replaceExisting }, "Bulk enrichment jobs queued");
+
+    return result;
   });
-
-  log.info(result, "Bulk enrichment jobs queued");
-
-  return result;
-});
 
 export const aiConfigProcedures = router({
   updateAIConfig,

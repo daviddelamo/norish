@@ -43,10 +43,13 @@ export async function addEnrichmentJob(
     return { kind, status: "duplicate", existingJobId: activeJobId };
   }
 
-  if (data.origin === "manual") {
+  if (data.origin === "manual" || data.replaceExisting === true) {
     // A deliberate rerun clears the retained terminal job so history cannot
-    // block it. Automatic enrollment deliberately does not: a duplicate
-    // creation event must coalesce onto the completed run, not re-spend AI.
+    // block it. Ordinary automatic enrollment deliberately does not: a
+    // duplicate creation event must coalesce onto the completed run, not
+    // re-spend AI. An administrator's refresh is automatic but deliberate, and
+    // would otherwise be swallowed as a duplicate for exactly the recipes that
+    // ran recently enough to still have a retained job.
     await removeRetainedJob(queue, jobId, kind, recipeId);
   } else if (await queue.getJob(jobId)) {
     // Automatic creation signals can be delivered more than once. A retained

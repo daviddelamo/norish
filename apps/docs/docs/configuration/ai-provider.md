@@ -150,6 +150,12 @@ provider, use a significant amount of credits. It replaces the old
 **Categorize All Recipes** button, which ran only categorization and ignored
 the switches.
 
+The confirmation also offers **Overwrite existing data**, which turns the behaviour from filling gaps into redoing them. Every recipe's categories, nutrition, provenance and step ingredients are inferred again and replace what is stored useful after tuning a prompt, or after an upgrade improves one of the kinds. Two things to know before using it:
+
+- **It cannot be undone, and it does not spare your own work.**
+- **It costs more than the default sweep.**
+- **Tags and allergy indications are never overwritten**
+
 ### Turning it all off
 
 `AI_ENABLED=false` (or the global switch in the admin settings) suppresses every

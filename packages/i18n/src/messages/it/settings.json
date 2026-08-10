@@ -528,12 +528,16 @@
       "bulkEnrichment": {
         "title": "Arricchimento in blocco",
         "subtitle": "Esegui l'arricchimento abilitato su tutte le ricette",
-        "description": "Metti in coda, per tutte le ricette di questo server, ogni tipo di arricchimento il cui interruttore automatico è abilitato. Le ricette conservano i dati che hanno già, vengono riempite solo le lacune.",
+        "description": "Accoda, per tutte le ricette di questo server, ogni tipo di arricchimento il cui interruttore automatico è attivo. Per impostazione predefinita vengono colmate solo le lacune; la conferma propone di sovrascrivere ciò che è già presente.",
         "button": "Arricchisci tutte le ricette",
         "confirmTitle": "Eseguire l'arricchimento su tutte le ricette?",
         "confirmMessage": "Questo mette in coda lavoro di IA per ogni ricetta di questo server. Ogni tipo di arricchimento il cui interruttore automatico è abilitato viene eseguito dove mancano dati.",
+        "replaceExisting": "Sovrascrivere i dati esistenti",
+        "replaceExistingDescription": "Rifare categorie, valori nutrizionali, provenienza e ingredienti dei passaggi anche quando la ricetta li ha già. Tag e indicazioni sulle allergie vengono solo aggiunti.",
+        "replaceWarning": "L'operazione non può essere annullata. Vengono sostituiti anche i dati inseriti da te, compresi gli ingredienti dei passaggi collegati a mano: non è registrato quali valori provengano dall'IA.",
         "costWarning": "Può essere un'operazione costosa: con molte ricette può richiedere molto tempo e, con un provider di IA a pagamento, consumare una quantità significativa di crediti.",
         "confirmButton": "Esegui su tutte le ricette",
+        "confirmButtonReplace": "Sovrascrivi tutte le ricette",
         "queued": "{queued, plural, =0 {Nessuna esecuzione in coda} one {# esecuzione in coda} other {# esecuzioni in coda}} per {recipes, plural, one {# ricetta} other {# ricette}}",
         "aiDisabled": "L'IA è disabilitata su questo server. Abilita prima l'IA.",
         "error": "Avvio dell'arricchimento in blocco non riuscito"

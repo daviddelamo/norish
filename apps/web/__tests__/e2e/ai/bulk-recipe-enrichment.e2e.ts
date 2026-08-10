@@ -9,6 +9,11 @@
  * captured: the enabled automatic switches decide what runs, Supplied Recipe
  * Data still wins, and nothing at all runs from a cancelled confirmation or a
  * server whose AI is disabled.
+ *
+ * The confirmation's overwrite switch is the one way that last rule is
+ * suspended, so it is driven here too — including the fact that the choice is
+ * forgotten afterwards, which is the difference between a per-run decision and
+ * a setting that lies in wait.
  */
 import type { Locator, Page } from "@playwright/test";
 import { Client } from "pg";
@@ -212,6 +217,65 @@ test("a confirmed run fills gaps through enabled kinds and defers to supplied da
   // provider was asked exactly once — for the gap recipe.
   expect(await readStoredCategories("Bulk Supplied Stew")).toEqual(["Breakfast"]);
   expect(ai.control.requestCount).toBe(1);
+});
+
+test("overwriting redoes the supplied recipe instead of deferring to it", async () => {
+  // The destructive variant of the same sweep: the switch in the confirmation
+  // suspends the Supplied Recipe Data skips, so the recipe that was left alone
+  // above is enrolled and its stored category is replaced.
+  await setAutomaticEnrichment({ autoCategorization: true });
+
+  const ai = stack!.ai;
+
+  ai.control.reset();
+  ai.control.succeedWith({ categories: ["Dinner"] });
+
+  const panel = await openBulkPanel();
+
+  await panel.getByRole("button", { name: "Enrich All Recipes" }).click();
+  // Keyboard, as the grocery checkbox does: the control span sits over the
+  // input, so a click never reaches its hit target.
+  await page.getByRole("switch", { name: "Overwrite existing data" }).press("Space");
+  await expect(page.getByText("This cannot be undone.", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Overwrite All Recipes" }).click();
+
+  // Both recipes enrolled this time: having a category no longer suppresses it.
+  await expect(panel.getByText("2 runs queued across 2 recipes")).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await expect
+    .poll(async () => readStoredCategories("Bulk Supplied Stew"), {
+      timeout: 60_000,
+      intervals: [1_000, 2_000, 5_000],
+    })
+    .toEqual(["Dinner"]);
+  expect(await readStoredCategories("Bulk Gap Stew")).toEqual(["Dinner"]);
+  expect(ai.control.requestCount).toBe(2);
+});
+
+test("the overwrite choice is not remembered by the next confirmation", async () => {
+  await setAutomaticEnrichment({ autoCategorization: true });
+
+  const ai = stack!.ai;
+
+  ai.control.reset();
+  ai.control.succeedWith({ categories: ["Dinner"] });
+
+  const panel = await openBulkPanel();
+  const replaceSwitch = page.getByRole("switch", { name: "Overwrite existing data" });
+
+  await panel.getByRole("button", { name: "Enrich All Recipes" }).click();
+  await replaceSwitch.press("Space");
+  await expect(replaceSwitch).toBeChecked();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByText("Run enrichment on all recipes?")).toBeHidden();
+
+  // Reopening starts from gap-filling, so a later sweep cannot inherit a
+  // destructive choice nobody made this time.
+  await panel.getByRole("button", { name: "Enrich All Recipes" }).click();
+  await expect(replaceSwitch).not.toBeChecked();
+  await expect(page.getByRole("button", { name: "Run on All Recipes" })).toBeVisible();
 });
 
 test("a provenance run fills the gaps around a supplied Cuisine and skips a complete group", async () => {

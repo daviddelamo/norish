@@ -2,7 +2,7 @@
  * Nutrition Estimation Worker
  *
  * One AI request and an atomic replacement of the whole Nutrition Information
- * group. Automatic runs replace only while the group is still incomplete; a
+ * group. Gap-filling runs replace only while the group is still incomplete; a
  * group that already has all four values is authoritative.
  * Uses lazy worker pattern - starts on-demand and pauses when idle.
  */
@@ -11,6 +11,7 @@ import type { RecipeEnrichmentJobData } from "@norish/queue/contracts/job-types"
 import { replaceRecipeNutrition } from "@norish/db/repositories/recipe-enrichment";
 import { estimateNutritionFromIngredients } from "@norish/shared-server/ai/enrichment/nutrition-estimator";
 import { createLogger } from "@norish/shared-server/logger";
+import { enrichmentWriteMode } from "@norish/shared/lib/recipe-enrichment";
 
 import { defineLazyWorker, QUEUE_NAMES } from "../config";
 import { handleEnrichmentJobFailure, runEnrichmentJob } from "../enrichment/worker-runner";
@@ -37,10 +38,11 @@ const nutritionEstimationWorker = defineLazyWorker<RecipeEnrichmentJobData>(
       // and will retry — a model answer with anything missing.
       await reportStep(job, "saving");
 
-      const applied = await replaceRecipeNutrition(recipe.id, estimate, job.data.origin);
+      const mode = enrichmentWriteMode("nutrition-estimation", job.data);
+      const applied = await replaceRecipeNutrition(recipe.id, estimate, mode);
 
       log.info(
-        { recipeId: recipe.id, applied, origin: job.data.origin },
+        { recipeId: recipe.id, applied, origin: job.data.origin, mode },
         applied ? "Nutrition estimate saved" : "Nutrition estimate deferred to supplied data"
       );
 

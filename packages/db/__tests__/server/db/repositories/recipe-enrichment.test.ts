@@ -5,10 +5,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { findCuisineByName, getRecipeCuisines } from "@norish/db/repositories/cuisines";
 import {
-  addStepIngredientsToBareSteps,
   replaceRecipeCategories,
   replaceRecipeNutrition,
   replaceRecipeProvenance,
+  writeInferredStepIngredients,
 } from "@norish/db/repositories/recipe-enrichment";
 import {
   createRecipeWithRefs,
@@ -88,33 +88,33 @@ describe("Recipe Enrichment repository", () => {
 
   describe("replaceRecipeCategories", () => {
     it("replaces the complete list unconditionally", async () => {
-      await replaceRecipeCategories(testRecipe.id, ["Breakfast"], "manual");
-      const applied = await replaceRecipeCategories(testRecipe.id, ["Dinner", "Snack"], "manual");
+      await replaceRecipeCategories(testRecipe.id, ["Breakfast"], "replace");
+      const applied = await replaceRecipeCategories(testRecipe.id, ["Dinner", "Snack"], "replace");
 
       expect(applied).toBe(true);
       expect((await getRecipeFull(testRecipe.id))?.categories).toEqual(["Dinner", "Snack"]);
     });
 
     it("rejects an empty proposal without touching stored values", async () => {
-      await replaceRecipeCategories(testRecipe.id, ["Breakfast"], "manual");
+      await replaceRecipeCategories(testRecipe.id, ["Breakfast"], "replace");
 
-      await expect(replaceRecipeCategories(testRecipe.id, [], "manual")).rejects.toThrow();
+      await expect(replaceRecipeCategories(testRecipe.id, [], "replace")).rejects.toThrow();
       expect((await getRecipeFull(testRecipe.id))?.categories).toEqual(["Breakfast"]);
     });
   });
 
-  describe("replaceRecipeCategories with the automatic origin", () => {
+  describe("replaceRecipeCategories gap-filling", () => {
     it("applies while the stored list is empty", async () => {
-      const applied = await replaceRecipeCategories(testRecipe.id, ["Dinner"], "automatic");
+      const applied = await replaceRecipeCategories(testRecipe.id, ["Dinner"], "gap-fill");
 
       expect(applied).toBe(true);
       expect((await getRecipeFull(testRecipe.id))?.categories).toEqual(["Dinner"]);
     });
 
     it("becomes a no-op when data appeared while AI was running", async () => {
-      await replaceRecipeCategories(testRecipe.id, ["Breakfast"], "manual");
+      await replaceRecipeCategories(testRecipe.id, ["Breakfast"], "replace");
 
-      const applied = await replaceRecipeCategories(testRecipe.id, ["Dinner"], "automatic");
+      const applied = await replaceRecipeCategories(testRecipe.id, ["Dinner"], "gap-fill");
 
       expect(applied).toBe(false);
       expect((await getRecipeFull(testRecipe.id))?.categories).toEqual(["Breakfast"]);
@@ -126,13 +126,13 @@ describe("Recipe Enrichment repository", () => {
       await replaceRecipeNutrition(
         testRecipe.id,
         { calories: 500, fat: "20", carbs: "40", protein: "30" },
-        "manual"
+        "replace"
       );
 
       const applied = await replaceRecipeNutrition(
         testRecipe.id,
         { calories: 240, fat: "9", carbs: "30", protein: "12" },
-        "manual"
+        "replace"
       );
 
       expect(applied).toBe(true);
@@ -149,7 +149,7 @@ describe("Recipe Enrichment repository", () => {
       const applied = await replaceRecipeNutrition(
         testRecipe.id,
         { calories: 4, fat: "0", carbs: "1", protein: "0" },
-        "manual"
+        "replace"
       );
 
       expect(applied).toBe(true);
@@ -160,31 +160,31 @@ describe("Recipe Enrichment repository", () => {
       await replaceRecipeNutrition(
         testRecipe.id,
         { calories: 500, fat: "20", carbs: "40", protein: "30" },
-        "manual"
+        "replace"
       );
 
       // Replacement writes all four fields, so a proposal missing any of them
       // would null out the rest and must be refused outright.
       await expect(
-        replaceRecipeNutrition(testRecipe.id, { calories: 240 }, "manual")
+        replaceRecipeNutrition(testRecipe.id, { calories: 240 }, "replace")
       ).rejects.toThrow();
       await expect(
         replaceRecipeNutrition(
           testRecipe.id,
           { calories: null, fat: "  ", carbs: "", protein: null },
-          "manual"
+          "replace"
         )
       ).rejects.toThrow();
       expect((await getRecipeFull(testRecipe.id))?.calories).toBe(500);
     });
   });
 
-  describe("replaceRecipeNutrition with the automatic origin", () => {
+  describe("replaceRecipeNutrition gap-filling", () => {
     it("applies while the whole group is absent", async () => {
       const applied = await replaceRecipeNutrition(
         testRecipe.id,
         { calories: 240, fat: "9", carbs: "30", protein: "12" },
-        "automatic"
+        "gap-fill"
       );
 
       expect(applied).toBe(true);
@@ -197,7 +197,7 @@ describe("Recipe Enrichment repository", () => {
       const applied = await replaceRecipeNutrition(
         supplied.id,
         { calories: 240, fat: "9", carbs: "30", protein: "12" },
-        "automatic"
+        "gap-fill"
       );
 
       expect(applied).toBe(true);
@@ -220,7 +220,7 @@ describe("Recipe Enrichment repository", () => {
       const applied = await replaceRecipeNutrition(
         supplied.id,
         { calories: 240, fat: "9", carbs: "30", protein: "12" },
-        "automatic"
+        "gap-fill"
       );
 
       expect(applied).toBe(false);
@@ -247,7 +247,7 @@ describe("Recipe Enrichment repository", () => {
           provenanceNote: "Una classica ricetta romana.",
           cuisineIds: [await cuisineId("Italian"), await cuisineId("Mediterranean")],
         },
-        "manual"
+        "replace"
       );
 
       expect(applied).toBe(true);
@@ -265,13 +265,13 @@ describe("Recipe Enrichment repository", () => {
       await replaceRecipeProvenance(
         testRecipe.id,
         { originCountry: "IT", originCountryName: "Italia", provenanceNote: "First claim." },
-        "manual"
+        "replace"
       );
 
       const applied = await replaceRecipeProvenance(
         testRecipe.id,
         { originCountry: "JP", provenanceNote: "Second claim." },
-        "manual"
+        "replace"
       );
 
       expect(applied).toBe(true);
@@ -293,13 +293,13 @@ describe("Recipe Enrichment repository", () => {
           provenanceNote: "First claim.",
           cuisineIds: [await cuisineId("Italian")],
         },
-        "manual"
+        "replace"
       );
 
       const applied = await replaceRecipeProvenance(
         testRecipe.id,
         { originCountry: "JP", provenanceNote: "Second claim." },
-        "manual"
+        "replace"
       );
 
       expect(applied).toBe(true);
@@ -315,7 +315,7 @@ describe("Recipe Enrichment repository", () => {
       await replaceRecipeProvenance(
         testRecipe.id,
         { originCountry: "it", provenanceNote: "Lowercase code." },
-        "manual"
+        "replace"
       );
 
       expect((await getRecipeFull(testRecipe.id))?.originCountry).toBe("IT");
@@ -323,7 +323,7 @@ describe("Recipe Enrichment repository", () => {
       await replaceRecipeProvenance(
         testRecipe.id,
         { originCountry: "Italy", provenanceNote: "A name, not a code." },
-        "manual"
+        "replace"
       );
 
       expect((await getRecipeFull(testRecipe.id))?.originCountry).toBeNull();
@@ -333,14 +333,14 @@ describe("Recipe Enrichment repository", () => {
       await replaceRecipeProvenance(
         testRecipe.id,
         { originCountry: "IT", provenanceNote: "Stored." },
-        "manual"
+        "replace"
       );
 
       await expect(
         replaceRecipeProvenance(
           testRecipe.id,
           { originCountry: null, originRegion: "  ", provenanceNote: "" },
-          "manual"
+          "replace"
         )
       ).rejects.toThrow();
 
@@ -356,7 +356,7 @@ describe("Recipe Enrichment repository", () => {
             provenanceNote: "Would be stored.",
             cuisineIds: ["00000000-0000-0000-0000-000000000000"],
           },
-          "manual"
+          "replace"
         )
       ).rejects.toThrow();
 
@@ -367,7 +367,7 @@ describe("Recipe Enrichment repository", () => {
     });
   });
 
-  describe("replaceRecipeProvenance with the automatic origin", () => {
+  describe("replaceRecipeProvenance gap-filling", () => {
     /** The claim as the worker delivers it: complete, arguing for Italy. */
     async function italianClaim() {
       return {
@@ -383,7 +383,7 @@ describe("Recipe Enrichment repository", () => {
       const applied = await replaceRecipeProvenance(
         testRecipe.id,
         { originCountry: "IT", provenanceNote: "Inferred." },
-        "automatic"
+        "gap-fill"
       );
 
       expect(applied).toBe(true);
@@ -395,13 +395,13 @@ describe("Recipe Enrichment repository", () => {
       await replaceRecipeProvenance(
         testRecipe.id,
         { cuisineIds: [await cuisineId("Mediterranean")] },
-        "manual"
+        "replace"
       );
 
       const applied = await replaceRecipeProvenance(
         testRecipe.id,
         await italianClaim(),
-        "automatic"
+        "gap-fill"
       );
 
       expect(applied).toBe(true);
@@ -420,13 +420,13 @@ describe("Recipe Enrichment repository", () => {
       await replaceRecipeProvenance(
         testRecipe.id,
         { provenanceNote: "My grandmother's, from Rome." },
-        "manual"
+        "replace"
       );
 
       const applied = await replaceRecipeProvenance(
         testRecipe.id,
         await italianClaim(),
-        "automatic"
+        "gap-fill"
       );
 
       expect(applied).toBe(true);
@@ -447,7 +447,7 @@ describe("Recipe Enrichment repository", () => {
       const applied = await replaceRecipeProvenance(
         testRecipe.id,
         await italianClaim(),
-        "automatic"
+        "gap-fill"
       );
 
       expect(applied).toBe(true);
@@ -467,7 +467,7 @@ describe("Recipe Enrichment repository", () => {
       const applied = await replaceRecipeProvenance(
         testRecipe.id,
         await italianClaim(),
-        "automatic"
+        "gap-fill"
       );
 
       expect(applied).toBe(true);
@@ -489,13 +489,13 @@ describe("Recipe Enrichment repository", () => {
           provenanceNote: "Set by an editor.",
           cuisineIds: [await cuisineId("French")],
         },
-        "manual"
+        "replace"
       );
 
       const applied = await replaceRecipeProvenance(
         testRecipe.id,
         await italianClaim(),
-        "automatic"
+        "gap-fill"
       );
 
       expect(applied).toBe(false);
@@ -514,7 +514,7 @@ describe("Recipe Enrichment repository", () => {
       const applied = await replaceRecipeProvenance(
         testRecipe.id,
         { originCountry: "IT", provenanceNote: "Inferred." },
-        "automatic"
+        "gap-fill"
       );
 
       expect(applied).toBe(false);
@@ -529,7 +529,7 @@ describe("Recipe Enrichment repository", () => {
           provenanceNote: "Would be stored.",
           cuisineIds: ["00000000-0000-0000-0000-000000000000"],
         },
-        "automatic"
+        "gap-fill"
       );
 
       await expect(applied).rejects.toThrow();
@@ -613,7 +613,7 @@ describe("Recipe Enrichment repository", () => {
       const applied = await replaceRecipeProvenance(
         testRecipe.id,
         { originCountry: "IT", provenanceNote: "Inferred." },
-        "automatic"
+        "gap-fill"
       );
 
       expect(applied).toBe(false);
@@ -626,7 +626,7 @@ describe("Recipe Enrichment repository", () => {
       await replaceRecipeProvenance(
         testRecipe.id,
         { originCountry: "IT", provenanceNote: "Wrong.", cuisineIds: [italian!.id] },
-        "manual"
+        "replace"
       );
 
       await updateRecipeWithRefs(testRecipe.id, userId, {
@@ -647,7 +647,7 @@ describe("Recipe Enrichment repository", () => {
       await replaceRecipeProvenance(
         testRecipe.id,
         { originCountry: "IT", provenanceNote: "Keep me." },
-        "manual"
+        "replace"
       );
 
       await updateRecipeWithRefs(testRecipe.id, userId, { name: "A new title" });
@@ -659,7 +659,7 @@ describe("Recipe Enrichment repository", () => {
     });
   });
 
-  describe("addStepIngredientsToBareSteps", () => {
+  describe("writeInferredStepIngredients", () => {
     /** Dual-system recipe with a heading row and a hand-linked step. */
     async function createLinkedFixture() {
       const created = await createRecipeWithRefs(randomUUID(), userId, {
@@ -733,14 +733,18 @@ describe("Recipe Enrichment repository", () => {
     it("fills bare steps in every measurement system and leaves linked steps untouched", async () => {
       const recipeId = await createLinkedFixture();
 
-      const written = await addStepIngredientsToBareSteps(recipeId, [
-        // The claim also names the already-linked step: the write must skip it.
-        { stepOrder: 1, refs: [{ ingredientOrder: 2, share: 1, order: 0 }] },
-        { stepOrder: 2, refs: [{ ingredientOrder: 2, share: 0.5, order: 0 }] },
-      ]);
+      const written = await writeInferredStepIngredients(
+        recipeId,
+        [
+          // The claim also names the already-linked step: the write must skip it.
+          { stepOrder: 1, refs: [{ ingredientOrder: 2, share: 1, order: 0 }] },
+          { stepOrder: 2, refs: [{ ingredientOrder: 2, share: 0.5, order: 0 }] },
+        ],
+        "gap-fill"
+      );
 
-      // The bare "half the water" step, once per system.
-      expect(written).toBe(2);
+      // The bare "half the water" step, once per system. Nothing was cleared.
+      expect(written).toEqual({ filled: 2, cleared: 0 });
 
       const recipe = await getRecipeFull(recipeId);
       const metric = recipe!.steps.filter((step) => step.systemUsed === "metric");
@@ -757,23 +761,29 @@ describe("Recipe Enrichment repository", () => {
     it("never links heading rows on either side of the reference", async () => {
       const recipeId = await createLinkedFixture();
 
-      const written = await addStepIngredientsToBareSteps(recipeId, [
-        // Step order 0 is a heading row; line order 0 is the "# Spices" row.
-        { stepOrder: 0, refs: [{ ingredientOrder: 1, share: 1, order: 0 }] },
-        { stepOrder: 2, refs: [{ ingredientOrder: 0, share: 1, order: 0 }] },
-      ]);
+      const written = await writeInferredStepIngredients(
+        recipeId,
+        [
+          // Step order 0 is a heading row; line order 0 is the "# Spices" row.
+          { stepOrder: 0, refs: [{ ingredientOrder: 1, share: 1, order: 0 }] },
+          { stepOrder: 2, refs: [{ ingredientOrder: 0, share: 1, order: 0 }] },
+        ],
+        "gap-fill"
+      );
 
-      expect(written).toBe(0);
+      expect(written).toEqual({ filled: 0, cleared: 0 });
     });
 
     it("drops references to line orders that do not exist", async () => {
       const recipeId = await createLinkedFixture();
 
-      const written = await addStepIngredientsToBareSteps(recipeId, [
-        { stepOrder: 2, refs: [{ ingredientOrder: 99, share: 1, order: 0 }] },
-      ]);
+      const written = await writeInferredStepIngredients(
+        recipeId,
+        [{ stepOrder: 2, refs: [{ ingredientOrder: 99, share: 1, order: 0 }] }],
+        "gap-fill"
+      );
 
-      expect(written).toBe(0);
+      expect(written).toEqual({ filled: 0, cleared: 0 });
 
       const recipe = await getRecipeFull(recipeId);
       const metric = recipe!.steps.filter((step) => step.systemUsed === "metric");
@@ -784,7 +794,63 @@ describe("Recipe Enrichment repository", () => {
     it("writes nothing for an empty claim", async () => {
       const recipeId = await createLinkedFixture();
 
-      expect(await addStepIngredientsToBareSteps(recipeId, [])).toBe(0);
+      expect(await writeInferredStepIngredients(recipeId, [], "gap-fill")).toEqual({
+        filled: 0,
+        cleared: 0,
+      });
+    });
+
+    it("replaces a hand-linked step when the write is a refresh", async () => {
+      const recipeId = await createLinkedFixture();
+
+      const written = await writeInferredStepIngredients(
+        recipeId,
+        [{ stepOrder: 1, refs: [{ ingredientOrder: 2, share: 1, order: 0 }] }],
+        "replace"
+      );
+
+      // One step per system was cleared, and both were rewritten.
+      expect(written).toEqual({ filled: 2, cleared: 2 });
+
+      const recipe = await getRecipeFull(recipeId);
+      const metric = recipe!.steps.filter((step) => step.systemUsed === "metric");
+
+      // The salt link a person made is gone; the claim's water link is there.
+      expect(metric[1]?.stepIngredients).toEqual([{ ingredientOrder: 2, share: 1, order: 0 }]);
+    });
+
+    it("empties a step the claim omits, which is how a wrong link gets removed", async () => {
+      const recipeId = await createLinkedFixture();
+
+      // The claim covers only the bare step; the hand-linked one is omitted,
+      // as an over-linked step is once the model stops claiming it.
+      const written = await writeInferredStepIngredients(
+        recipeId,
+        [{ stepOrder: 2, refs: [{ ingredientOrder: 2, share: 0.5, order: 0 }] }],
+        "replace"
+      );
+
+      expect(written).toEqual({ filled: 2, cleared: 2 });
+
+      const recipe = await getRecipeFull(recipeId);
+      const metric = recipe!.steps.filter((step) => step.systemUsed === "metric");
+
+      expect(metric[1]?.stepIngredients).toEqual([]);
+      expect(metric[2]?.stepIngredients).toEqual([{ ingredientOrder: 2, share: 0.5, order: 0 }]);
+    });
+
+    it("clears nothing on an empty claim, whatever the mode", async () => {
+      const recipeId = await createLinkedFixture();
+
+      expect(await writeInferredStepIngredients(recipeId, [], "replace")).toEqual({
+        filled: 0,
+        cleared: 0,
+      });
+
+      const recipe = await getRecipeFull(recipeId);
+      const metric = recipe!.steps.filter((step) => step.systemUsed === "metric");
+
+      expect(metric[1]?.stepIngredients).toEqual([{ ingredientOrder: 1, share: 1, order: 0 }]);
     });
   });
 });

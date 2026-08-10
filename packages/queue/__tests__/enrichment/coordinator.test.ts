@@ -375,6 +375,78 @@ describe("automatic enrollment", () => {
   });
 });
 
+describe("automatic enrollment asked to replace", () => {
+  it("suspends every Supplied Recipe Data skip, because redoing them is the point", async () => {
+    getRecipeFull.mockResolvedValue(
+      recipe({
+        categories: ["Dinner"],
+        calories: 240,
+        fat: "9",
+        carbs: "30",
+        protein: "12",
+        originCountry: "IT",
+        provenanceNote: "Set by an editor.",
+        cuisines: [{ id: "id-italian", name: "Italian" }],
+      })
+    );
+
+    const results = await enrichRecipe(context, { origin: "automatic", replaceExisting: true });
+
+    expect(results.every((result) => result.status === "queued")).toBe(true);
+    expect(addEnrichmentJob).toHaveBeenCalledTimes(KIND_COUNT);
+  });
+
+  it("marks the jobs so the workers' writes replace rather than fill gaps", async () => {
+    await enrichRecipe(context, { origin: "automatic", replaceExisting: true });
+
+    expect(addEnrichmentJob).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ origin: "automatic", replaceExisting: true })
+    );
+  });
+
+  it("leaves the flag off an ordinary automatic enrollment", async () => {
+    await enrichRecipe(context, { origin: "automatic" });
+
+    expect(addEnrichmentJob).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ replaceExisting: undefined })
+    );
+  });
+
+  it("still honors the automatic switches", async () => {
+    getAutomaticEnrichmentConfig.mockResolvedValue({ ...ALL_ON, autoTagging: false });
+
+    const results = await enrichRecipe(context, { origin: "automatic", replaceExisting: true });
+
+    expect(outcome(results, "auto-tagging")).toEqual({
+      kind: "auto-tagging",
+      status: "skipped",
+      reason: "automatic-disabled",
+    });
+  });
+
+  it("still skips a kind whose input the recipe lacks", async () => {
+    getRecipeFull.mockResolvedValue(recipe({ steps: [] }));
+
+    const results = await enrichRecipe(context, { origin: "automatic", replaceExisting: true });
+
+    expect(outcome(results, "ingredient-linking")).toEqual({
+      kind: "ingredient-linking",
+      status: "skipped",
+      reason: "insufficient-input",
+    });
+  });
+
+  it("still refuses when AI is globally disabled", async () => {
+    isAIEnabled.mockResolvedValue(false);
+
+    const results = await enrichRecipe(context, { origin: "automatic", replaceExisting: true });
+
+    expect(results.every((r) => r.status === "skipped" && r.reason === "ai-disabled")).toBe(true);
+  });
+});
+
 describe("manual enrollment", () => {
   it("enrolls only the requested kind", async () => {
     const results = await enrichRecipe(context, { origin: "manual", kind: "auto-tagging" });

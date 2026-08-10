@@ -528,12 +528,16 @@
       "bulkEnrichment": {
         "title": "Enriquecimiento masivo",
         "subtitle": "Ejecutar el enriquecimiento habilitado en todas las recetas",
-        "description": "Encola, para todas las recetas de este servidor, cada tipo de enriquecimiento cuyo interruptor automático esté habilitado. Las recetas conservan los datos que ya tienen: solo se rellenan los huecos.",
+        "description": "Pon en cola, para todas las recetas de este servidor, cada tipo de enriquecimiento cuyo interruptor automático esté activado. De forma predeterminada solo se rellenan los huecos; la confirmación ofrece sobrescribir lo que ya existe.",
         "button": "Enriquecer todas las recetas",
         "confirmTitle": "¿Ejecutar el enriquecimiento en todas las recetas?",
         "confirmMessage": "Esto encola trabajo de IA para cada receta de este servidor. Cada tipo de enriquecimiento cuyo interruptor automático esté habilitado se ejecuta donde falten datos.",
+        "replaceExisting": "Sobrescribir los datos existentes",
+        "replaceExistingDescription": "Rehacer categorías, nutrición, procedencia e ingredientes de los pasos aunque la receta ya los tenga. Las etiquetas y las indicaciones de alergia solo se añaden.",
+        "replaceWarning": "Esto no se puede deshacer. También se reemplazan los datos que introdujiste tú, incluidos los ingredientes de pasos que vinculaste a mano: no se registra qué valores vinieron de la IA.",
         "costWarning": "Puede ser una operación costosa: con muchas recetas puede tardar mucho y, con un proveedor de IA de pago, consumir una cantidad significativa de créditos.",
         "confirmButton": "Ejecutar en todas las recetas",
+        "confirmButtonReplace": "Sobrescribir todas las recetas",
         "queued": "{queued, plural, =0 {Ninguna ejecución en cola} one {# ejecución en cola} other {# ejecuciones en cola}} para {recipes, plural, one {# receta} other {# recetas}}",
         "aiDisabled": "La IA está deshabilitada en este servidor. Habilita la IA primero.",
         "error": "No se pudo iniciar el enriquecimiento masivo"

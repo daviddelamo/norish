@@ -528,12 +528,16 @@
       "bulkEnrichment": {
         "title": "Bulk Enrichment",
         "subtitle": "Run enabled enrichment on every recipe",
-        "description": "Queue every enrichment kind whose automatic switch is enabled, for all recipes on this server. Recipes keep the data they already have, only gaps are filled.",
+        "description": "Queue every enrichment kind whose automatic switch is enabled, for all recipes on this server. Gaps are filled by default; the confirmation offers to overwrite what is already there.",
         "button": "Enrich All Recipes",
         "confirmTitle": "Run enrichment on all recipes?",
         "confirmMessage": "This queues AI work for every recipe on this server. Every enrichment kind whose automatic switch is enabled runs wherever data is missing.",
+        "replaceExisting": "Overwrite existing data",
+        "replaceExistingDescription": "Redo categories, nutrition, provenance and step ingredients even where a recipe already has them. Tags and allergy indications are only ever added to.",
+        "replaceWarning": "This cannot be undone. Data you entered yourself is replaced too, including step ingredients you linked by hand: nothing records which values came from AI.",
         "costWarning": "This can be an expensive operation: with many recipes it may take a long time and, on a paid AI provider, use a significant amount of credits.",
         "confirmButton": "Run on All Recipes",
+        "confirmButtonReplace": "Overwrite All Recipes",
         "queued": "{queued, plural, =0 {No runs queued} one {# run queued} other {# runs queued}} across {recipes, plural, one {# recipe} other {# recipes}}",
         "aiDisabled": "AI is disabled on this server. Enable AI first.",
         "error": "Failed to start bulk enrichment"

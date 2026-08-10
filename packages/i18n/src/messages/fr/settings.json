@@ -528,12 +528,16 @@
       "bulkEnrichment": {
         "title": "Enrichissement en masse",
         "subtitle": "Exécuter l'enrichissement activé sur toutes les recettes",
-        "description": "Mettre en file d'attente, pour toutes les recettes de ce serveur, chaque type d'enrichissement dont l'interrupteur automatique est activé. Les recettes conservent les données qu'elles ont déjà, seuls les manques sont comblés.",
+        "description": "Mettez en file d'attente, pour toutes les recettes de ce serveur, chaque type d'enrichissement dont l'interrupteur automatique est activé. Par défaut, seules les données manquantes sont complétées ; la confirmation propose d'écraser ce qui existe déjà.",
         "button": "Enrichir toutes les recettes",
         "confirmTitle": "Exécuter l'enrichissement sur toutes les recettes ?",
         "confirmMessage": "Ceci met en file d'attente du travail d'IA pour chaque recette de ce serveur. Chaque type d'enrichissement dont l'interrupteur automatique est activé s'exécute là où des données manquent.",
+        "replaceExisting": "Écraser les données existantes",
+        "replaceExistingDescription": "Refaire les catégories, la nutrition, la provenance et les ingrédients des étapes même lorsqu'une recette les possède déjà. Les tags et les indications d'allergie ne sont jamais qu'ajoutés.",
+        "replaceWarning": "Cette action est irréversible. Les données que vous avez saisies vous-même sont également remplacées, y compris les ingrédients d'étapes liés à la main : rien n'indique quelles valeurs viennent de l'IA.",
         "costWarning": "Cette opération peut être coûteuse : avec beaucoup de recettes, elle peut prendre longtemps et, avec un fournisseur d'IA payant, consommer une quantité importante de crédits.",
         "confirmButton": "Exécuter sur toutes les recettes",
+        "confirmButtonReplace": "Écraser toutes les recettes",
         "queued": "{queued, plural, =0 {Aucune exécution en file d'attente} one {# exécution en file d'attente} other {# exécutions en file d'attente}} pour {recipes, plural, one {# recette} other {# recettes}}",
         "aiDisabled": "L'IA est désactivée sur ce serveur. Activez d'abord l'IA.",
         "error": "Échec du démarrage de l'enrichissement en masse"

@@ -528,12 +528,16 @@
       "bulkEnrichment": {
         "title": "Masowe wzbogacanie",
         "subtitle": "Uruchom włączone wzbogacanie dla wszystkich przepisów",
-        "description": "Dodaj do kolejki, dla wszystkich przepisów na tym serwerze, każdy rodzaj wzbogacania z włączonym przełącznikiem automatycznym. Przepisy zachowują dane, które już mają, uzupełniane są tylko braki.",
+        "description": "Dodaj do kolejki, dla wszystkich przepisów na tym serwerze, każdy rodzaj wzbogacania, którego automatyczny przełącznik jest włączony. Domyślnie uzupełniane są tylko braki; potwierdzenie pozwala nadpisać to, co już istnieje.",
         "button": "Wzbogać wszystkie przepisy",
         "confirmTitle": "Uruchomić wzbogacanie dla wszystkich przepisów?",
         "confirmMessage": "To dodaje do kolejki pracę AI dla każdego przepisu na tym serwerze. Każdy rodzaj wzbogacania z włączonym przełącznikiem automatycznym uruchamia się tam, gdzie brakuje danych.",
+        "replaceExisting": "Nadpisz istniejące dane",
+        "replaceExistingDescription": "Ponownie ustal kategorie, wartości odżywcze, pochodzenie i składniki kroków, nawet jeśli przepis już je ma. Tagi i informacje o alergenach są wyłącznie dodawane.",
+        "replaceWarning": "Tej operacji nie można cofnąć. Zastąpione zostaną także dane wprowadzone przez Ciebie, w tym składniki kroków powiązane ręcznie: nigdzie nie zapisano, które wartości pochodzą od AI.",
         "costWarning": "To może być kosztowna operacja: przy wielu przepisach może potrwać długo, a u płatnego dostawcy AI zużyć znaczną ilość kredytów.",
         "confirmButton": "Uruchom dla wszystkich przepisów",
+        "confirmButtonReplace": "Nadpisz wszystkie przepisy",
         "queued": "{queued, plural, =0 {Brak uruchomień w kolejce} one {# uruchomienie w kolejce} few {# uruchomienia w kolejce} many {# uruchomień w kolejce} other {# uruchomienia w kolejce}} dla {recipes, plural, one {# przepisu} few {# przepisów} many {# przepisów} other {# przepisu}}",
         "aiDisabled": "AI jest wyłączone na tym serwerze. Najpierw włącz AI.",
         "error": "Nie udało się uruchomić masowego wzbogacania"

@@ -6,8 +6,9 @@
  * call, and the lifecycle it publishes — and nothing else. In particular it
  * owns no queries: the drizzle handle below throws on any access, so a worker
  * that composed one would fail these tests rather than quietly cross the
- * boundary. The gap-filling itself lives in the repository write; what is
- * pinned here is that the worker never asks for anything else.
+ * boundary. Gap-filling and replacing both live in the repository write; what
+ * is pinned here is which of the two the worker asks for, and that clearing
+ * links counts as a change even when the claim landed on no step.
  */
 
 import type { Job } from "bullmq";
@@ -20,7 +21,7 @@ const mocks = vi.hoisted(() => ({
   publishLifecycle: vi.fn(),
   publishRecipeUpdated: vi.fn(),
   reportStep: vi.fn(),
-  addStepIngredientsToBareSteps: vi.fn(),
+  writeInferredStepIngredients: vi.fn(),
   inferStepIngredients: vi.fn(),
 }));
 
@@ -33,7 +34,7 @@ vi.mock("@norish/db/drizzle", () => ({
 }));
 
 vi.mock("@norish/db/repositories/recipe-enrichment", () => ({
-  addStepIngredientsToBareSteps: mocks.addStepIngredientsToBareSteps,
+  writeInferredStepIngredients: mocks.writeInferredStepIngredients,
 }));
 
 vi.mock("@norish/shared-server/ai/enrichment/ingredient-linking-inferrer", () => ({
@@ -108,7 +109,7 @@ function jobFor(overrides: Partial<RecipeEnrichmentJobData> = {}): Job<RecipeEnr
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.getRecipeFull.mockResolvedValue(RECIPE);
-  mocks.addStepIngredientsToBareSteps.mockResolvedValue(1);
+  mocks.writeInferredStepIngredients.mockResolvedValue({ filled: 1, cleared: 0 });
   mocks.inferStepIngredients.mockResolvedValue(INFERENCE);
 });
 
@@ -138,7 +139,11 @@ describe("processIngredientLinkingJob", () => {
   it("persists a claim through the gap-filling repository write and reports success", async () => {
     await processIngredientLinkingJob(jobFor());
 
-    expect(mocks.addStepIngredientsToBareSteps).toHaveBeenCalledWith("recipe-1", INFERENCE.links);
+    expect(mocks.writeInferredStepIngredients).toHaveBeenCalledWith(
+      "recipe-1",
+      INFERENCE.links,
+      "gap-fill"
+    );
     expect(mocks.publishLifecycle.mock.calls.map(([, state]) => state)).toEqual([
       "processing",
       "succeeded",
@@ -159,7 +164,7 @@ describe("processIngredientLinkingJob", () => {
 
     await processIngredientLinkingJob(jobFor());
 
-    expect(mocks.addStepIngredientsToBareSteps).not.toHaveBeenCalled();
+    expect(mocks.writeInferredStepIngredients).not.toHaveBeenCalled();
     expect(mocks.publishRecipeUpdated).not.toHaveBeenCalled();
     expect(mocks.publishLifecycle.mock.calls.map(([, state]) => state)).toEqual([
       "processing",
@@ -167,9 +172,17 @@ describe("processIngredientLinkingJob", () => {
     ]);
   });
 
+  it("never reaches the write with an empty claim, so a refresh cannot clear on nothing", async () => {
+    mocks.inferStepIngredients.mockResolvedValue({ links: [] });
+
+    await processIngredientLinkingJob(jobFor({ replaceExisting: true }));
+
+    expect(mocks.writeInferredStepIngredients).not.toHaveBeenCalled();
+  });
+
   it("stays quiet when every claimed step already had links", async () => {
     // The write applied to zero steps: a person's own links were there first.
-    mocks.addStepIngredientsToBareSteps.mockResolvedValue(0);
+    mocks.writeInferredStepIngredients.mockResolvedValue({ filled: 0, cleared: 0 });
 
     await processIngredientLinkingJob(jobFor());
 
@@ -177,16 +190,45 @@ describe("processIngredientLinkingJob", () => {
     expect(mocks.publishLifecycle.mock.calls.map(([, state]) => state)).toContain("succeeded");
   });
 
-  it("passes the run's origin through untouched", async () => {
+  it("asks for a replacing write when the run is an administrator's refresh", async () => {
+    await processIngredientLinkingJob(jobFor({ replaceExisting: true }));
+
+    expect(mocks.writeInferredStepIngredients).toHaveBeenCalledWith(
+      "recipe-1",
+      INFERENCE.links,
+      "replace"
+    );
+  });
+
+  it("keeps a manual rerun gap-filling, because that action exists to fill in the rest", async () => {
+    // Unlike every other kind, "Link Ingredients to Steps" is invoked to
+    // complete a person's own links, so it must never delete them.
     await processIngredientLinkingJob(jobFor({ origin: "manual", requestedByUserId: "user-1" }));
 
-    expect(mocks.addStepIngredientsToBareSteps).toHaveBeenCalledWith("recipe-1", INFERENCE.links);
+    expect(mocks.writeInferredStepIngredients).toHaveBeenCalledWith(
+      "recipe-1",
+      INFERENCE.links,
+      "gap-fill"
+    );
+  });
+
+  it("counts a write that only cleared links as a change", async () => {
+    // Every ref was dropped, but the refresh emptied the steps it cleared, so
+    // clients that are still rendering those links must be told.
+    mocks.writeInferredStepIngredients.mockResolvedValue({ filled: 0, cleared: 2 });
+
+    await processIngredientLinkingJob(jobFor({ replaceExisting: true }));
+
+    expect(mocks.publishRecipeUpdated).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "ingredient-linking" }),
+      RECIPE
+    );
   });
 
   it("throws on a transient AI failure so BullMQ retries it", async () => {
     mocks.inferStepIngredients.mockRejectedValue(new Error("provider timed out"));
 
     await expect(processIngredientLinkingJob(jobFor())).rejects.toThrow("provider timed out");
-    expect(mocks.addStepIngredientsToBareSteps).not.toHaveBeenCalled();
+    expect(mocks.writeInferredStepIngredients).not.toHaveBeenCalled();
   });
 });

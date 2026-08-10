@@ -528,12 +528,16 @@
       "bulkEnrichment": {
         "title": "Massen-Anreicherung",
         "subtitle": "Aktivierte Anreicherung für alle Rezepte ausführen",
-        "description": "Stellen Sie für alle Rezepte auf diesem Server jede Anreicherungsart in die Warteschlange, deren automatischer Schalter aktiviert ist. Rezepte behalten, was sie bereits haben, nur Lücken werden gefüllt.",
+        "description": "Stellen Sie für alle Rezepte auf diesem Server jede Anreicherungsart in die Warteschlange, deren automatischer Schalter aktiviert ist. Standardmäßig werden nur Lücken gefüllt; in der Bestätigung können Sie vorhandene Daten überschreiben lassen.",
         "button": "Alle Rezepte anreichern",
         "confirmTitle": "Anreicherung für alle Rezepte ausführen?",
         "confirmMessage": "Dies stellt KI-Arbeit für jedes Rezept auf diesem Server in die Warteschlange. Jede Anreicherungsart, deren automatischer Schalter aktiviert ist, läuft überall dort, wo Daten fehlen.",
+        "replaceExisting": "Vorhandene Daten überschreiben",
+        "replaceExistingDescription": "Kategorien, Nährwerte, Herkunft und Schritt-Zutaten neu ermitteln, auch wenn ein Rezept sie bereits hat. Tags und Allergiehinweise werden immer nur ergänzt.",
+        "replaceWarning": "Dies kann nicht rückgängig gemacht werden. Auch selbst eingegebene Daten werden ersetzt, einschließlich von Hand verknüpfter Schritt-Zutaten: Es ist nirgends festgehalten, welche Werte von der KI stammen.",
         "costWarning": "Dies kann ein teurer Vorgang sein: Bei vielen Rezepten kann es lange dauern und bei einem kostenpflichtigen KI-Anbieter erhebliches Guthaben verbrauchen.",
         "confirmButton": "Für alle Rezepte ausführen",
+        "confirmButtonReplace": "Alle Rezepte überschreiben",
         "queued": "{queued, plural, =0 {Keine Läufe in Warteschlange} one {# Lauf in Warteschlange} other {# Läufe in Warteschlange}} für {recipes, plural, one {# Rezept} other {# Rezepte}}",
         "aiDisabled": "KI ist auf diesem Server deaktiviert. Aktivieren Sie zuerst KI.",
         "error": "Massen-Anreicherung konnte nicht gestartet werden"

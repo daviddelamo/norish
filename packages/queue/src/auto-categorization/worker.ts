@@ -1,15 +1,16 @@
 /**
  * Auto-Categorization Worker
  *
- * One AI request and a category replacement. Automatic runs replace only while
- * the stored list is still empty, so data supplied while AI was running wins.
- * Uses lazy worker pattern - starts on-demand and pauses when idle.
+ * One AI request and a category replacement. Gap-filling runs replace only
+ * while the stored list is still empty, so data supplied while AI was running
+ * wins. Uses lazy worker pattern - starts on-demand and pauses when idle.
  */
 
 import type { RecipeEnrichmentJobData } from "@norish/queue/contracts/job-types";
 import { replaceRecipeCategories } from "@norish/db/repositories/recipe-enrichment";
 import { categorizeRecipe } from "@norish/shared-server/ai/enrichment/auto-categorizer";
 import { createLogger } from "@norish/shared-server/logger";
+import { enrichmentWriteMode } from "@norish/shared/lib/recipe-enrichment";
 
 import { defineLazyWorker, QUEUE_NAMES } from "../config";
 import {
@@ -35,10 +36,11 @@ const autoCategorizationWorker = defineLazyWorker<RecipeEnrichmentJobData>(
 
       await reportStep(job, "saving");
 
-      const applied = await replaceRecipeCategories(recipe.id, categories, job.data.origin);
+      const mode = enrichmentWriteMode("auto-categorization", job.data);
+      const applied = await replaceRecipeCategories(recipe.id, categories, mode);
 
       log.info(
-        { recipeId: recipe.id, categories, applied, origin: job.data.origin },
+        { recipeId: recipe.id, categories, applied, origin: job.data.origin, mode },
         applied ? "Auto-categorization saved" : "Auto-categorization deferred to supplied data"
       );
 

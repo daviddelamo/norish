@@ -528,12 +528,16 @@
       "bulkEnrichment": {
         "title": "Masseberigelse",
         "subtitle": "Kør aktiveret berigelse på alle opskrifter",
-        "description": "Sæt hver berigelsestype, hvis automatiske kontakt er slået til, i kø for alle opskrifter på denne server. Opskrifter beholder de data, de allerede har, kun huller udfyldes.",
+        "description": "Sæt hver berigelsestype, hvis automatiske kontakt er slået til, i kø for alle opskrifter på denne server. Som standard udfyldes kun huller; bekræftelsen tilbyder at overskrive det, der allerede findes.",
         "button": "Berig alle opskrifter",
         "confirmTitle": "Kør berigelse på alle opskrifter?",
         "confirmMessage": "Dette sætter AI-arbejde i kø for hver opskrift på denne server. Hver berigelsestype, hvis automatiske kontakt er slået til, kører hvor der mangler data.",
+        "replaceExisting": "Overskriv eksisterende data",
+        "replaceExistingDescription": "Lav kategorier, næringsindhold, oprindelse og triningredienser om, også hvor en opskrift allerede har dem. Tags og allergiangivelser bliver kun tilføjet.",
+        "replaceWarning": "Dette kan ikke fortrydes. Data, du selv har indtastet, bliver også erstattet, inklusive triningredienser, du har knyttet manuelt: intet registrerer, hvilke værdier der kom fra AI.",
         "costWarning": "Dette kan være en dyr operation: Med mange opskrifter kan det tage lang tid og hos en betalt AI-udbyder bruge betydelig kredit.",
         "confirmButton": "Kør på alle opskrifter",
+        "confirmButtonReplace": "Overskriv alle opskrifter",
         "queued": "{queued, plural, =0 {Ingen kørsler i kø} one {# kørsel i kø} other {# kørsler i kø}} for {recipes, plural, one {# opskrift} other {# opskrifter}}",
         "aiDisabled": "AI er deaktiveret på denne server. Aktivér AI først.",
         "error": "Kunne ikke starte masseberigelse"

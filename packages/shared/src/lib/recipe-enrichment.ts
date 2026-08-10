@@ -31,6 +31,50 @@ export type RecipeEnrichmentLifecycleState = (typeof ENRICHMENT_LIFECYCLE_STATES
 /** Whether a run was enrolled automatically for a newly usable recipe or requested by an editor. */
 export type RecipeEnrichmentOrigin = "automatic" | "manual";
 
+/**
+ * What a run's write is allowed to do to what is already stored.
+ *
+ * `gap-fill` defers to Supplied Recipe Data: the write applies only where the
+ * recipe is still absent, so nothing a person or an import source provided is
+ * touched. `replace` is a deliberate refresh that overwrites it.
+ *
+ * This is deliberately not the same question as {@link RecipeEnrichmentOrigin}.
+ * Origin says who asked, and is what decides who hears about a failure; the
+ * mode says what the write does. They agreed for as long as an editor's rerun
+ * was the only way to ask for a replacement, and an administrator's bulk
+ * refresh is the case that separates them: automatic work, replacing writes.
+ */
+export type RecipeEnrichmentWriteMode = "gap-fill" | "replace";
+
+/** The two fields of a run that decide its write mode. */
+export interface RecipeEnrichmentRunIntent {
+  origin: RecipeEnrichmentOrigin;
+  /** An administrator's bulk refresh; absent on every ordinary automatic run. */
+  replaceExisting?: boolean;
+}
+
+/**
+ * The mode one run's write should use.
+ *
+ * Manual is a deliberate refresh for every kind but one. Ingredient Linking is
+ * the exception, and deliberately so: its manual action exists to fill in the
+ * steps a person did not link themselves, so treating that rerun as a
+ * replacement would delete exactly the work it was invoked to complete. Only
+ * an administrator's bulk refresh, which says so in as many words and warns
+ * about it, replaces a recipe's links.
+ *
+ * The rule is kind-aware here rather than left to each worker so that the
+ * exception is stated once, where the vocabulary lives.
+ */
+export function enrichmentWriteMode(
+  kind: RecipeEnrichmentKind,
+  run: RecipeEnrichmentRunIntent
+): RecipeEnrichmentWriteMode {
+  if (run.replaceExisting === true) return "replace";
+
+  return run.origin === "manual" && kind !== "ingredient-linking" ? "replace" : "gap-fill";
+}
+
 /** Why the coordinator declined to enroll a kind. */
 export type RecipeEnrichmentSkipReason =
   /** Global AI enablement is the top-level prerequisite for automatic and manual alike. */

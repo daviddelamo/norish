@@ -528,12 +528,16 @@
       "bulkEnrichment": {
         "title": "Masseberikelse",
         "subtitle": "Kjør aktivert berikelse på alle oppskrifter",
-        "description": "Sett hver berikelsestype med automatisk bryter slått på i kø for alle oppskrifter på denne serveren. Oppskrifter beholder dataene de allerede har, bare hull fylles.",
+        "description": "Legg hver berikelsestype som har automatisk bryter på, i kø for alle oppskrifter på denne serveren. Som standard fylles bare hull; bekreftelsen tilbyr å overskrive det som allerede finnes.",
         "button": "Berik alle oppskrifter",
         "confirmTitle": "Kjøre berikelse på alle oppskrifter?",
         "confirmMessage": "Dette setter AI-arbeid i kø for hver oppskrift på denne serveren. Hver berikelsestype med automatisk bryter slått på kjøres der data mangler.",
+        "replaceExisting": "Overskriv eksisterende data",
+        "replaceExistingDescription": "Gjør kategorier, næringsinnhold, opphav og trinningredienser på nytt, også der en oppskrift allerede har dem. Tagger og allergimerknader blir bare lagt til.",
+        "replaceWarning": "Dette kan ikke angres. Data du har lagt inn selv blir også erstattet, inkludert trinningredienser du har koblet for hånd: ingenting registrerer hvilke verdier som kom fra AI.",
         "costWarning": "Dette kan være en kostbar operasjon: Med mange oppskrifter kan det ta lang tid og hos en betalt AI-leverandør bruke betydelig kreditt.",
         "confirmButton": "Kjør på alle oppskrifter",
+        "confirmButtonReplace": "Overskriv alle oppskrifter",
         "queued": "{queued, plural, =0 {Ingen kjøringer i kø} one {# kjøring i kø} other {# kjøringer i kø}} for {recipes, plural, one {# oppskrift} other {# oppskrifter}}",
         "aiDisabled": "AI er deaktivert på denne serveren. Aktiver AI først.",
         "error": "Kunne ikke starte masseberikelse"
