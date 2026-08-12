@@ -5,6 +5,15 @@ them directly; `pnpm --filter @norish/landing shots` renders them into
 `public/screenshots/optimized` at the exact sizes `components/shot.tsx`
 requests. After replacing any capture here, run that script and commit both.
 
+`hero-dish-{light,dark}.jpg` is the odd one out: a photograph rather than a
+capture, the dish in the hero's recipe fragment. It is the recipe's own photo
+at the largest size its site publishes, 440x195 once cropped to the fragment's
+band, and the dark variant is the same frame at 0.87 brightness so it does not
+glare over the dark ground. Because 440 is all there is, the 2x variant the
+optimizer writes is an upscale it sharpens rather than detail — a hero photo
+that has to hold more than about 440 CSS pixels needs a different photograph,
+not a bigger export.
+
 ## The capture spec
 
 Every screen ships four captures, named `<screen>-<web|mobile>-<light|dark>.jpg`:

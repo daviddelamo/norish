@@ -56,7 +56,11 @@ export function Hero() {
           </Reveal>
         </div>
 
-        <Reveal className="mx-auto mt-16 max-w-3xl sm:mt-20 lg:max-w-4xl" delay={250}>
+        {/* Two equal halves, so the seam between them — where the strands all
+            meet — is the middle of the page. The sources need less than their
+            half and sit against the seam; the width here is set by the half
+            the recipe wants, not by the half the sources want. */}
+        <Reveal className="mx-auto mt-16 max-w-3xl sm:mt-20 md:max-w-4xl lg:max-w-6xl" delay={250}>
           <div className="parallax" style={{ "--depth": 0.5 } as CSSProperties}>
             <SourceFlow />
           </div>

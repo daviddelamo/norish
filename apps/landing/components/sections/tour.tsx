@@ -5,7 +5,7 @@ import { useRef } from "react";
 
 import { Phone, Screen } from "../frames";
 import { clamp, useScrollFrame } from "../scroll-frame";
-import { asking, heldAt, prefersCalm, walkAt } from "../sequence";
+import { asking, heldAt, walkAt } from "../sequence";
 import { Shot } from "../shot";
 
 type Screenful = {
@@ -70,28 +70,11 @@ const WIDE = "(min-width: 64rem)";
  */
 const TRIGGER = 0.38;
 
-/** The share of a block's stretch of scroll its capture spends fading in. */
-const FADE = 0.45;
-
 /** The shorter handover of ghost to ink, so only one block is ever being read. */
 const INK = 0.25;
 
-/**
- * The share of the held screen a move between two screens takes, narrow only.
- * Small: a dissolve between two screenshots is a blend of both while it runs,
- * so the screens should rest for most of the section and swap quickly.
- */
+/** The share of the held screen a move between two screens takes. */
 const GLIDE = 0.08;
-
-/** The same dissolve on the held stage, where a move is all the room there is. */
-const HELD_FADE = 0.7;
-
-/**
- * The share of a move a block of copy spends leaving, and the next one spends
- * arriving. Under a half, so the one being replaced is gone before its
- * replacement starts: two paragraphs half-faded through each other are unreadable.
- */
-const SWAP = 0.28;
 
 /**
  * How far the reader has come, counted in blocks: a whole number is a block at
@@ -121,13 +104,10 @@ function reading(blocks: (HTMLLIElement | null)[]) {
 /**
  * The same count on the held stage, where the screens are stacked rather than
  * laid down the page: the section's own progress, walked a screen at a time so
- * each one rests long enough to be read. Under reduced motion it cuts between
- * screens instead of dissolving.
+ * each one rests long enough to be read.
  */
 function held(section: HTMLElement) {
-  const walked = walkAt(heldAt(section), screens.length, GLIDE);
-
-  return prefersCalm() ? Math.round(walked) : walked;
+  return walkAt(heldAt(section), screens.length, GLIDE);
 }
 
 /**
@@ -164,10 +144,14 @@ function Capture({ screen }: { screen: Screenful }) {
  * on a timer, so it follows you exactly, both ways.
  *
  * Where there is room for two columns the copy walks down the page on the left
- * and the capture stays with it on the right, dissolving into the next screen
- * across the handover between two blocks. Where there is not, the section holds
- * the screen instead and the copy and the capture swap in place above one
- * another, a screen at a time; under reduced motion that swap is a cut.
+ * and the capture keeps up with it on the right. Where there is not, the
+ * section holds the screen instead and the copy and the capture are pushed up
+ * out of it together, a screen at a time.
+ *
+ * Which screen is up is the one thing that is not scrubbed: it is committed at
+ * the halfway point between two blocks and the change then plays itself out,
+ * because a screenshot scrubbed halfway into another screenshot is a blend of
+ * two pictures and reads as neither; under reduced motion it is a cut.
  *
  * Adding a screen is one entry here plus its four captures, web and mobile in
  * both themes, registered in `components/shot.tsx`.
@@ -185,32 +169,45 @@ export function Tour() {
 
     const wide = asking(WIDE);
     const at = wide ? reading(blocks.current) : held(section);
-    const fade = wide ? FADE : HELD_FADE;
+    // Which screen is up is committed rather than scrubbed: it changes over at
+    // the halfway point between two blocks and the swap then plays itself out
+    // (see `.screen-layer` in globals.css). Scrubbing it means every position
+    // between two screens is a blend of two screenshots, and a screenshot half
+    // faded through another screenshot cannot be read at all.
+    const showing = Math.round(at);
 
-    // The captures are stacked, so each one fades in over the one before it
-    // rather than the two of them dissolving through to the page underneath.
+    // Where a screen sits relative to the one being shown: behind it once it
+    // has been read, ahead of it while it is still to come.
     layers.current.forEach((layer, index) => {
-      layer?.style.setProperty("--lit", `${clamp((at - index + fade) / fade)}`);
+      layer?.style.setProperty("--lit", `${Number(index === showing)}`);
+      layer?.style.setProperty("--push", `${Math.sign(showing - index)}`);
     });
 
     // Beside its capture a block is in ink from the moment it reaches the line
-    // until the next one takes over. Stacked on top of it there is only room
-    // for one, so a block leaves before the next one arrives, in the direction
-    // it is being read in.
-    const read = (index: number) =>
-      wide
-        ? Math.min(clamp((at - index + INK) / INK), clamp((index + 1 - at) / INK))
-        : clamp((0.5 - Math.abs(at - index)) / SWAP);
-
+    // until the next one takes over, which is a reading position rather than a
+    // picture and stays scrubbed. Stacked over the capture there is only room
+    // for one, so it commits along with the screen it belongs to.
     blocks.current.forEach((block, index) => {
-      block?.style.setProperty("--lit", `${read(index)}`);
-      block?.style.setProperty("--slide", `${Math.max(-1, Math.min(1, at - index))}`);
+      const lit = wide
+        ? Math.min(clamp((at - index + INK) / INK), clamp((index + 1 - at) / INK))
+        : Number(index === showing);
+
+      // Which side of the reading a block sits on, and how far. Committed on
+      // the held stage, where it is a push in one move; scrubbed beside a
+      // capture, where a block sitting on the line would otherwise be held
+      // there until the one behind it arrives to shove it off — the two are
+      // touching at that moment. Read continuously, both are already pulling
+      // apart, the one above rising and the one below hanging back, so the
+      // line is clear well before they reach each other.
+      block?.style.setProperty("--lit", `${lit}`);
+      block?.style.setProperty(
+        "--push",
+        `${wide ? Math.max(-1, Math.min(1, at - index)) : Math.sign(showing - index)}`
+      );
     });
 
-    // The dots are a position rather than a piece of reading, so on the held
-    // stage they glide across the gap the copy leaves blank.
     dots.current.forEach((dot, index) => {
-      dot?.style.setProperty("--lit", `${wide ? read(index) : clamp(1 - Math.abs(at - index))}`);
+      dot?.style.setProperty("--lit", `${Number(index === showing)}`);
     });
   });
 

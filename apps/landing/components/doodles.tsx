@@ -133,20 +133,16 @@ export function CookScene({ className }: DoodleProps) {
         <path {...drawn} d="M62 172c7-7 7-13 0-20M136 172c7-7 7-13 0-20" style={order(3)} />
         <path {...drawn} d="M99 174c7-7 7-13 0-20" style={order(4)} />
 
-        {/* Steam is the one part that is not drawn: it waits until the step is
-            properly on the screen and then starts rising, and it keeps going
-            for as long as you stay (see `.steam-line` and `[data-steaming]`). */}
-        <path className="steam-line" d="M60 98c-11-12 10-21 0-33-9-11 6-20 0-31" />
-        <path
-          className="steam-line"
-          d="M96 98c-11-12 10-21 0-33-8-10 5-18 0-29"
-          style={{ "--steam-delay": "1600ms" } as CSSProperties}
-        />
-        <path
-          className="steam-line"
-          d="M132 98c-11-12 10-21 0-33-9-11 6-20 0-31"
-          style={{ "--steam-delay": "3200ms" } as CSSProperties}
-        />
+        {/* Steam is the one part that is not drawn and not scrubbed: it rises
+            on its own clock for as long as the page is open, the three strands
+            a third of a cycle apart, and only fades up with the last of the
+            drawing. The order they sit in here is the order they rise in (see
+            `.steam-line` and `.doodle-steam` in globals.css). */}
+        <g className="doodle-steam">
+          <path className="steam-line" d="M60 98c-11-12 10-21 0-33-9-11 6-20 0-31" />
+          <path className="steam-line" d="M96 98c-11-12 10-21 0-33-8-10 5-18 0-29" />
+          <path className="steam-line" d="M132 98c-11-12 10-21 0-33-9-11 6-20 0-31" />
+        </g>
       </g>
     </svg>
   );

@@ -26,59 +26,72 @@ const SOURCES: Source[] = [
     label: "A recipe site",
     chip: "bg-tint-site/14 text-tint-site",
     line: "text-tint-site",
-    y: 22,
+    y: 28,
   },
   {
     icon: YouTubeIcon,
     label: "A YouTube video",
     chip: "bg-tint-video/14 text-tint-video",
     line: "text-tint-video",
-    y: 74,
+    y: 94,
   },
   {
     icon: InstagramIcon,
     label: "An Instagram reel",
     chip: "bg-tint-social/14 text-tint-social",
     line: "text-tint-social",
-    y: 126,
+    y: 160,
   },
   {
     icon: CameraIcon,
     label: "A photo",
     chip: "bg-tint-photo/14 text-tint-photo",
     line: "text-tint-photo",
-    y: 178,
+    y: 226,
   },
   {
     icon: ClipboardDocumentIcon,
     label: "Pasted text",
     chip: "bg-tint-text/14 text-tint-text",
     line: "text-tint-text",
-    y: 230,
+    y: 292,
   },
 ];
 
 /**
- * Rows are 44px on a 52px pitch, so a strand meets each one at its centre.
- * They converge above the midpoint, which lands the meeting point on the
- * recipe's photo rather than on the seam between two cards.
+ * The fan's own box: as tall as the five rows it leaves, and the run it has to
+ * cross to reach the recipe. Drawn at one user unit per pixel, so the `h-80
+ * w-32` it is given has to stay these two numbers.
  */
-const CONVERGE = 104;
+const FAN_W = 128;
+const FAN_H = 320;
+
+/**
+ * Rows are 56px on a 66px pitch, so a strand meets each one at its centre.
+ * They converge above the fan's own midpoint, and the fan starts level with
+ * the top of the recipe, which lands the meeting point on the recipe's photo
+ * rather than below it on the seam between two cards.
+ */
+const CONVERGE = 132;
 
 /** A curve from a row's centre across to the card, flattening at both ends. */
 function curve(y: number) {
-  return y === CONVERGE ? `M0 ${y}H96` : `M0 ${y}C48 ${y} 48 ${CONVERGE} 96 ${CONVERGE}`;
+  const bend = FAN_W / 2;
+
+  return y === CONVERGE
+    ? `M0 ${y}H${FAN_W}`
+    : `M0 ${y}C${bend} ${y} ${bend} ${CONVERGE} ${FAN_W} ${CONVERGE}`;
 }
 
 /*
  * Below md the sources sit in a row and the fan drops downward instead. The
- * chips are 36px on a 48px pitch (gap-3), so a strand leaves each chip at its
+ * chips are 48px on a 60px pitch (gap-3), so a strand leaves each chip at its
  * centre and meets the others over the middle of the recipe photo.
  */
-const ROW_W = 228;
-const ROW_H = 72;
+const ROW_W = 288;
+const ROW_H = 88;
 
-const chipX = (position: number) => 18 + position * 48;
+const chipX = (position: number) => 24 + position * 60;
 
 /** The vertical twin of `curve`: chip centre down to the row's midline. */
 function curveDown(x: number) {
@@ -124,12 +137,19 @@ function Strand({ d, line, position }: { d: string; line: string; position: numb
  * keeps its own colour so the fan reads at a glance; they draw themselves as
  * the hero reveals and then carry something along themselves for as long as
  * they are on the page (see `.stroke-in` and `.flow-pulse` in globals.css).
+ *
+ * Wide enough for two columns, the two halves are equal and the sources are
+ * pushed up against the seam between them: the fan ends where its half does,
+ * so the point every strand converges on is the middle of the page, and the
+ * recipe it converges on takes the half after it. The sources need less room
+ * than the recipe does, so the width of the whole thing is set by the half the
+ * recipe wants and the slack is left out at the far edge.
  */
 export function SourceFlow() {
   return (
     <div
       aria-label="A recipe site, a YouTube video, an Instagram reel, a photo and pasted text all becoming one stored recipe"
-      className="md:grid md:grid-cols-[auto_6rem_minmax(0,1fr)] md:items-center"
+      className="md:grid md:grid-cols-2 md:items-start"
       role="img"
     >
       {/* Below md: the same five chips in a row, fanning down into the recipe.
@@ -138,8 +158,8 @@ export function SourceFlow() {
         <ul className="flex items-center justify-center gap-3">
           {SOURCES.map(({ icon: Icon, label, chip }) => (
             <li key={label}>
-              <span className={`grid size-9 place-items-center rounded-xl ${chip}`}>
-                <Icon className="size-4.5" />
+              <span className={`grid size-12 place-items-center rounded-2xl ${chip}`}>
+                <Icon className="size-6" />
               </span>
             </li>
           ))}
@@ -147,7 +167,7 @@ export function SourceFlow() {
 
         <svg
           aria-hidden
-          className="mx-auto mt-1.5 block"
+          className="mx-auto mt-2 block"
           fill="none"
           height={ROW_H}
           viewBox={`0 0 ${ROW_W} ${ROW_H}`}
@@ -160,28 +180,30 @@ export function SourceFlow() {
         </svg>
       </div>
 
-      <ul className="hidden md:flex md:flex-col md:gap-2">
-        {SOURCES.map(({ icon: Icon, label, chip }) => (
-          <li key={label} className="flex h-11 items-center gap-2.5">
-            <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${chip}`}>
-              <Icon className="size-4.5" />
-            </span>
-            <span className="text-sm whitespace-nowrap">{label}</span>
-          </li>
-        ))}
-      </ul>
+      <div className="hidden md:flex md:items-center md:justify-end">
+        <ul className="flex flex-col gap-2.5">
+          {SOURCES.map(({ icon: Icon, label, chip }) => (
+            <li key={label} className="flex h-14 items-center gap-3">
+              <span className={`grid size-12 shrink-0 place-items-center rounded-2xl ${chip}`}>
+                <Icon className="size-6" />
+              </span>
+              <span className="whitespace-nowrap">{label}</span>
+            </li>
+          ))}
+        </ul>
 
-      <svg
-        aria-hidden
-        className="hidden h-63 w-24 md:block"
-        fill="none"
-        viewBox="0 0 96 252"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {SOURCES.map(({ label, line, y }, position) => (
-          <Strand key={label} d={curve(y)} line={line} position={position} />
-        ))}
-      </svg>
+        <svg
+          aria-hidden
+          className="h-80 w-32 shrink-0"
+          fill="none"
+          viewBox={`0 0 ${FAN_W} ${FAN_H}`}
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {SOURCES.map(({ label, line, y }, position) => (
+            <Strand key={label} d={curve(y)} line={line} position={position} />
+          ))}
+        </svg>
+      </div>
 
       <RecipeFragment />
     </div>

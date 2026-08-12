@@ -386,44 +386,59 @@
 }
 
 /*
- * Steam never stops rising, but only just: each strand drifts up and thins
- * out, then starts again. Slow, staggered, and gone entirely for anyone who
- * asked for less motion.
+ * Steam never stops rising: each strand climbs, thins out, and starts again,
+ * far enough and bright enough to be caught out of the corner of an eye.
+ * Staggered, and gone entirely for anyone who asked for less motion.
  *
- * In a scene it waits: a step writes `data-steaming` once it is properly on
- * the screen, and until then the strands are held on the first frame of the
- * drift, which is nothing at all. So the pan starts steaming when you arrive
- * at it rather than having been steaming to an empty room. The mark in the
- * closing has no step to wait for and simply goes.
+ * It runs on its own clock rather than on the scroll. The strands are a third
+ * of a cycle apart and the offsets are negative, which starts each one
+ * part-way into the drift instead of holding it at nothing: a pan is steaming
+ * the moment it is drawn, at whatever point of the cycle you happen to arrive
+ * at it, rather than beginning a slow first rise once some threshold has been
+ * crossed. Nothing here waits to be scrolled to, so nothing here can fail to
+ * start.
+ *
+ * A drawing carrying more than three strands needs another line here; there is
+ * no counting in CSS, and the timing is better off in one place than written
+ * into every strand of every drawing.
  */
 .steam-line {
+  --steam-cycle: 4.4s;
+
   /* Percentages in the drift are of the strand itself, not the whole drawing. */
   transform-box: fill-box;
-  animation: steam-drift 7s ease-in-out infinite;
-  animation-delay: var(--steam-delay, 0ms);
+  animation: steam-drift var(--steam-cycle) ease-in-out infinite;
 }
 
-[data-steaming] .steam-line {
-  animation-play-state: paused;
+.steam-line:nth-child(2) {
+  animation-delay: calc(var(--steam-cycle) / -3);
 }
 
-[data-steaming="true"] .steam-line {
-  animation-play-state: running;
+.steam-line:nth-child(3) {
+  animation-delay: calc(var(--steam-cycle) / -1.5);
+}
+
+/* What is steaming has to have been drawn first, so in a scene the strands
+   come up with the last of the drawing rather than hanging in the air over an
+   unfinished pan. With nothing written the drawing is finished and they are
+   simply on, which is the closing's mark and the scripting-free page. */
+.doodle-steam {
+  opacity: clamp(0, (var(--draw, 1) - 0.62) / 0.3, 1);
 }
 
 @keyframes steam-drift {
   0% {
-    translate: 0 8%;
+    translate: 0 14%;
     opacity: 0;
   }
-  30% {
-    opacity: 0.75;
+  22% {
+    opacity: 0.95;
   }
   70% {
-    opacity: 0.35;
+    opacity: 0.55;
   }
   100% {
-    translate: 0 -10%;
+    translate: 0 -26%;
     opacity: 0;
   }
 }
@@ -643,12 +658,14 @@
  *
  * Narrower than that there is no second column to hold anything still, so the
  * section holds the screen instead. The copy blocks stack in one grid cell
- * above the capture and only the one being read is painted, leaving upward as
- * the next arrives from below.
+ * above the capture and only the one being read is painted, pushed up out of
+ * the column as the next arrives from below.
  *
- * `tour.tsx` scrubs all of it from the scroll and writes it here as `--lit` and
- * `--slide`. Without scripting the section is a plain column: every block of
- * copy in ink, the first capture under them.
+ * `tour.tsx` writes both of them here: `--lit`, which screen is up, and
+ * `--push`, which side of it everything else sits on. The reading position on
+ * the wide layout is scrubbed from the scroll; the screen itself is committed
+ * and played out by the transitions below. Without scripting the section is a
+ * plain column: every block of copy in ink, the first capture under them.
  */
 .tour-pin {
   padding-block: 6rem;
@@ -668,7 +685,6 @@
 
 .tour-shots {
   position: relative;
-  aspect-ratio: 1120 / 839;
 }
 
 .screen-layer {
@@ -678,7 +694,11 @@
   opacity: var(--lit, 0);
 }
 
+/* The first frame is left in the flow, so the stack is exactly as tall as one
+   capture in its window: the chrome above a capture is a fixed height and the
+   capture itself scales with the column, which no aspect ratio can state. */
 .screen-layer:first-child {
+  position: relative;
   opacity: var(--lit, 1);
 }
 
@@ -727,13 +747,42 @@
   align-items: end;
 }
 
+/*
+ * Stacked, the screen is swapped by pushing it up the way you are reading:
+ * what you have read leaves upward and its replacement arrives from below,
+ * copy and capture together so the two read as one move rather than two.
+ *
+ * The push runs on its own clock rather than on the scroll — `tour.tsx` says
+ * only which screen is up, and the transition here plays the change out. What
+ * arrives waits for what it replaces to be gone before it starts, so there is
+ * never a frame with two screenshots showing through each other.
+ */
 .js .tour-step {
   grid-area: 1 / 1;
   margin-top: 0;
   opacity: var(--lit, 1);
-  translate: 0 calc(var(--slide, 0) * -0.9rem);
+  translate: 0 calc(var(--push, 0) * -1.5rem);
   /* Only one block is ever readable, so none of them should be selectable. */
   pointer-events: none;
+}
+
+.js .tour-step,
+.js .screen-layer {
+  transition:
+    opacity 0.3s var(--ease-calm),
+    translate 0.46s var(--ease-calm);
+  /* Read off the state being moved to, so arriving is delayed and leaving is
+     not: `--lit` is 1 on the screen coming up and 0 on the one going away. The
+     wait is a shade under the fade it is waiting on, which hands over without
+     ever showing both and without showing neither. */
+  transition-delay: calc(var(--lit, 0) * 0.28s);
+}
+
+.js .screen-layer {
+  translate: 0 calc(var(--push, 0) * -8%);
+  /* A beat behind the copy in both directions, so the words start going up
+     before the picture does and the two do not move as one slab. */
+  transition-delay: calc(0.07s + var(--lit, 0) * 0.28s);
 }
 
 .js .tour-shots {
@@ -741,13 +790,27 @@
   margin-inline: auto;
 }
 
+/* The dots are told the same thing the screens are, so the bar draws itself
+   out under the screen it belongs to as that screen arrives. */
+.js .tour-dots .progress-dot {
+  transition:
+    width 0.46s var(--ease-calm),
+    opacity 0.46s var(--ease-calm);
+}
+
 .js .tour-dots {
   margin-top: clamp(1rem, 3svh, 2.5rem);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .js .tour-step {
+  .js .tour-step,
+  .js .screen-layer {
     translate: none;
+    transition: none;
+  }
+
+  .js .tour-dots .progress-dot {
+    transition: none;
   }
 }
 
@@ -797,15 +860,36 @@
     margin-top: 0;
   }
 
+  /* Beside its capture a block of copy is a reading position rather than a
+     picture: it stays scrubbed, held in ghost until it reaches the line, so
+     it takes neither the push nor the transition that plays one. */
   .js .tour-step {
     opacity: calc(0.28 + 0.72 * var(--lit, 1));
     translate: none;
+    transition: none;
     pointer-events: auto;
+  }
+
+  /* The capture still commits, but there is nowhere to push it to beside a
+     column of copy that is not moving, so it only fades. */
+  .js .screen-layer {
+    translate: none;
   }
 
   .tour-block {
     position: sticky;
     top: 38svh;
+  }
+
+  /* Sticky alone holds a block on the line until the one after it arrives to
+     push it off, which is to say the two are touching at the moment it leaves.
+     Carrying every block a little in the direction it is being read pulls them
+     apart before then: the one on the line drifts up off it while it is still
+     being read, the one behind hangs back below, and the gap between them
+     never closes. Scrubbed, because this is the reading moving rather than a
+     picture changing. */
+  .js .tour-block {
+    translate: 0 calc(var(--push, 0) * -3.5rem);
   }
 
   .tour-rail {

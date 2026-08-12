@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { asset } from "@/lib/assets";
 import {
   ArrowsRightLeftIcon,
   ArrowTopRightOnSquareIcon,
@@ -11,6 +10,8 @@ import {
   SunIcon,
 } from "@heroicons/react/24/outline";
 import { FireIcon } from "@heroicons/react/24/solid";
+
+import { Shot } from "./shot";
 
 /** Amount, unit, name — the unit is the part Norish colours. */
 const ingredients = [
@@ -42,23 +43,15 @@ function Control({ children }: { children: React.ReactNode }) {
  * assets/screenshots/README.md).
  */
 export function RecipeFragment() {
-  const photo = { width: 840, height: 373, loading: "lazy", decoding: "async" } as const;
-
   return (
     <div className="relative max-h-[36rem] overflow-hidden lg:max-h-[44rem]">
       <div className="space-y-3 lg:space-y-4">
         <div className="overflow-hidden rounded-2xl shadow-[0_30px_70px_-45px_rgb(0_0_0/0.5)]">
-          <img
-            {...photo}
+          <Shot
             alt="A bowl of smoky pork and Boston beans with griddled bread on top"
-            className="recipe-photo block w-full dark:hidden"
-            src={asset("/screenshots/hero-dish-light.jpg")}
-          />
-          <img
-            {...photo}
-            alt="A bowl of smoky pork and Boston beans with griddled bread on top"
-            className="recipe-photo hidden w-full dark:block"
-            src={asset("/screenshots/hero-dish-dark.jpg")}
+            base="hero-dish"
+            className="recipe-photo w-full"
+            sizes="(min-width: 64rem) 36rem, (min-width: 48rem) 22rem, 92vw"
           />
         </div>
 

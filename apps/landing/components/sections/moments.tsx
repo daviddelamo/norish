@@ -99,12 +99,12 @@ export function Moments() {
       step.style.setProperty("--draw", `${index === 0 ? Math.max(drawing, arriving) : drawing}`);
       step.style.setProperty("--fill", `${clamp((settled - 0.15) / 0.6)}`);
       // What happens in a drawing after it has been drawn — the sources going
-      // into the bowl, the pan starting to steam — runs off the step's own turn
-      // on the screen, not off `settled`: the first step is handed that already
-      // finished so that it opens fully drawn, and anything scrubbed from it
-      // would then have played to nobody on the way in.
+      // into the bowl — runs off the step's own turn on the screen, not off
+      // `settled`: the first step is handed that already finished so that it
+      // opens fully drawn, and anything scrubbed from it would then have played
+      // to nobody on the way in. The steam is not scrubbed at all; it rises on
+      // its own clock (see `.steam-line` in globals.css).
       step.style.setProperty("--settle", `${resting}`);
-      step.dataset.steaming = `${resting > 0.45}`;
     });
 
     dots.current.forEach((dot, index) => {
