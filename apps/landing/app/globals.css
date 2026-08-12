@@ -1,8 +1,7 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
-@import "@heroui/styles";
+@import "@fontsource-variable/fraunces/wght.css";
 @import "@norish/tailwind-config/heroui-theme";
-@source "../../../node_modules/@heroui/styles/dist/**/*.{css,js,ts,jsx,tsx}";
 
 @custom-variant light (&:is(:root, .light *, [data-theme="light"] *));
 @custom-variant dark (&:is(.dark *, [data-theme="dark"] *));
@@ -10,16 +9,140 @@
 @layer theme {
   :root {
     --font-inter: "Inter Variable", system-ui, sans-serif;
+    --font-fraunces: "Fraunces Variable", ui-serif, Georgia, serif;
+  }
+
+  /*
+   * The landing page warms the product's near-neutral ground into paper, and
+   * warms borders and muted text with it so nothing reads grey on beige.
+   * Surfaces stay white: the contrast between beige page and white panel is
+   * what gives screenshots and the compose file their lift. Every other token
+   * — accent, foreground, the whole semantic set — comes from the app.
+   */
+  :root,
+  .light,
+  [data-theme="light"] {
+    --background: oklch(96.4% 0.016 88);
+    --border: oklch(89.5% 0.012 86);
+    --separator: oklch(92% 0.01 86);
+    --muted: oklch(52.5% 0.012 80);
+    --default: oklch(93% 0.014 86);
+  }
+
+  .dark,
+  [data-theme="dark"] {
+    --background: oklch(18% 0.009 80);
+    --surface: oklch(23.5% 0.008 80);
+    --border: oklch(31% 0.008 80);
+    --separator: oklch(28% 0.008 80);
+    --muted: oklch(71.5% 0.011 80);
+    --default: oklch(27.4% 0.008 80);
+  }
+
+  /*
+   * Import sources need to be told apart at a glance. These reuse the app's own
+   * semantic hues rather than inventing a second palette; only the social pink
+   * has no counterpart in the product.
+   */
+  :root {
+    --tint-site: var(--accent);
+    --tint-video: var(--danger);
+    --tint-social: oklch(62% 0.185 350);
+    --tint-photo: var(--warning);
+    --tint-text: var(--nutrition-carbs);
   }
 }
 
-html {
-  scroll-behavior: smooth;
+/*
+ * The product's own tokens (imported above) drive every colour here. HeroUI's
+ * component CSS is deliberately not imported — the landing page uses none of
+ * its components, so only this token bridge is needed.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-overlay: var(--overlay);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-separator: var(--separator);
+  --color-focus: var(--focus);
+  --color-default: var(--default);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --color-tint-site: var(--tint-site);
+  --color-tint-video: var(--tint-video);
+  --color-tint-social: var(--tint-social);
+  --color-tint-photo: var(--tint-photo);
+  --color-tint-text: var(--tint-text);
+
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-fraunces);
+
+  /* One easing for the whole page: a long, settled deceleration. */
+  --ease-calm: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Fraunces ships a soft, slightly quirky default; dial it toward the
+     bookish end so headlines read calm rather than decorative. */
+  .font-serif {
+    font-variation-settings:
+      "SOFT" 0,
+      "WONK" 0;
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklch, var(--accent) 22%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+}
+
+@layer components {
+  /* The only tint on the page: a still, barely-there warmth behind the hero. */
+  .hero-wash {
+    background: radial-gradient(
+      58% 52% at 50% 0%,
+      color-mix(in oklch, var(--accent) 9%, transparent),
+      transparent 70%
+    );
+  }
+
+  /*
+   * The deck. Each card comes to rest a little lower than the one before it, so
+   * a screen you have already read stays put and the next slides over it,
+   * leaving its top edge showing. Sticky positioning does all of it: there is
+   * nothing listening to the scroll and nothing catching up to it, which is why
+   * it moves exactly with the page on a phone as well as a desktop.
+   *
+   * The offset clears the fixed header, and the step is small enough that a
+   * long deck still fits above the fold.
+   */
+  .deck-card {
+    position: sticky;
+    top: calc(5.5rem + var(--card) * 0.85rem);
   }
 }
 
@@ -32,24 +155,110 @@ html {
   }
 }
 
-/* Subtle vertical float for ambient accents. */
-@keyframes float-y {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
+/*
+ * Scroll reveal. Elements start displaced and settle once observed. The `.js`
+ * guard means a scripting-free browser gets the finished state immediately
+ * rather than a blank page, and reduced-motion skips the movement entirely.
+ */
+.js .reveal {
+  opacity: 0;
+  translate: 0 14px;
+  transition:
+    opacity 0.75s var(--ease-calm),
+    translate 0.75s var(--ease-calm);
+  transition-delay: var(--reveal-delay, 0ms);
 }
 
-@utility animate-float {
-  animation: float-y 7s ease-in-out infinite;
+.js .reveal[data-shown="true"] {
+  opacity: 1;
+  translate: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-float {
-    animation: none;
+  .js .reveal {
+    opacity: 1;
+    translate: none;
+    transition: none;
+  }
+}
+
+/* A screenshot settling into place — slightly deeper than a text reveal. */
+.js .reveal-media {
+  opacity: 0;
+  scale: 0.985;
+  translate: 0 20px;
+  transition:
+    opacity 0.9s var(--ease-calm),
+    scale 0.9s var(--ease-calm),
+    translate 0.9s var(--ease-calm);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.js .reveal-media[data-shown="true"] {
+  opacity: 1;
+  scale: 1;
+  translate: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal-media {
+    opacity: 1;
+    scale: 1;
+    translate: none;
+    transition: none;
+  }
+}
+
+/*
+ * The hero diagram. Every strand rests fully drawn; with JS each one draws
+ * itself in as the hero reveals, staggered by an inline delay. Path length is
+ * unknown at author time, so the dash pattern is simply longer than any path.
+ */
+.flow-line {
+  stroke-dasharray: 260;
+}
+
+.js .flow-line {
+  stroke-dashoffset: 260;
+  transition: stroke-dashoffset 0.9s var(--ease-calm);
+}
+
+.js .reveal[data-shown="true"] .flow-line {
+  stroke-dashoffset: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .flow-line {
+    stroke-dashoffset: 0;
+    transition: none;
+  }
+}
+
+/*
+ * Feature accordions. Native <details>; where the browser can animate a box to
+ * `auto` (interpolate-size) the content glides open, everywhere else it simply
+ * appears. The plus icon rotating into a cross is handled in the markup.
+ */
+@supports (interpolate-size: allow-keywords) {
+  .accordion {
+    interpolate-size: allow-keywords;
+  }
+
+  .accordion::details-content {
+    block-size: 0;
+    overflow-y: clip;
+    transition:
+      block-size 0.4s var(--ease-calm),
+      content-visibility 0.4s allow-discrete;
+  }
+
+  .accordion[open]::details-content {
+    block-size: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .accordion::details-content {
+      transition: none;
+    }
   }
 }

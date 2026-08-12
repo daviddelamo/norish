@@ -5,7 +5,7 @@ import { links } from "@/lib/css-tokens";
 import { LockClosedIcon } from "@heroicons/react/24/outline";
 
 import { CopyCommand } from "../copy-command";
-import { Reveal } from "../motion/reveal";
+import { Reveal } from "../reveal";
 
 const PLACEHOLDER = "<openssl rand -base64 32>";
 
@@ -72,10 +72,10 @@ export function SelfHostCompose() {
   const ready = masterKey !== PLACEHOLDER;
 
   return (
-    <Reveal className="min-w-0" delay={0.1}>
+    <Reveal className="min-w-0" delay={120}>
       <CopyCommand collapsible code={buildCompose(masterKey)} />
-      <p className="text-muted mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-balance">
-        <LockClosedIcon className="text-accent size-3.5 shrink-0" />
+      <p className="text-muted mt-3 flex items-start gap-1.5 text-xs text-pretty">
+        <LockClosedIcon className="text-accent mt-0.5 size-3.5 shrink-0" />
         {ready ? (
           <span>
             A unique <span className="text-foreground font-mono">MASTER_KEY</span> was generated

@@ -1,0 +1,174 @@
+import type { ComponentType, SVGProps } from "react";
+import { CameraIcon, ClipboardDocumentIcon, GlobeAltIcon } from "@heroicons/react/24/outline";
+
+import { InstagramIcon, YouTubeIcon } from "./icons";
+import { RecipeFragment } from "./recipe-fragment";
+
+type Source = {
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  label: string;
+  /** Full class pairs, written out so Tailwind's scanner can see them. */
+  chip: string;
+  line: string;
+  /** Vertical centre of this row in the connector's coordinate space. */
+  y: number;
+};
+
+/**
+ * Every one of these is a real import path: a page's structured data, the two
+ * named video platforms, photographs read by AI, and text pasted straight in.
+ * The colours belong to the diagram, not the product: they tell the strands
+ * apart, and they all end at the same neutral recipe.
+ */
+const SOURCES: Source[] = [
+  {
+    icon: GlobeAltIcon,
+    label: "A recipe site",
+    chip: "bg-tint-site/14 text-tint-site",
+    line: "text-tint-site",
+    y: 22,
+  },
+  {
+    icon: YouTubeIcon,
+    label: "A YouTube video",
+    chip: "bg-tint-video/14 text-tint-video",
+    line: "text-tint-video",
+    y: 74,
+  },
+  {
+    icon: InstagramIcon,
+    label: "An Instagram reel",
+    chip: "bg-tint-social/14 text-tint-social",
+    line: "text-tint-social",
+    y: 126,
+  },
+  {
+    icon: CameraIcon,
+    label: "A photo",
+    chip: "bg-tint-photo/14 text-tint-photo",
+    line: "text-tint-photo",
+    y: 178,
+  },
+  {
+    icon: ClipboardDocumentIcon,
+    label: "Pasted text",
+    chip: "bg-tint-text/14 text-tint-text",
+    line: "text-tint-text",
+    y: 230,
+  },
+];
+
+/**
+ * Rows are 44px on a 52px pitch, so a strand meets each one at its centre.
+ * They converge above the midpoint, which lands the meeting point on the
+ * recipe's photo rather than on the seam between two cards.
+ */
+const CONVERGE = 104;
+
+/** A curve from a row's centre across to the card, flattening at both ends. */
+function curve(y: number) {
+  return y === CONVERGE ? `M0 ${y}H96` : `M0 ${y}C48 ${y} 48 ${CONVERGE} 96 ${CONVERGE}`;
+}
+
+/*
+ * Below md the sources sit in a row and the fan drops downward instead. The
+ * chips are 36px on a 48px pitch (gap-3), so a strand leaves each chip at its
+ * centre and meets the others over the middle of the recipe photo.
+ */
+const ROW_W = 228;
+const ROW_H = 72;
+
+const chipX = (position: number) => 18 + position * 48;
+
+/** The vertical twin of `curve`: chip centre down to the row's midline. */
+function curveDown(x: number) {
+  const mid = ROW_W / 2;
+
+  return x === mid
+    ? `M${x} 0V${ROW_H}`
+    : `M${x} 0C${x} ${ROW_H / 2} ${mid} ${ROW_H / 2} ${mid} ${ROW_H}`;
+}
+
+/**
+ * The hero diagram: five genuinely different sources, one stored recipe. It is
+ * drawn as a diagram rather than a mock of the app, so it illustrates what
+ * Norish does without implying an interface that does not exist. Each strand
+ * keeps its own colour so the fan reads at a glance; they draw themselves once
+ * as the hero reveals (see `.flow-line` in globals.css) and then rest.
+ */
+export function SourceFlow() {
+  return (
+    <div
+      aria-label="A recipe site, a YouTube video, an Instagram reel, a photo and pasted text all becoming one stored recipe"
+      className="md:grid md:grid-cols-[auto_6rem_minmax(0,1fr)] md:items-center"
+      role="img"
+    >
+      {/* Below md: the same five chips in a row, fanning down into the recipe.
+          The labels stay desktop-only; the subtitle has just named them. */}
+      <div className="md:hidden">
+        <ul className="flex items-center justify-center gap-3">
+          {SOURCES.map(({ icon: Icon, label, chip }) => (
+            <li key={label}>
+              <span className={`grid size-9 place-items-center rounded-xl ${chip}`}>
+                <Icon className="size-4.5" />
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <svg
+          aria-hidden
+          className="mx-auto mt-1.5 block"
+          fill="none"
+          height={ROW_H}
+          viewBox={`0 0 ${ROW_W} ${ROW_H}`}
+          width={ROW_W}
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {SOURCES.map(({ label, line }, position) => (
+            <path
+              key={label}
+              className={`flow-line ${line}`}
+              d={curveDown(chipX(position))}
+              stroke="currentColor"
+              strokeWidth={1.5}
+              style={{ transitionDelay: `${250 + position * 90}ms` }}
+            />
+          ))}
+        </svg>
+      </div>
+
+      <ul className="hidden md:flex md:flex-col md:gap-2">
+        {SOURCES.map(({ icon: Icon, label, chip }) => (
+          <li key={label} className="flex h-11 items-center gap-2.5">
+            <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${chip}`}>
+              <Icon className="size-4.5" />
+            </span>
+            <span className="text-sm whitespace-nowrap">{label}</span>
+          </li>
+        ))}
+      </ul>
+
+      <svg
+        aria-hidden
+        className="hidden h-63 w-24 md:block"
+        fill="none"
+        viewBox="0 0 96 252"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {SOURCES.map(({ label, line, y }, position) => (
+          <path
+            key={label}
+            className={`flow-line ${line}`}
+            d={curve(y)}
+            stroke="currentColor"
+            strokeWidth={1.5}
+            style={{ transitionDelay: `${250 + position * 90}ms` }}
+          />
+        ))}
+      </svg>
+
+      <RecipeFragment />
+    </div>
+  );
+}

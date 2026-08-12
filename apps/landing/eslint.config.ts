@@ -11,5 +11,13 @@ export default defineConfig(
   baseConfig,
   reactConfig,
   nextjsConfig,
-  restrictEnvAccess
+  restrictEnvAccess,
+  {
+    // This app is a static export with the image optimizer switched off, so
+    // next/image would add client runtime without optimising anything — and it
+    // cannot emit the srcset the screenshots rely on. Plain <img> is correct here.
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  }
 );
