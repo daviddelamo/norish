@@ -131,18 +131,28 @@
   }
 
   /*
-   * The deck. Each card comes to rest a little lower than the one before it, so
-   * a screen you have already read stays put and the next slides over it,
-   * leaving its top edge showing. Sticky positioning does all of it: there is
-   * nothing listening to the scroll and nothing catching up to it, which is why
-   * it moves exactly with the page on a phone as well as a desktop.
-   *
-   * The offset clears the fixed header, and the step is small enough that a
-   * long deck still fits above the fold.
+   * The deck. Each card pins below the header and rests there; the next one
+   * only climbs in once the resting card has had the screen to itself for a
+   * moment, because the gap between cards is most of a viewport. Each card
+   * also comes to rest a little lower than the one before it, so the screens
+   * you have read stay stacked behind the current one, top edges showing.
+   * Sticky positioning does all of it: there is nothing listening to the
+   * scroll and nothing catching up to it, which is why it moves exactly with
+   * the page on a phone as well as a desktop.
    */
+  .deck {
+    /* Room for the last card to rest before the page moves on. */
+    padding-bottom: 26svh;
+  }
+
   .deck-card {
     position: sticky;
     top: calc(5.5rem + var(--card) * 0.85rem);
+  }
+
+  /* The pacing: the next screen stays below the fold until this one has settled. */
+  .deck-card + .deck-card {
+    margin-top: 55svh;
   }
 }
 
@@ -231,6 +241,86 @@
   .js .flow-line {
     stroke-dashoffset: 0;
     transition: none;
+  }
+}
+
+/*
+ * Little line drawings — a bowl, a calendar, a pan. Same idea as the hero
+ * strands, but the dash matches these shorter paths so the stroke reads as
+ * being drawn rather than popping in.
+ */
+.doodle-line {
+  stroke-dasharray: 72;
+}
+
+.js .doodle-line {
+  stroke-dashoffset: 72;
+  transition: stroke-dashoffset 1s var(--ease-calm);
+  transition-delay: var(--doodle-delay, 0ms);
+}
+
+.js .reveal[data-shown="true"] .doodle-line {
+  stroke-dashoffset: 0;
+}
+
+/* A detail that arrives after its drawing has finished, like the planned meal
+   landing on the calendar. */
+.js .doodle-dot {
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-calm);
+  transition-delay: var(--doodle-delay, 900ms);
+}
+
+.js .reveal[data-shown="true"] .doodle-dot {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .doodle-line {
+    stroke-dashoffset: 0;
+    transition: none;
+  }
+
+  .js .doodle-dot {
+    opacity: 1;
+    transition: none;
+  }
+}
+
+/*
+ * Steam never stops rising, but only just: each strand drifts up and thins
+ * out, then starts again. Slow, staggered, and gone entirely for anyone who
+ * asked for less motion.
+ */
+.steam-line {
+  /* Percentages in the drift are of the strand itself, not the whole drawing. */
+  transform-box: fill-box;
+  animation: steam-drift 5s ease-in-out infinite;
+  animation-delay: var(--steam-delay, 0ms);
+}
+
+@keyframes steam-drift {
+  0% {
+    translate: 0 6%;
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.8;
+  }
+  70% {
+    opacity: 0.3;
+  }
+  100% {
+    translate: 0 -8%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .steam-line {
+    animation: none;
+    opacity: 0.5;
+    translate: none;
   }
 }
 

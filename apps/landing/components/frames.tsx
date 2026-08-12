@@ -13,18 +13,22 @@ type FrameProps = {
 export function Screen({ children, className }: FrameProps) {
   return (
     <div
-      className={`border-border bg-surface overflow-hidden rounded-2xl border shadow-[0_40px_90px_-50px_rgb(0_0_0/0.45)] ${className ?? ""}`}
+      className={`border-border bg-surface overflow-hidden rounded-xl border shadow-[0_40px_90px_-50px_rgb(0_0_0/0.45)] ${className ?? ""}`}
     >
       {children}
     </div>
   );
 }
 
-/** Thin bezel so a mobile screenshot reads as a phone without a fake notch. */
+/**
+ * Thin bezel so a mobile screenshot reads as a phone without a fake notch.
+ * Sized for riding along in a corner of the wide capture, so the bezel and
+ * radius stay in proportion at a few rem wide.
+ */
 export function Phone({ children, className }: FrameProps) {
   return (
     <div
-      className={`border-border bg-surface overflow-hidden rounded-[1.75rem] border-[5px] shadow-[0_30px_70px_-40px_rgb(0_0_0/0.5)] ${className ?? ""}`}
+      className={`border-border bg-surface overflow-hidden rounded-[1rem] border-[3px] shadow-[0_24px_50px_-24px_rgb(0_0_0/0.55)] md:rounded-[1.35rem] md:border-4 ${className ?? ""}`}
     >
       {children}
     </div>
