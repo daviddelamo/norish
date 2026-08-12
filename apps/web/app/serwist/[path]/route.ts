@@ -13,8 +13,8 @@ import { createSerwistRoute } from "@serwist/turbopack";
  * Registration stays with <RegisterServiceWorker/> — one explicit, logged
  * path — rather than Serwist's `SerwistProvider` window runtime.
  */
-export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } =
-  createSerwistRoute({
+export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } = createSerwistRoute(
+  {
     swSrc: "app/sw.ts",
     // The native binary rather than esbuild-wasm; @serwist/turbopack only
     // defaults to native on Windows, and the wasm build is markedly slower.
@@ -29,4 +29,5 @@ export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } =
         warnings: [],
       }),
     ],
-  });
+  }
+);

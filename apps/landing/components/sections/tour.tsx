@@ -1,9 +1,12 @@
-import type { CSSProperties } from "react";
+"use client";
+
+import { useRef } from "react";
 
 import { Phone, Screen } from "../frames";
+import { clamp, useScrollFrame } from "../scroll-frame";
 import { Shot } from "../shot";
 
-type Card = {
+type Screenful = {
   title: string;
   body: string;
   /** The two captures of one screen: the wide one, and the same on a phone. */
@@ -17,7 +20,7 @@ type Card = {
   alt: string;
 };
 
-const cards: Card[] = [
+const screens: Screenful[] = [
   {
     title: "Opens on what you are eating today",
     body: "The meals you planned for today sit at the top, each one a tap from the recipe. Everything you have ever saved is under them, searchable and filterable, however many hundreds that has become.",
@@ -56,63 +59,168 @@ const cards: Card[] = [
 ];
 
 /**
- * The app, a screen at a time, as a deck that stacks up as you scroll: each
- * card rests where the last one left off and the next slides over it once it
- * has settled (see `.deck` in globals.css). Every screen shows its wide
- * capture with the phone capture riding its corner, because the point is that
- * both are the same screen.
+ * How far down the screen a block comes to rest, matching the `top` its copy
+ * sticks at. A block has arrived when it reaches this line, and it holds there
+ * beside its capture until the next block pushes it off.
+ */
+const TRIGGER = 0.38;
+
+/** The share of a block's stretch of scroll its capture spends fading in. */
+const FADE = 0.45;
+
+/** The shorter handover of ghost to ink, so only one block is ever being read. */
+const INK = 0.25;
+
+/**
+ * How far the reader has come, counted in blocks: a whole number is a block at
+ * the line, the fraction between two is the handover from one to the next. Read
+ * straight off the geometry on a frame rather than from remembered offsets, so
+ * it survives a resize, a zoom, and a browser restoring a scroll position in the
+ * middle of the section.
+ */
+function readerAt(blocks: (HTMLLIElement | null)[], line: number) {
+  const tops = blocks.map((block) => block?.getBoundingClientRect().top ?? Infinity);
+  let at = 0;
+
+  for (let index = 0; index < tops.length; index += 1) {
+    const top = tops[index];
+
+    if (top === undefined || top > line) break;
+
+    const next = tops[index + 1];
+
+    at = next === undefined ? index : index + clamp((line - top) / (next - top));
+  }
+
+  return at;
+}
+
+/**
+ * One screen, both shapes: the wide capture with the phone capture riding its
+ * corner, because the point is that both are the same screen.
+ */
+function Capture({ screen }: { screen: Screenful }) {
+  return (
+    <div className="relative">
+      <Screen>
+        <Shot
+          alt={screen.alt}
+          base={screen.web}
+          className="w-full"
+          sizes="(min-width: 64rem) 42rem, 92vw"
+        />
+      </Screen>
+      <Phone className="absolute -right-1 -bottom-4 w-[23%] sm:-right-2 sm:-bottom-5">
+        <Shot
+          alt=""
+          base={screen.mobile}
+          className="w-full"
+          sizes="(min-width: 64rem) 10rem, 21vw"
+        />
+      </Phone>
+    </div>
+  );
+}
+
+/**
+ * The app, a screen at a time. The copy walks down the page on the left and the
+ * capture stays with it on the right, dissolving into the next screen across the
+ * handover between two blocks and taking the copy from ghost to ink with it. All
+ * of it is scrubbed by the scroll rather than played on a timer, so it follows
+ * you exactly, both ways.
+ *
+ * Below the two-column break there is nothing to keep still, so each block simply
+ * carries its own capture underneath it, all of them in ink.
  *
  * Adding a screen is one entry here plus its four captures, web and mobile in
  * both themes, registered in `components/shot.tsx`.
  */
 export function Tour() {
-  return (
-    <section className="border-border border-t px-5 py-24 sm:px-8 sm:py-32">
-      <div className="mx-auto max-w-5xl">
-        <div className="deck">
-          {cards.map((card, index) => (
-            <article
-              key={card.title}
-              className="deck-card border-border bg-surface rounded-3xl border p-6 shadow-[0_40px_90px_-50px_rgb(0_0_0/0.45)] sm:p-8"
-              style={{ "--card": index } as CSSProperties}
-            >
-              <div className="grid gap-6 md:grid-cols-[minmax(0,17rem)_minmax(0,1fr)] md:items-center md:gap-10">
-                <div>
-                  <h2 className="font-serif text-2xl leading-tight font-medium text-balance">
-                    {card.title}
-                  </h2>
-                  <p className="text-muted mt-3 text-sm leading-relaxed text-pretty">{card.body}</p>
-                </div>
+  const blocks = useRef<(HTMLLIElement | null)[]>([]);
+  const layers = useRef<(HTMLDivElement | null)[]>([]);
+  const dots = useRef<(HTMLSpanElement | null)[]>([]);
 
-                {/* One screen, both shapes: the wide capture carries the phone
-                    capture on its corner, at every breakpoint. */}
-                <div className="relative min-w-0">
-                  <Screen>
-                    <Shot
-                      alt={card.alt}
-                      base={card.web}
-                      className="w-full"
-                      sizes="(min-width: 768px) 40rem, 92vw"
-                    />
-                  </Screen>
-                  <Phone className="absolute -right-2 -bottom-4 w-[24%] sm:-right-3 sm:-bottom-5">
-                    <Shot
-                      alt=""
-                      base={card.mobile}
-                      className="w-full"
-                      sizes="(min-width: 768px) 10rem, 22vw"
-                    />
-                  </Phone>
+  useScrollFrame(() => {
+    const at = readerAt(blocks.current, window.innerHeight * TRIGGER);
+
+    // The captures are stacked, so each one fades in over the one before it
+    // rather than the two of them dissolving through to the page underneath.
+    layers.current.forEach((layer, index) => {
+      layer?.style.setProperty("--lit", `${clamp((at - index + FADE) / FADE)}`);
+    });
+
+    // A block is in ink from the moment it reaches the line until the next one
+    // takes over, rather than only at the instant it lands.
+    const read = (index: number) =>
+      `${Math.min(clamp((at - index + INK) / INK), clamp((index + 1 - at) / INK))}`;
+
+    blocks.current.forEach((block, index) => block?.style.setProperty("--lit", read(index)));
+    dots.current.forEach((dot, index) => dot?.style.setProperty("--lit", read(index)));
+  });
+
+  return (
+    <section className="border-border border-t px-5 py-24 sm:px-8 sm:py-28">
+      <div className="mx-auto grid max-w-5xl lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-10">
+        {/* The head puts the first block on the line the moment the section is
+            reached, so it opens level with the capture rather than above it;
+            the tail keeps the capture held while the last block is read. Each
+            block owns a stretch of scroll a little shorter than the screen, and
+            rests on the line for most of it. */}
+        <ol className="space-y-20 lg:space-y-0 lg:pt-[calc(38svh-7rem)] lg:pb-[30svh]">
+          {screens.map((screen, index) => (
+            <li
+              key={screen.title}
+              ref={(node) => {
+                blocks.current[index] = node;
+              }}
+              className="screen-step lg:h-[62svh]"
+            >
+              <div className="lg:sticky lg:top-[38svh]">
+                <h2 className="font-serif text-2xl leading-tight font-medium text-balance sm:text-3xl">
+                  {screen.title}
+                </h2>
+                <p className="text-muted mt-4 leading-relaxed text-pretty">{screen.body}</p>
+
+                <div className="mt-8 lg:hidden">
+                  <Capture screen={screen} />
                 </div>
               </div>
-            </article>
+            </li>
           ))}
-        </div>
+        </ol>
 
-        <p className="text-muted/70 text-xs text-pretty">
-          Unit conversion, nutrition and allergen detection need an AI provider, which you bring and
-          configure yourself.
-        </p>
+        <div className="hidden lg:block">
+          <div className="sticky top-0 flex h-svh flex-col justify-center">
+            {/* Every capture is in the stack and only the ones being read are
+                painted, so the swap is a dissolve rather than a load, and the
+                box keeps the captures' shape whichever one is showing. */}
+            <div className="relative aspect-1120/839">
+              {screens.map((screen, index) => (
+                <div
+                  key={screen.title}
+                  ref={(node) => {
+                    layers.current[index] = node;
+                  }}
+                  className="screen-layer"
+                >
+                  <Capture screen={screen} />
+                </div>
+              ))}
+            </div>
+
+            <div aria-hidden className="mt-9 flex items-center justify-center gap-2">
+              {screens.map((screen, index) => (
+                <span
+                  key={screen.title}
+                  ref={(node) => {
+                    dots.current[index] = node;
+                  }}
+                  className="progress-dot"
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

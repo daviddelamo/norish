@@ -121,7 +121,9 @@
 }
 
 @layer components {
-  /* The only tint on the page: a still, barely-there warmth behind the hero. */
+  /* The only tint on the page: a still, barely-there warmth behind the hero.
+     Light only — over the dark ground the same wash reads as a murky glow
+     hanging off the top of the page, so dark rests on plain background. */
   .hero-wash {
     background: radial-gradient(
       58% 52% at 50% 0%,
@@ -130,29 +132,9 @@
     );
   }
 
-  /*
-   * The deck. Each card pins below the header and rests there; the next one
-   * only climbs in once the resting card has had the screen to itself for a
-   * moment, because the gap between cards is most of a viewport. Each card
-   * also comes to rest a little lower than the one before it, so the screens
-   * you have read stay stacked behind the current one, top edges showing.
-   * Sticky positioning does all of it: there is nothing listening to the
-   * scroll and nothing catching up to it, which is why it moves exactly with
-   * the page on a phone as well as a desktop.
-   */
-  .deck {
-    /* Room for the last card to rest before the page moves on. */
-    padding-bottom: 26svh;
-  }
-
-  .deck-card {
-    position: sticky;
-    top: calc(5.5rem + var(--card) * 0.85rem);
-  }
-
-  /* The pacing: the next screen stays below the fold until this one has settled. */
-  .deck-card + .deck-card {
-    margin-top: 55svh;
+  .dark .hero-wash,
+  [data-theme="dark"] .hero-wash {
+    background: none;
   }
 }
 
@@ -248,43 +230,22 @@
  * Little line drawings — a bowl, a calendar, a pan. Same idea as the hero
  * strands, but the dash matches these shorter paths so the stroke reads as
  * being drawn rather than popping in.
+ *
+ * How far along the drawing is comes from `--draw`, which the step it belongs
+ * to writes as it arrives; the strands each take their turn inside that,
+ * ordered by `--doodle-step`. With nothing written, the drawing is finished.
  */
 .doodle-line {
   stroke-dasharray: 72;
-}
-
-.js .doodle-line {
-  stroke-dashoffset: 72;
-  transition: stroke-dashoffset 1s var(--ease-calm);
-  transition-delay: var(--doodle-delay, 0ms);
-}
-
-.js .reveal[data-shown="true"] .doodle-line {
-  stroke-dashoffset: 0;
+  stroke-dashoffset: calc(
+    72 * (1 - clamp(0, (var(--draw, 1) - var(--doodle-step, 0) * 0.18) / 0.55, 1))
+  );
 }
 
 /* A detail that arrives after its drawing has finished, like the planned meal
    landing on the calendar. */
-.js .doodle-dot {
-  opacity: 0;
-  transition: opacity 0.5s var(--ease-calm);
-  transition-delay: var(--doodle-delay, 900ms);
-}
-
-.js .reveal[data-shown="true"] .doodle-dot {
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .js .doodle-line {
-    stroke-dashoffset: 0;
-    transition: none;
-  }
-
-  .js .doodle-dot {
-    opacity: 1;
-    transition: none;
-  }
+.doodle-dot {
+  opacity: calc((var(--draw, 1) - 0.75) / 0.25);
 }
 
 /*
@@ -321,6 +282,244 @@
     animation: none;
     opacity: 0.5;
     translate: none;
+  }
+}
+
+/*
+ * The hero recipe keeps moving, barely. The dish photo drifts in its frame
+ * and the ingredient rows step in one after another once the fragment has
+ * revealed. All of it is decoration on the fragment itself — none of it
+ * implies an interaction — and all of it stands down under reduced motion.
+ */
+.js .ingredient-row {
+  opacity: 0;
+  translate: 10px 0;
+  transition:
+    opacity 0.55s var(--ease-calm),
+    translate 0.55s var(--ease-calm);
+  transition-delay: var(--row-delay, 0ms);
+}
+
+.js .reveal[data-shown="true"] .ingredient-row {
+  opacity: 1;
+  translate: none;
+}
+
+.recipe-photo {
+  animation: recipe-drift 24s ease-in-out infinite alternate;
+}
+
+@keyframes recipe-drift {
+  from {
+    scale: 1;
+  }
+  to {
+    scale: 1.045;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .ingredient-row {
+    opacity: 1;
+    translate: none;
+    transition: none;
+  }
+
+  .recipe-photo {
+    animation: none;
+  }
+}
+
+/*
+ * Import, plan, cook. The rail is a row of three steps, one of them filling the
+ * readable width with the next ghosting in past the right edge, and every
+ * measurement here is worked out from the width of the pin, so a step starts
+ * exactly where the rest of the page does at any size.
+ *
+ * On its own the rail is what it looks like: a row you swipe, snapping to each
+ * step, every drawing finished and every rule loaded. With scripting the
+ * section holds the screen instead and `moments.tsx` walks the rail along with
+ * the scroll, writing where it has got to as `--walk`, how far each step has
+ * arrived as `--draw` and `--fill`, and how lit each dot is as `--lit`. Nothing
+ * in this file decides any of that timing.
+ */
+.moments-pin {
+  container-type: inline-size;
+
+  /* The page gutter, so a step starts where every other section does. */
+  --pad: 1.25rem;
+  --gutter: calc(max(0px, (100cqw - 64rem) / 2) + var(--pad));
+  --gap: clamp(1rem, 4cqw, 3rem);
+  /* How much of the next step shows once this one has settled. */
+  --peek: clamp(1.5rem, 6cqw, 9rem);
+  --panel: min(60rem, 100cqw - var(--gutter) - var(--peek) - var(--gap));
+  --stride: calc(var(--panel) + var(--gap));
+}
+
+@media (width >= 40rem) {
+  .moments-pin {
+    --pad: 2rem;
+  }
+}
+
+.moments-viewport {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline-start: var(--gutter);
+  scrollbar-width: none;
+  padding-block: 0.5rem;
+  /* Steps waiting their turn fade out at both edges rather than being cut. */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black var(--gutter),
+    black calc(100% - var(--peek)),
+    transparent 100%
+  );
+}
+
+.moments-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.moments-track {
+  display: flex;
+  gap: var(--gap);
+  padding-inline: var(--gutter);
+}
+
+.moment {
+  flex: 0 0 var(--panel);
+  scroll-snap-align: start;
+}
+
+.moment-fill {
+  transform: scaleX(var(--fill, 1));
+}
+
+/* Progress belongs to the walked rail; a swiped one shows its own position. */
+.moments-dots {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.js .moments-stage {
+  /* The runway: how long the section keeps the screen for its three steps. */
+  height: 320svh;
+}
+
+.js .moments-pin {
+  position: sticky;
+  top: 0;
+  display: grid;
+  /* One column the width of the pin: without the explicit minmax the rail,
+     which is three steps wide, would size the column and carry everything
+     beside it off the side of the page. */
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  min-height: 100svh;
+}
+
+.js .moments-viewport {
+  overflow-x: clip;
+  scroll-snap-type: none;
+}
+
+.js .moments-track {
+  transform: translateX(calc(var(--stride) * var(--walk, 0) * -1));
+  will-change: transform;
+}
+
+.js .moments-dots {
+  display: flex;
+}
+
+/*
+ * How far along a sequence you are: a run of dots where the one you are on has
+ * drawn itself out into a bar. Shared by the rail and the tour, both of which
+ * write `--lit` per dot as the scroll moves between one and the next.
+ */
+.progress-dot {
+  height: 0.25rem;
+  width: calc(0.25rem + var(--lit, 0) * 1.5rem);
+  border-radius: 999px;
+  background-color: var(--accent);
+  opacity: calc(0.16 + 0.84 * var(--lit, 0));
+}
+
+/*
+ * The tour. The copy walks down the page and the capture keeps up with it: one
+ * sticky stack on the right where each screen fades in over the one before it
+ * as its block comes up, with the blocks either side sitting back in ghost.
+ * `tour.tsx` scrubs both from the scroll and writes them here as `--lit`.
+ *
+ * Without scripting the first capture shows and every block stays in ink, which
+ * is also what the one-column layout gets.
+ */
+.screen-layer {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  opacity: var(--lit, 0);
+}
+
+.screen-layer:first-child {
+  opacity: var(--lit, 1);
+}
+
+@media (width >= 64rem) {
+  .js .screen-step {
+    opacity: calc(0.28 + 0.72 * var(--lit, 1));
+  }
+}
+
+/*
+ * The bar gets out of the way as you read down the page. It is only ever moved
+ * a whole bar's height, so nothing it holds is ever half off the screen.
+ */
+.site-header {
+  transition: translate 0.45s var(--ease-calm);
+}
+
+.site-header[data-hidden="true"] {
+  translate: 0 calc(-100% - 1.5rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header {
+    transition: none;
+  }
+}
+
+/*
+ * Theme switch. The old theme holds still underneath while the new one sweeps
+ * out from the toggle as a growing circle; the toggle writes the origin and
+ * radius before starting the transition. Browsers without the View Transition
+ * API never enter this path and switch instantly, as does reduced motion.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  animation: none;
+}
+
+::view-transition-new(root) {
+  animation: theme-reveal 0.55s var(--ease-calm) both;
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0px at var(--theme-reveal-x, 50%) var(--theme-reveal-y, 0%));
+  }
+  to {
+    clip-path: circle(
+      var(--theme-reveal-r, 120vmax) at var(--theme-reveal-x, 50%) var(--theme-reveal-y, 0%)
+    );
   }
 }
 

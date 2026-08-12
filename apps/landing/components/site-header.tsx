@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { links } from "@/lib/css-tokens";
 import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
 
 import { Action } from "./action";
 import { BrandLogo } from "./brand-logo";
 import { GitHubIcon } from "./icons";
+import { useScrollFrame } from "./scroll-frame";
 import { ThemeToggle } from "./theme-toggle";
 
 const navLinks = [
@@ -14,31 +15,38 @@ const navLinks = [
   { label: "Getting started", href: "#self-host" },
 ];
 
+/** Enough movement to count as a direction rather than a wobble. */
+const NUDGE = 6;
+
+/** How far down the bar starts getting out of the way. */
+const KEEP = 140;
+
 /**
- * A quiet bar that stays put. It picks up a hairline and a blur once the page
- * has moved, and does nothing else — no hiding, no shrinking, no floating pill.
+ * The same rounded bar the app itself wears: a surface pill floating just off
+ * the top edge, with the app's shadow. It gets out of the way as you read down
+ * the page and comes back the moment you scroll up, so a long section has the
+ * whole screen and the way out is never more than a flick away.
  */
 export function SiteHeader() {
-  const [lifted, setLifted] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const last = useRef(0);
 
-  useEffect(() => {
-    const onScroll = () => setLifted(window.scrollY > 8);
+  useScrollFrame(() => {
+    const y = window.scrollY;
+    const moved = y - last.current;
 
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    if (Math.abs(moved) < NUDGE) return;
 
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    last.current = y;
+    setHidden(moved > 0 && y > KEEP);
+  });
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
-        lifted
-          ? "border-border bg-background/80 border-b backdrop-blur-md"
-          : "border-b border-transparent"
-      }`}
+      className="site-header fixed inset-x-0 top-3 z-50 px-3 sm:top-4 sm:px-6"
+      data-hidden={hidden}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
+      <div className="bg-surface mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 rounded-full px-4 shadow-[0_8px_28px_-10px_rgb(0_0_0/0.3)] sm:h-16 sm:px-5">
         <a aria-label="Norish home" className="shrink-0" href="#top">
           <BrandLogo height={26} width={97} />
         </a>
@@ -58,7 +66,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-1">
           <a
             aria-label="Norish on GitHub"
-            className="text-muted hover:text-foreground hover:bg-surface grid size-9 place-items-center rounded-full transition-colors"
+            className="text-muted hover:text-foreground hover:bg-default grid size-9 place-items-center rounded-full transition-colors"
             href={links.github}
             rel="noreferrer"
             target="_blank"

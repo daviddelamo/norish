@@ -10,7 +10,7 @@ import { SelfHostCompose } from "./self-host-compose";
 export function SelfHost() {
   return (
     <section
-      className="border-border scroll-mt-16 border-t px-5 py-24 sm:px-8 sm:py-32"
+      className="border-border scroll-mt-24 border-t px-5 py-24 sm:px-8 sm:py-32"
       id="self-host"
     >
       <div className="mx-auto grid max-w-5xl items-start gap-14 lg:grid-cols-2 lg:gap-16">

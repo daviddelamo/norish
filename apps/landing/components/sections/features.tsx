@@ -120,7 +120,7 @@ const groups: Group[] = [
 export function Features() {
   return (
     <section
-      className="border-border scroll-mt-16 border-t px-5 py-24 sm:px-8 sm:py-32"
+      className="border-border scroll-mt-24 border-t px-5 py-24 sm:px-8 sm:py-32"
       id="features"
     >
       <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-[18rem_1fr] lg:gap-20">

@@ -38,7 +38,7 @@ export function Hero() {
         </Reveal>
       </div>
 
-      <Reveal className="mx-auto mt-16 max-w-3xl sm:mt-20" delay={250}>
+      <Reveal className="mx-auto mt-16 max-w-3xl sm:mt-20 lg:max-w-4xl" delay={250}>
         <SourceFlow />
       </Reveal>
     </section>

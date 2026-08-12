@@ -51,9 +51,11 @@ volumes:
 /** Generate a 32-byte random key, base64-encoded — matches `openssl rand -base64 32`. */
 function generateMasterKey() {
   const bytes = new Uint8Array(32);
+
   crypto.getRandomValues(bytes);
 
   let binary = "";
+
   for (const byte of bytes) binary += String.fromCharCode(byte);
 
   return btoa(binary);
