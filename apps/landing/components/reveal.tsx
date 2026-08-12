@@ -59,20 +59,25 @@ type RevealProps = {
   /** Milliseconds to hold back after the element is seen, for staggering. */
   delay?: number;
   /** Screenshots settle further and slower than text does. */
-  variant?: "text" | "media";
+  variant?: "text" | "media" | "bare";
+  style?: CSSProperties;
 };
 
-/** Fades and lifts its children into place the first time they are scrolled to. */
-export function Reveal({ children, className, delay = 0, variant = "text" }: RevealProps) {
+/**
+ * Fades and lifts its children into place the first time they are scrolled to.
+ * The `bare` variant does none of that itself and only says when it was seen,
+ * for children that have their own way of arriving.
+ */
+export function Reveal({ children, className, delay = 0, variant = "text", style }: RevealProps) {
   const { ref, shown } = useReveal<HTMLDivElement>();
-  const style = delay ? ({ "--reveal-delay": `${delay}ms` } as CSSProperties) : undefined;
+  const settling = { text: "reveal", media: "reveal-media", bare: "" }[variant];
 
   return (
     <div
       ref={ref}
-      className={`${variant === "media" ? "reveal-media" : "reveal"} ${className ?? ""}`}
+      className={`${settling} ${className ?? ""}`}
       data-shown={shown}
-      style={style}
+      style={delay ? ({ ...style, "--reveal-delay": `${delay}ms` } as CSSProperties) : style}
     >
       {children}
     </div>

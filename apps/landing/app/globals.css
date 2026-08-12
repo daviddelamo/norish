@@ -202,44 +202,135 @@
 }
 
 /*
- * The hero diagram. Every strand rests fully drawn; with JS each one draws
- * itself in as the hero reveals, staggered by an inline delay. Path length is
- * unknown at author time, so the dash pattern is simply longer than any path.
+ * A stroke that draws itself once, the first time the block holding it is
+ * scrolled to: the hero's strands, and the small drawings in the margins. Every
+ * path using it carries `pathLength="1"`, so the dash is exactly its own length
+ * whatever shape it happens to be, and one rule draws all of them at one rate.
  */
-.flow-line {
-  stroke-dasharray: 260;
+.stroke-in {
+  stroke-dasharray: 1;
 }
 
-.js .flow-line {
-  stroke-dashoffset: 260;
-  transition: stroke-dashoffset 0.9s var(--ease-calm);
+.js .stroke-in {
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 1s var(--ease-calm);
+  transition-delay: var(--reveal-delay, 0ms);
 }
 
-.js .reveal[data-shown="true"] .flow-line {
+.js [data-shown="true"] .stroke-in {
   stroke-dashoffset: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .js .flow-line {
+  .js .stroke-in {
     stroke-dashoffset: 0;
     transition: none;
   }
 }
 
 /*
- * Little line drawings — a bowl, a calendar, a pan. Same idea as the hero
- * strands, but the dash matches these shorter paths so the stroke reads as
- * being drawn rather than popping in.
- *
- * How far along the drawing is comes from `--draw`, which the step it belongs
- * to writes as it arrives; the strands each take their turn inside that,
- * ordered by `--doodle-step`. With nothing written, the drawing is finished.
+ * The hero's strands carry something along them once they are drawn: a short
+ * dash running the length of each one, which is the import happening. They are
+ * held still until the strand they belong to has finished drawing.
  */
+.flow-pulse {
+  stroke-dasharray: 0.07 0.93;
+  stroke-dashoffset: 1;
+  opacity: 0;
+}
+
+.js [data-shown="true"] .flow-pulse {
+  opacity: 0.9;
+  animation: flow-run 3.4s linear infinite;
+  transition: opacity 0.6s var(--ease-calm) 1s;
+}
+
+@keyframes flow-run {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-shown="true"] .flow-pulse {
+    opacity: 0;
+    animation: none;
+  }
+}
+
+/*
+ * Things off the worktop, sitting in the margins of the quieter sections. They
+ * turn slowly on the spot and travel their own share of the block's crossing,
+ * which `--depth` sets and `Drift` measures, so the page has a little depth to
+ * it without anything actually moving past you.
+ */
+.mark {
+  position: absolute;
+  color: var(--muted);
+  opacity: 0.4;
+  pointer-events: none;
+  translate: 0 calc(var(--drift, 0) * var(--depth, 1) * -1.6rem);
+}
+
+.js .mark {
+  animation: mark-turn var(--turn, 11s) ease-in-out infinite alternate;
+  animation-delay: var(--turn-delay, 0s);
+}
+
+@keyframes mark-turn {
+  from {
+    rotate: -4deg;
+  }
+  to {
+    rotate: 5deg;
+  }
+}
+
+/* Anything that rides the same measurement, at its own share of it. */
+.parallax {
+  translate: 0 calc(var(--drift, 0) * var(--depth, 1) * -1.5rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark,
+  .parallax,
+  .js .mark {
+    translate: none;
+    animation: none;
+  }
+}
+
+/*
+ * Line drawings — a bowl, a week, a pan on the heat. Same idea as the hero
+ * strands, except every stroke is dashed to exactly its own length (each one
+ * carries `pathLength="1"`), so one rule draws a short tick and a long curve at
+ * the same rate and no drawing needs a measurement written into it.
+ *
+ * How far along a drawing is comes from `--draw`, which the step it belongs to
+ * writes as it arrives; the strokes each take their turn inside that, ordered
+ * by `--doodle-step`. With nothing written, the drawing is finished.
+ */
+.doodle-line,
+.doodle-trace {
+  --drawn: clamp(0, (var(--draw, 1) - var(--doodle-step, 0) * 0.095) / 0.4, 1);
+}
+
 .doodle-line {
-  stroke-dasharray: 72;
-  stroke-dashoffset: calc(
-    72 * (1 - clamp(0, (var(--draw, 1) - var(--doodle-step, 0) * 0.18) / 0.55, 1))
-  );
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - var(--drawn));
+  /* A round cap on a dash of no length is still a dot, so a drawing that has
+     not started yet would be a scatter of them. Hold it back until it has. */
+  opacity: clamp(0, var(--drawn) * 14, 1);
+}
+
+/* The guide a thing travels along, which is a hint rather than a line: it
+   arrives with the stroke it belongs to instead of being drawn itself. */
+.doodle-trace {
+  stroke-dasharray: 0.022 0.03;
+  opacity: calc(var(--drawn) * 0.5);
 }
 
 /* A detail that arrives after its drawing has finished, like the planned meal
@@ -249,30 +340,90 @@
 }
 
 /*
+ * A part of a drawing that keeps happening after the drawing is finished: the
+ * sources going into the bowl. It is scrubbed rather than played, off the whole
+ * of the step's turn (`--settle`) rather than the shorter stretch the drawing
+ * itself takes, so it runs both ways and holds wherever the scroll left it.
+ *
+ * Each one starts a little after the one before, travels its own distance in,
+ * and is gone by the time it is inside. With nothing written the step has not
+ * arrived yet, so everything rests where it was drawn.
+ */
+.doodle-drop {
+  --fall: clamp(0, (var(--settle, 0) - 0.4 - var(--fall-step, 0) * 0.08) / 0.36, 1);
+
+  transform: translate(
+    calc(var(--fall) * var(--drop-x, 0px)),
+    calc(var(--fall) * var(--drop-y, 90px))
+  );
+  opacity: calc(1 - clamp(0, (var(--fall) - 0.6) / 0.4, 1));
+}
+
+/* And what is left in the bowl once they are in it. */
+.doodle-lands {
+  --landed: clamp(0, (var(--settle, 0) - 0.72) / 0.22, 1);
+
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - var(--landed));
+  opacity: clamp(0, var(--landed) * 14, 1);
+}
+
+/* Under reduced motion nothing goes anywhere: the scene holds the composition
+   it was drawn in, three sources above an empty bowl. */
+@media (prefers-reduced-motion: reduce) {
+  .doodle-drop {
+    transform: none;
+    opacity: 1;
+  }
+
+  .doodle-lands {
+    opacity: 0;
+  }
+}
+
+/*
  * Steam never stops rising, but only just: each strand drifts up and thins
  * out, then starts again. Slow, staggered, and gone entirely for anyone who
  * asked for less motion.
+ *
+ * In a scene it waits: a step writes `data-steaming` once it is properly on
+ * the screen, and until then the strands are held on the first frame of the
+ * drift, which is nothing at all. So the pan starts steaming when you arrive
+ * at it rather than having been steaming to an empty room. The mark in the
+ * closing has no step to wait for and simply goes.
  */
 .steam-line {
   /* Percentages in the drift are of the strand itself, not the whole drawing. */
   transform-box: fill-box;
-  animation: steam-drift 5s ease-in-out infinite;
+  animation: steam-drift 7s ease-in-out infinite;
   animation-delay: var(--steam-delay, 0ms);
+}
+
+[data-steaming] .steam-line {
+  animation-play-state: paused;
+}
+
+[data-steaming="true"] .steam-line {
+  animation-play-state: running;
 }
 
 @keyframes steam-drift {
   0% {
-    translate: 0 6%;
+    translate: 0 8%;
     opacity: 0;
   }
-  35% {
-    opacity: 0.8;
+  30% {
+    opacity: 0.75;
   }
   70% {
-    opacity: 0.3;
+    opacity: 0.35;
   }
   100% {
-    translate: 0 -8%;
+    translate: 0 -10%;
     opacity: 0;
   }
 }
@@ -345,6 +496,7 @@
  */
 .moments-pin {
   container-type: inline-size;
+  position: relative;
 
   /* The page gutter, so a step starts where every other section does. */
   --pad: 1.25rem;
@@ -396,6 +548,38 @@
 
 .moment-fill {
   transform: scaleX(var(--fill, 1));
+}
+
+/*
+ * A step is a drawing and some words. Stacked, the drawing goes on top, where
+ * it fills the room the words leave; side by side it moves out to the right of
+ * them, which is where the eye goes next after reading.
+ */
+.moment-body {
+  display: grid;
+  gap: 2.5rem;
+}
+
+.moment-scene {
+  width: min(100%, 16.5rem);
+  height: auto;
+}
+
+@container (width >= 60rem) {
+  .moment-body {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 3.5rem;
+  }
+
+  .moment-words {
+    grid-area: 1 / 1;
+  }
+
+  .moment-scene {
+    grid-area: 1 / 2;
+    width: 24rem;
+  }
 }
 
 /* Progress belongs to the walked rail; a swiped one shows its own position. */
@@ -450,14 +634,43 @@
 }
 
 /*
- * The tour. The copy walks down the page and the capture keeps up with it: one
- * sticky stack on the right where each screen fades in over the one before it
- * as its block comes up, with the blocks either side sitting back in ghost.
- * `tour.tsx` scrubs both from the scroll and writes them here as `--lit`.
+ * The tour, told at two sizes.
  *
- * Without scripting the first capture shows and every block stays in ink, which
- * is also what the one-column layout gets.
+ * Wide enough for two columns, the copy walks down the page and the capture
+ * keeps up with it: one sticky stack on the right where each screen fades in
+ * over the one before it as its block comes up, with the blocks either side
+ * sitting back in ghost.
+ *
+ * Narrower than that there is no second column to hold anything still, so the
+ * section holds the screen instead. The copy blocks stack in one grid cell
+ * above the capture and only the one being read is painted, leaving upward as
+ * the next arrives from below.
+ *
+ * `tour.tsx` scrubs all of it from the scroll and writes it here as `--lit` and
+ * `--slide`. Without scripting the section is a plain column: every block of
+ * copy in ink, the first capture under them.
  */
+.tour-pin {
+  padding-block: 6rem;
+}
+
+.tour-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3rem;
+}
+
+/* Without scripting there is nothing to swap the blocks over, so they simply
+   follow one another down the page and all of them are readable. */
+.tour-step + .tour-step {
+  margin-top: 4.5rem;
+}
+
+.tour-shots {
+  position: relative;
+  aspect-ratio: 1120 / 839;
+}
+
 .screen-layer {
   position: absolute;
   inset-inline: 0;
@@ -469,9 +682,144 @@
   opacity: var(--lit, 1);
 }
 
+.tour-dots {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 2.5rem;
+}
+
+.js .tour-dots {
+  display: flex;
+}
+
+.js .tour-stage {
+  /* The runway: a screen of scroll for each capture, plus the one it holds. */
+  height: calc(var(--screens) * 72svh + 100svh);
+}
+
+/*
+ * Everything the held stage shows has to fit one screen at once, on a tall
+ * phone and a short one, so the room between its parts and the size of the
+ * capture are all worked out from the height of the screen rather than fixed.
+ */
+.js .tour-pin {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  min-height: 100svh;
+  padding-block: clamp(2.5rem, 7svh, 7rem);
+}
+
+.js .tour-grid {
+  gap: clamp(1.25rem, 4svh, 3rem);
+}
+
+.js .tour-copy {
+  /* Every block sits in the same cell, so the stack is as tall as the longest
+     one and the capture below it never moves as the copy swaps. They rest on
+     the bottom of it, which keeps the gap to the capture the same for all of
+     them and leaves the slack where there is nothing to look at. */
+  display: grid;
+  align-items: end;
+}
+
+.js .tour-step {
+  grid-area: 1 / 1;
+  margin-top: 0;
+  opacity: var(--lit, 1);
+  translate: 0 calc(var(--slide, 0) * -0.9rem);
+  /* Only one block is ever readable, so none of them should be selectable. */
+  pointer-events: none;
+}
+
+.js .tour-shots {
+  width: min(100%, 46svh);
+  margin-inline: auto;
+}
+
+.js .tour-dots {
+  margin-top: clamp(1rem, 3svh, 2.5rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .tour-step {
+    translate: none;
+  }
+}
+
+@media (width >= 40rem) {
+  .tour-pin {
+    padding-block: 7rem;
+  }
+}
+
 @media (width >= 64rem) {
-  .js .screen-step {
+  .tour-grid,
+  .js .tour-grid {
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    align-items: start;
+    gap: 2.5rem;
+  }
+
+  .js .tour-stage {
+    height: auto;
+  }
+
+  .js .tour-pin {
+    position: static;
+    display: block;
+    min-height: 0;
+    padding-block: 7rem;
+  }
+
+  .js .tour-shots {
+    width: 100%;
+  }
+
+  /* The head puts the first block on the line the moment the section is
+     reached, so it opens level with the capture rather than above it; the tail
+     keeps the capture held while the last block is read. Each block owns a
+     stretch of scroll a little shorter than the screen, and rests on the line
+     for most of it. */
+  .tour-copy,
+  .js .tour-copy {
+    display: block;
+    padding-block: calc(38svh - 7rem) 30svh;
+  }
+
+  .tour-step,
+  .tour-step + .tour-step {
+    height: 62svh;
+    margin-top: 0;
+  }
+
+  .js .tour-step {
     opacity: calc(0.28 + 0.72 * var(--lit, 1));
+    translate: none;
+    pointer-events: auto;
+  }
+
+  .tour-block {
+    position: sticky;
+    top: 38svh;
+  }
+
+  .tour-rail {
+    position: sticky;
+    top: 0;
+    display: flex;
+    height: 100svh;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .tour-dots,
+  .js .tour-dots {
+    margin-top: 2.25rem;
   }
 }
 

@@ -90,11 +90,40 @@ function curveDown(x: number) {
 }
 
 /**
+ * One source's line across to the recipe: the strand itself, which draws once
+ * as the hero arrives, and a short dash that runs along it afterwards and keeps
+ * running. Both are the same path, so the second follows the first exactly.
+ */
+function Strand({ d, line, position }: { d: string; line: string; position: number }) {
+  const shared = {
+    d,
+    pathLength: 1,
+    stroke: "currentColor",
+    strokeWidth: 1.5,
+    style: { transitionDelay: `${250 + position * 90}ms` },
+  } as const;
+
+  return (
+    <g className={line}>
+      <path {...shared} className="stroke-in" />
+      <path
+        {...shared}
+        className="flow-pulse"
+        strokeLinecap="round"
+        strokeWidth={2.5}
+        style={{ ...shared.style, animationDelay: `${position * 680}ms` }}
+      />
+    </g>
+  );
+}
+
+/**
  * The hero diagram: five genuinely different sources, one stored recipe. It is
  * drawn as a diagram rather than a mock of the app, so it illustrates what
  * Norish does without implying an interface that does not exist. Each strand
- * keeps its own colour so the fan reads at a glance; they draw themselves once
- * as the hero reveals (see `.flow-line` in globals.css) and then rest.
+ * keeps its own colour so the fan reads at a glance; they draw themselves as
+ * the hero reveals and then carry something along themselves for as long as
+ * they are on the page (see `.stroke-in` and `.flow-pulse` in globals.css).
  */
 export function SourceFlow() {
   return (
@@ -126,14 +155,7 @@ export function SourceFlow() {
           xmlns="http://www.w3.org/2000/svg"
         >
           {SOURCES.map(({ label, line }, position) => (
-            <path
-              key={label}
-              className={`flow-line ${line}`}
-              d={curveDown(chipX(position))}
-              stroke="currentColor"
-              strokeWidth={1.5}
-              style={{ transitionDelay: `${250 + position * 90}ms` }}
-            />
+            <Strand key={label} d={curveDown(chipX(position))} line={line} position={position} />
           ))}
         </svg>
       </div>
@@ -157,14 +179,7 @@ export function SourceFlow() {
         xmlns="http://www.w3.org/2000/svg"
       >
         {SOURCES.map(({ label, line, y }, position) => (
-          <path
-            key={label}
-            className={`flow-line ${line}`}
-            d={curve(y)}
-            stroke="currentColor"
-            strokeWidth={1.5}
-            style={{ transitionDelay: `${250 + position * 90}ms` }}
-          />
+          <Strand key={label} d={curve(y)} line={line} position={position} />
         ))}
       </svg>
 

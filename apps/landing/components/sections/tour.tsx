@@ -1,9 +1,11 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useRef } from "react";
 
 import { Phone, Screen } from "../frames";
 import { clamp, useScrollFrame } from "../scroll-frame";
+import { asking, heldAt, prefersCalm, walkAt } from "../sequence";
 import { Shot } from "../shot";
 
 type Screenful = {
@@ -58,10 +60,13 @@ const screens: Screenful[] = [
   },
 ];
 
+/** Where the two-column layout starts: copy beside the capture, not above it. */
+const WIDE = "(min-width: 64rem)";
+
 /**
- * How far down the screen a block comes to rest, matching the `top` its copy
- * sticks at. A block has arrived when it reaches this line, and it holds there
- * beside its capture until the next block pushes it off.
+ * How far down the screen a block comes to rest on the wide layout, matching
+ * the `top` its copy sticks at. A block has arrived when it reaches this line,
+ * and it holds there beside its capture until the next block pushes it off.
  */
 const TRIGGER = 0.38;
 
@@ -72,13 +77,31 @@ const FADE = 0.45;
 const INK = 0.25;
 
 /**
+ * The share of the held screen a move between two screens takes, narrow only.
+ * Small: a dissolve between two screenshots is a blend of both while it runs,
+ * so the screens should rest for most of the section and swap quickly.
+ */
+const GLIDE = 0.08;
+
+/** The same dissolve on the held stage, where a move is all the room there is. */
+const HELD_FADE = 0.7;
+
+/**
+ * The share of a move a block of copy spends leaving, and the next one spends
+ * arriving. Under a half, so the one being replaced is gone before its
+ * replacement starts: two paragraphs half-faded through each other are unreadable.
+ */
+const SWAP = 0.28;
+
+/**
  * How far the reader has come, counted in blocks: a whole number is a block at
  * the line, the fraction between two is the handover from one to the next. Read
  * straight off the geometry on a frame rather than from remembered offsets, so
  * it survives a resize, a zoom, and a browser restoring a scroll position in the
  * middle of the section.
  */
-function readerAt(blocks: (HTMLLIElement | null)[], line: number) {
+function reading(blocks: (HTMLLIElement | null)[]) {
+  const line = window.innerHeight * TRIGGER;
   const tops = blocks.map((block) => block?.getBoundingClientRect().top ?? Infinity);
   let at = 0;
 
@@ -93,6 +116,18 @@ function readerAt(blocks: (HTMLLIElement | null)[], line: number) {
   }
 
   return at;
+}
+
+/**
+ * The same count on the held stage, where the screens are stacked rather than
+ * laid down the page: the section's own progress, walked a screen at a time so
+ * each one rests long enough to be read. Under reduced motion it cuts between
+ * screens instead of dissolving.
+ */
+function held(section: HTMLElement) {
+  const walked = walkAt(heldAt(section), screens.length, GLIDE);
+
+  return prefersCalm() ? Math.round(walked) : walked;
 }
 
 /**
@@ -123,78 +158,98 @@ function Capture({ screen }: { screen: Screenful }) {
 }
 
 /**
- * The app, a screen at a time. The copy walks down the page on the left and the
- * capture stays with it on the right, dissolving into the next screen across the
- * handover between two blocks and taking the copy from ghost to ink with it. All
- * of it is scrubbed by the scroll rather than played on a timer, so it follows
- * you exactly, both ways.
+ * The app, a screen at a time, told the same way at both sizes: one screen is
+ * being read, its capture is on the screen with it, and the scroll moves you
+ * from one to the next. All of it is scrubbed by the scroll rather than played
+ * on a timer, so it follows you exactly, both ways.
  *
- * Below the two-column break there is nothing to keep still, so each block simply
- * carries its own capture underneath it, all of them in ink.
+ * Where there is room for two columns the copy walks down the page on the left
+ * and the capture stays with it on the right, dissolving into the next screen
+ * across the handover between two blocks. Where there is not, the section holds
+ * the screen instead and the copy and the capture swap in place above one
+ * another, a screen at a time; under reduced motion that swap is a cut.
  *
  * Adding a screen is one entry here plus its four captures, web and mobile in
  * both themes, registered in `components/shot.tsx`.
  */
 export function Tour() {
+  const stage = useRef<HTMLElement>(null);
   const blocks = useRef<(HTMLLIElement | null)[]>([]);
   const layers = useRef<(HTMLDivElement | null)[]>([]);
   const dots = useRef<(HTMLSpanElement | null)[]>([]);
 
   useScrollFrame(() => {
-    const at = readerAt(blocks.current, window.innerHeight * TRIGGER);
+    const section = stage.current;
+
+    if (!section) return;
+
+    const wide = asking(WIDE);
+    const at = wide ? reading(blocks.current) : held(section);
+    const fade = wide ? FADE : HELD_FADE;
 
     // The captures are stacked, so each one fades in over the one before it
     // rather than the two of them dissolving through to the page underneath.
     layers.current.forEach((layer, index) => {
-      layer?.style.setProperty("--lit", `${clamp((at - index + FADE) / FADE)}`);
+      layer?.style.setProperty("--lit", `${clamp((at - index + fade) / fade)}`);
     });
 
-    // A block is in ink from the moment it reaches the line until the next one
-    // takes over, rather than only at the instant it lands.
+    // Beside its capture a block is in ink from the moment it reaches the line
+    // until the next one takes over. Stacked on top of it there is only room
+    // for one, so a block leaves before the next one arrives, in the direction
+    // it is being read in.
     const read = (index: number) =>
-      `${Math.min(clamp((at - index + INK) / INK), clamp((index + 1 - at) / INK))}`;
+      wide
+        ? Math.min(clamp((at - index + INK) / INK), clamp((index + 1 - at) / INK))
+        : clamp((0.5 - Math.abs(at - index)) / SWAP);
 
-    blocks.current.forEach((block, index) => block?.style.setProperty("--lit", read(index)));
-    dots.current.forEach((dot, index) => dot?.style.setProperty("--lit", read(index)));
+    blocks.current.forEach((block, index) => {
+      block?.style.setProperty("--lit", `${read(index)}`);
+      block?.style.setProperty("--slide", `${Math.max(-1, Math.min(1, at - index))}`);
+    });
+
+    // The dots are a position rather than a piece of reading, so on the held
+    // stage they glide across the gap the copy leaves blank.
+    dots.current.forEach((dot, index) => {
+      dot?.style.setProperty("--lit", `${wide ? read(index) : clamp(1 - Math.abs(at - index))}`);
+    });
   });
 
   return (
-    <section className="border-border border-t px-5 py-24 sm:px-8 sm:py-28">
-      <div className="mx-auto grid max-w-5xl lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-10">
-        {/* The head puts the first block on the line the moment the section is
-            reached, so it opens level with the capture rather than above it;
-            the tail keeps the capture held while the last block is read. Each
-            block owns a stretch of scroll a little shorter than the screen, and
-            rests on the line for most of it. */}
-        <ol className="space-y-20 lg:space-y-0 lg:pt-[calc(38svh-7rem)] lg:pb-[30svh]">
-          {screens.map((screen, index) => (
-            <li
-              key={screen.title}
-              ref={(node) => {
-                blocks.current[index] = node;
-              }}
-              className="screen-step lg:h-[62svh]"
-            >
-              <div className="lg:sticky lg:top-[38svh]">
-                <h2 className="font-serif text-2xl leading-tight font-medium text-balance sm:text-3xl">
-                  {screen.title}
-                </h2>
-                <p className="text-muted mt-4 leading-relaxed text-pretty">{screen.body}</p>
-
-                <div className="mt-8 lg:hidden">
-                  <Capture screen={screen} />
+    <section
+      ref={stage}
+      className="tour-stage border-border border-t"
+      style={{ "--screens": `${screens.length}` } as CSSProperties}
+    >
+      <div className="tour-pin px-5 sm:px-8">
+        {/* Two columns where there is room for them, and the copy stacked over
+            the capture where there is not. The copy blocks own their stretch of
+            scroll on the wide layout and sit on top of one another on the held
+            one; `--lit` says which of them is being read either way. */}
+        <div className="tour-grid mx-auto max-w-5xl">
+          <ol className="tour-copy">
+            {screens.map((screen, index) => (
+              <li
+                key={screen.title}
+                ref={(node) => {
+                  blocks.current[index] = node;
+                }}
+                className="tour-step"
+              >
+                <div className="tour-block">
+                  <h2 className="font-serif text-2xl leading-tight font-medium text-balance sm:text-3xl">
+                    {screen.title}
+                  </h2>
+                  <p className="text-muted mt-4 leading-relaxed text-pretty">{screen.body}</p>
                 </div>
-              </div>
-            </li>
-          ))}
-        </ol>
+              </li>
+            ))}
+          </ol>
 
-        <div className="hidden lg:block">
-          <div className="sticky top-0 flex h-svh flex-col justify-center">
+          <div className="tour-rail">
             {/* Every capture is in the stack and only the ones being read are
                 painted, so the swap is a dissolve rather than a load, and the
                 box keeps the captures' shape whichever one is showing. */}
-            <div className="relative aspect-1120/839">
+            <div className="tour-shots">
               {screens.map((screen, index) => (
                 <div
                   key={screen.title}
@@ -208,7 +263,7 @@ export function Tour() {
               ))}
             </div>
 
-            <div aria-hidden className="mt-9 flex items-center justify-center gap-2">
+            <div aria-hidden className="tour-dots">
               {screens.map((screen, index) => (
                 <span
                   key={screen.title}
