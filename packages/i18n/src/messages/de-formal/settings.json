@@ -1,7 +1,6 @@
 {
   "page": {
     "title": "Einstellungen",
-    "loading": "Wird geladen...",
     "ariaLabel": "Einstellungen-Reiter"
   },
   "tabs": {

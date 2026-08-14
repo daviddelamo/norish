@@ -1,6 +1,6 @@
 # 04 — Settings flicker: trace before fixing
 
-Status: ready-for-human
+Status: resolved
 Type: research
 
 **What to do:** The maintainer sees `/settings` "load, flicker, and load again" and chose diagnosis before any fix. Record what actually renders: a performance trace / frame capture of navigating to `/settings` on the dev stack (admin account — the admin role query is part of the suspected sequence).
@@ -63,3 +63,53 @@ The trace makes (a) unconditional and favors *instant chrome + single panel skel
 
 - 2026-08-14: Stub removal done ahead of the trace (three `page.tsx` files deleted; component/context directories untouched). Verified no internal links and no test references before deleting.
 - 2026-08-14: Trace recorded and documented above; status → ready-for-human for the acceptance-criterion decision. Raw frame logs and screencast PNGs were kept in the session scratchpad only (they show personal dashboard content); the state sequences above are the condensed, deduplicated observer output.
+- 2026-08-14: **Half (a) is done** — the unconditional one. `navbar-user-menu.tsx`'s Settings
+  `Dropdown.Item` lost its bare `href` and now closes the menu and calls `router.push`, matching
+  every sibling item in that menu; a comment records why the `href` cannot come back while no
+  `RouterProvider` is wired. That removes the blank-flash document reboot from the desktop path.
+  A second instance of the same defect turned up while checking whether the menu item was the only
+  one: `recipe-page-mobile.tsx` imported `Link` from `@heroui/react` while its desktop twin
+  `recipe-page-desktop.tsx` imports `next/link`, so "back to recipes" hard-reloaded the document on
+  mobile only. Now both use `next/link`. Audited the rest of the app's internal links — the navbar,
+  mobile nav and planned-recipe panel are all `next/link`; the remaining HeroUI `Link`s point at
+  external URLs or `/api/docs`, where a document load is correct. Half (b), the skeleton strategy,
+  is still the maintainer's call and untouched.
+- 2026-08-14: **Maintainer decision on half (b): leave it for now.** Removing the document reboot
+  covered the dominant part of the complaint; the two-skeleton client-nav sequence (route skeleton
+  without chrome → chrome + panel skeleton → content) is accepted as-is for the moment. The ticket
+  stays open on this point only — the evidence and the two options above are still current, so this
+  can be picked up without re-tracing.
+- 2026-08-14: **Half (b) done after all** — maintainer reversed the "leave it" call and asked for the
+  fix. Implemented the recommended option, *instant chrome + single panel skeleton*.
+
+  The jump had a measurable cause: `loading.tsx` rendered a bare `SettingsSkeleton`, so its cards
+  started at the container top while the real page put them below the title and tab strip. Measured
+  chrome geometry at 1440×900: h1 32px at y=124, gap-6, tab strip 56px (4px padding around 48px
+  tabs, `rounded-full`), Tabs root gap-2, panel `py-4` — first card at y=260. The skeleton put it at
+  y=124. **A 136px drop on every settings navigation.**
+
+  New `apps/web/components/skeleton/settings-page-skeleton.tsx` reproduces that geometry exactly:
+  real translated `<h1>`, a 56px strip holding one full-width `rounded-full` pill, and the panel's
+  `py-4` wrapping the existing `SettingsSkeleton`. The strip is one pill rather than one per tab
+  deliberately — the Admin tab only exists for admins, so a per-tab placeholder would guess the count
+  wrong for non-admins and shift the strip when the real tabs arrive.
+
+  Both loading states now share it: the route's `loading.tsx`, and the page's own Suspense fallback,
+  which was a bare `<div>Loading...</div>` — a chrome-less frame that would paint on streaming SSR,
+  the exact state being removed. `settings.page.loading` is now unused and was deleted from all 14
+  locale files; `pnpm i18n:check` passes.
+
+  Verified with a rAF recorder over a real client navigation (the fixed user-menu route), 6× CPU
+  throttle plus 300ms latency to hold the loading state open, measuring the first `[data-slot=card]`:
+
+  | build | first painted frame | card y | verdict |
+  | --- | --- | --- | --- |
+  | dev, before | no h1, no strip, 0 tabs | 124 → 260 | **jumps 136px** |
+  | dev, after | h1 "Settings" + strip skeleton | 260 → 260 | stable |
+  | dev, after, 390×844 | h1 "Settings" + strip skeleton | 160 → 160 | stable |
+  | production build | page arrives complete, single state | 260 | no skeleton frame at all |
+
+  Note the last row: on the production bundle, even throttled, the page resolves fast enough that
+  neither skeleton paints — one state, straight to content. The skeleton work matters for cold or
+  slow loads; it is no longer a visible sequence on a warm one. All gates green
+  (format 17/17, lint 15/15, test 10/10, build 14/14, i18n, deps:cycles).

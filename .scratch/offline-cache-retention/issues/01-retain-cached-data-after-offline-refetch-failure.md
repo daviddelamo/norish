@@ -1,6 +1,6 @@
 # Retain cached data after an Offline refetch failure
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: None
 
 ## Problem

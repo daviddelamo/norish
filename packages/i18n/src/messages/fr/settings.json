@@ -1,7 +1,6 @@
 {
   "page": {
     "title": "Paramètres",
-    "loading": "Chargement...",
     "ariaLabel": "Onglets des paramètres"
   },
   "tabs": {

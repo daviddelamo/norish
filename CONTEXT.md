@@ -60,6 +60,10 @@ _Avoid_: Disabled (suggests the thing stops working), Hidden Section (not every 
 
 ### Imports & AI
 
+**Recipe Archive**:
+The portable file a Norish instance writes so recipes can leave it: everything the exporter can see, each recipe complete with its media, the author's display name as attribution, and the exporter's own rating and favourite mark. It is an exchange of recipe content, never a backup — whoever imports it owns what that creates, and no accounts, emails, or instance state travel inside, so an archive is safe to hand around. Cuisine names travel as words and attach only where the receiving instance's curated vocabulary already knows them; an archive never extends a vocabulary its administrator owns. Norish reads foreign archives (Mela, Paprika, Mealie, Tandoor) through the same import door as its own.
+_Avoid_: Export (the act, not the artifact), Backup (promises restoration an archive refuses to make), Instance export (suggests instance state is inside)
+
 **AI Runtime**:
 The single seam through which Norish issues a model request — structured generation and transcription, both on one shared transport. A feature never constructs a provider client, never reads Generation Preferences, and never calls the SDK: it hands the runtime its Prompt's name, its schema, and its Prompt Sections, and gets a validated result or a typed error that says whether retrying is worth it (ADR-0015).
 _Avoid_: AI executor (names the deleted prototype that had no callers), AI client (suggests a per-provider object, which is what the runtime hides)

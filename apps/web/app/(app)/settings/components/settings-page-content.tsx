@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
+import SettingsPageSkeleton from "@/components/skeleton/settings-page-skeleton";
 import SettingsSkeleton from "@/components/skeleton/settings-skeleton";
 import {
   HomeIcon as HomeIconSolid,
@@ -136,10 +137,11 @@ function SettingsContent({ showAdminTab }: { showAdminTab: boolean }) {
 }
 
 export default function SettingsPageContent({ showAdminTab }: { showAdminTab: boolean }) {
-  const t = useTranslations("settings");
-
+  // Same skeleton as the route's loading.tsx. `useSearchParams` suspends this
+  // boundary during streaming SSR, and a bare text fallback there would paint a
+  // chrome-less frame — the exact state loading.tsx was changed to stop showing.
   return (
-    <Suspense fallback={<div>{t("page.loading")}</div>}>
+    <Suspense fallback={<SettingsPageSkeleton />}>
       <SettingsContent showAdminTab={showAdminTab} />
     </Suspense>
   );

@@ -1,7 +1,6 @@
 {
   "page": {
     "title": "Configurações",
-    "loading": "Carregando...",
     "ariaLabel": "Abas de configurações"
   },
   "tabs": {

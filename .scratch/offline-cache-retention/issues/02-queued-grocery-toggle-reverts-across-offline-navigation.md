@@ -1,6 +1,6 @@
 # A queued grocery toggle reverts in the UI across Offline navigation
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: None
 
 ## Problem

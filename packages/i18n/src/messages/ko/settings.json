@@ -1,7 +1,6 @@
 {
   "page": {
     "title": "설정",
-    "loading": "불러오는 중...",
     "ariaLabel": "설정 탭"
   },
   "tabs": {

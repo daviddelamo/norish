@@ -1,7 +1,6 @@
 {
   "page": {
     "title": "Settings",
-    "loading": "Loading...",
     "ariaLabel": "Settings tabs"
   },
   "tabs": {

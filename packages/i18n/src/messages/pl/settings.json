@@ -1,7 +1,6 @@
 {
   "page": {
     "title": "Ustawienia",
-    "loading": "Ładowanie...",
     "ariaLabel": "Karty ustawień"
   },
   "tabs": {
