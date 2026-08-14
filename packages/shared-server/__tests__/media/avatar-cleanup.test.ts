@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { sweepUserAvatars } from "@norish/shared-server/media/avatar-cleanup";
+
 const fsMocks = vi.hoisted(() => ({
   readdir: vi.fn(),
   unlink: vi.fn(),
@@ -19,8 +21,6 @@ vi.mock("@norish/config/env-config-server", () => ({
 vi.mock("@norish/shared-server/logger", () => ({
   schedulerLogger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
-
-import { sweepUserAvatars } from "@norish/shared-server/media/avatar-cleanup";
 
 describe("sweepUserAvatars", () => {
   beforeEach(() => {

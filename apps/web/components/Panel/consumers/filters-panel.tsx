@@ -6,8 +6,8 @@ import Panel from "@/components/Panel/Panel";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/action-button";
 import ChipSkeleton from "@/components/skeleton/chip-skeleton";
 import { useRecipesFiltersContext } from "@/context/recipes-filters-context";
-import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
 import { useTagsQuery } from "@/hooks/config";
+import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
 import {
   ArrowRightIcon,
   CheckIcon,

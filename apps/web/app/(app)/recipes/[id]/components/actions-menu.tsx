@@ -22,7 +22,12 @@ import { useTranslations } from "next-intl";
 import { twMerge } from "tailwind-merge";
 
 import type { RecipeEnrichmentKind } from "@norish/shared/lib/recipe-enrichment";
-import { cssAIGradientText, cssAIIconColor, cssButtonPill, cssButtonPillDanger } from "@norish/web/config/css-tokens";
+import {
+  cssAIGradientText,
+  cssAIIconColor,
+  cssButtonPill,
+  cssButtonPillDanger,
+} from "@norish/web/config/css-tokens";
 
 import { useRecipeContextRequired } from "../context";
 import RecipeSharePanel from "./recipe-share-panel";

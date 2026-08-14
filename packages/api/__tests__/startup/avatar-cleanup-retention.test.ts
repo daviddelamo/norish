@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { cleanupOrphanedAvatars } from "@norish/api/startup/media-cleanup";
+
 const fsMocks = vi.hoisted(() => ({
   readdir: vi.fn(),
   unlink: vi.fn(),
@@ -33,8 +35,6 @@ vi.mock("@norish/db/repositories/steps", () => ({
 vi.mock("@norish/shared-server/logger", () => ({
   schedulerLogger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
-
-import { cleanupOrphanedAvatars } from "@norish/api/startup/media-cleanup";
 
 describe("cleanupOrphanedAvatars retention (ADR-0021)", () => {
   beforeEach(() => {

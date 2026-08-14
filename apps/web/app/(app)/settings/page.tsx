@@ -1,7 +1,8 @@
 import { headers } from "next/headers";
-import SettingsPageContent from "./components/settings-page-content";
 
 import { auth } from "@norish/auth/auth";
+
+import SettingsPageContent from "./components/settings-page-content";
 
 export default async function SettingsPage() {
   const session = await auth.api.getSession({

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import ActionsMenu from "@/app/(app)/recipes/[id]/components/actions-menu";
 import AddToGroceries from "@/app/(app)/recipes/[id]/components/add-to-groceries-button";
 import CookingMode from "@/app/(app)/recipes/[id]/components/cookingmode";
@@ -30,7 +31,7 @@ import { useFavoritesMutation, useFavoritesQuery } from "@/hooks/favorites";
 import { useRatingQuery, useRatingsMutation } from "@/hooks/ratings";
 import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
 import { ArrowLeftIcon } from "@heroicons/react/16/solid";
-import { Card, Link, Separator } from "@heroui/react";
+import { Card, Separator } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import StarRating from "@norish/ui/star-rating";

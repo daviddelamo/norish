@@ -1,5 +1,6 @@
+import type { Root } from "react-dom/client";
 import React, { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SharedRecipesContextValue } from "../src/contexts/recipes/recipes-context";
@@ -112,10 +113,9 @@ describe("the library never paints unfiltered", () => {
     renderProbe();
 
     expect(latest.isLoading).toBe(false);
-    expect(useRecipesQuery).toHaveBeenLastCalledWith(
-      expect.objectContaining({ search: "soup" }),
-      { enabled: true }
-    );
+    expect(useRecipesQuery).toHaveBeenLastCalledWith(expect.objectContaining({ search: "soup" }), {
+      enabled: true,
+    });
   });
 
   it("renders straight through when nothing was stored", () => {

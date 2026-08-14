@@ -8,8 +8,8 @@ import OriginFlag from "@/components/recipes/origin-flag";
 import HeartButton from "@/components/shared/heart-button";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
 import { usePermissionsContext } from "@/context/permissions-context";
-import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
 import { useRecipePrefetch } from "@/hooks/recipes/use-recipe-prefetch";
+import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
 import { useAppStore } from "@/stores/useAppStore";
 import {
   CalendarDaysIcon,
@@ -320,7 +320,12 @@ function RecipeCardComponent({
           <Tooltip.Content className="max-w-64">
             <div className="flex flex-wrap gap-1.5 p-1">
               {tagNames.map((tag) => (
-                <Chip key={tag.toLowerCase()} className="max-w-48 rounded-full px-2" size="sm" variant="tertiary">
+                <Chip
+                  key={tag.toLowerCase()}
+                  className="max-w-48 rounded-full px-2"
+                  size="sm"
+                  variant="tertiary"
+                >
                   <Chip.Label className="truncate">{tag}</Chip.Label>
                 </Chip>
               ))}

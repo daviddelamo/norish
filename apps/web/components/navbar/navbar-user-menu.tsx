@@ -208,10 +208,16 @@ export default function NavbarUserMenu({
             <Dropdown.Item
               key="settings"
               className={`py-3 ${cssButtonPill}`}
-              href="/settings?tab=user"
               id="settings"
               textValue={t("settings.title")}
-              onPress={() => handleOpenChange(false)}
+              // No React Aria RouterProvider is wired in this app, so a bare
+              // `href` here renders a native anchor and reboots the document —
+              // a blank flash plus a full app boot on the way to /settings.
+              // Every sibling item routes through the client router instead.
+              onPress={() => {
+                handleOpenChange(false);
+                router.push("/settings?tab=user");
+              }}
             >
               <span className="text-muted">
                 <Cog6ToothIcon className="size-5" />

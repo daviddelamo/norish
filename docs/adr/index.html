@@ -697,6 +697,21 @@
             traded staleness for a guaranteed loading flash and nothing offline.
           </p>
         </li>
+        <li>
+          <a href="imports/0022-recipe-archives-are-portability-not-backup.md"
+            >ADR-0022 — Recipe Archives are portability, not backup</a
+          >
+          <p>
+            <b>Accepted.</b> The <code>.norishrecipes</code> export is an ownership-free
+            exchange of recipe content: importing one makes the importer the owner, identity
+            travels only as display-name attribution plus the exporter's own rating and
+            favourite, and no PII rides inside. Cuisine names attach only where the receiving
+            vocabulary already knows them and are dropped visibly otherwise; the Norish parser
+            inherits the shared archive loop unchanged, overwrite on match included. Rejects
+            ownership-preserving restore, auto-created or tag-demoted cuisines, a skip-on-match
+            special case, and server-side export artifacts.
+          </p>
+        </li>
       </ul>
 
       <h2>Validation policy</h2>

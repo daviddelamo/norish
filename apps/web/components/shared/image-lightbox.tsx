@@ -199,14 +199,8 @@ export default function ImageLightbox({
                     ))}
                   </Carousel.Content>
                 </div>
-                <Carousel.Previous
-                  data-lightbox-interactive
-                  className={cssMediaControl}
-                />
-                <Carousel.Next
-                  data-lightbox-interactive
-                  className={cssMediaControl}
-                />
+                <Carousel.Previous data-lightbox-interactive className={cssMediaControl} />
+                <Carousel.Next data-lightbox-interactive className={cssMediaControl} />
                 <Carousel.Thumbnails
                   data-lightbox-interactive
                   className="mt-3 justify-start overflow-x-auto py-1 sm:justify-center"

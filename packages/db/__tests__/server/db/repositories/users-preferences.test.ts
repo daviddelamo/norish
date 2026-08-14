@@ -48,8 +48,6 @@ describe("user preferences repository", () => {
   it("rethrows if the update fails", async () => {
     mockReturning.mockRejectedValue(new Error("boom"));
 
-    await expect(updateUserPreferences("user-1", { locale: "fr" })).rejects.toThrow(
-      "boom"
-    );
+    await expect(updateUserPreferences("user-1", { locale: "fr" })).rejects.toThrow("boom");
   });
 });
