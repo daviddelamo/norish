@@ -138,7 +138,7 @@ export default function SearchInput() {
             </button>
           )}
         </div>
-        <Filters isGlass={false} />
+        <Filters />
       </div>
       {/* Use grid for height animation - avoids layout thrashing on desktop */}
       <div
@@ -148,7 +148,14 @@ export default function SearchInput() {
         }}
       >
         <div className="overflow-hidden">
-          <SearchFieldToggles scrollable className="px-1 pb-1" onInteraction={resetHideTimer} />
+          {/* These stand on the page rather than in the filters panel, so they
+              take the surface fill instead of the default one. */}
+          <SearchFieldToggles
+            scrollable
+            className="px-1 pb-1"
+            itemClassName="chip--on-ground"
+            onInteraction={resetHideTimer}
+          />
         </div>
       </div>
     </div>

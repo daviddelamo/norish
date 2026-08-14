@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { RecipeDashboardViewMode } from "@/lib/recipe-view-mode";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecipesContext } from "@/context/recipes-context";
 import { useContainerColumns } from "@/hooks/use-container-columns";
-import { useRecipeDashboardViewMode } from "@/hooks/use-recipe-dashboard-view-mode";
 import { Spinner } from "@heroui/react";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { useWindowSize } from "usehooks-ts";
@@ -25,7 +25,7 @@ const LIST_ROW_OVERSCAN = 12;
 const GRID_LOAD_MORE_ROW_THRESHOLD = 2;
 const LIST_LOAD_MORE_ROW_THRESHOLD = 6;
 
-export default function RecipeGrid() {
+export default function RecipeGrid({ variant }: { variant: RecipeDashboardViewMode }) {
   const {
     recipes,
     isLoading,
@@ -44,9 +44,15 @@ export default function RecipeGrid() {
 
   const { saveScrollState, getScrollState } = useScrollRestoration(filterKey);
 
-  const [showSkeleton, setShowSkeleton] = useState(false);
-  const [isLoadedOnce, setIsLoadedOnce] = useState(false);
-  const [viewMode] = useRecipeDashboardViewMode();
+  // Seeded from `isLoading` so the skeleton is part of the very first paint —
+  // server render included. Starting at `false` and flipping in the effect
+  // below paints a blank grid for a frame or two, and on a fast network the
+  // data then pops in with no skeleton ever shown.
+  const [showSkeleton, setShowSkeleton] = useState(() => isLoading);
+  const [isLoadedOnce, setIsLoadedOnce] = useState(() => !isLoading);
+  // Each tab panel mounts its own grid with the presentation fixed, so a view
+  // switch swaps panels rather than re-laying out this one in place.
+  const viewMode = variant;
   const containerRef = useRef<HTMLDivElement>(null);
   const hasTriggeredLoadMoreRef = useRef(false);
 
@@ -147,7 +153,11 @@ export default function RecipeGrid() {
     }
 
     if (isLoadedOnce && isLoading) {
-      const timeout = setTimeout(() => setShowSkeleton(true), 100);
+      // Swapping a loaded library for a grid of skeletons is the single most
+      // expensive render on this page, and it fires from a timer while the
+      // reader is still interacting with the control that caused it. As a
+      // transition it can be interrupted rather than blocking the frame.
+      const timeout = setTimeout(() => startTransition(() => setShowSkeleton(true)), 100);
 
       return () => clearTimeout(timeout);
     }

@@ -54,6 +54,10 @@ _Avoid_: Ingredient Link (suggests a hyperlink in the text rather than a usage r
 **Ingredient Linking**:
 The Recipe Enrichment kind that infers Step Ingredients. It is a gap-filler in every case — automatic or manual, it only ever adds links to steps that have none, so it can never replace or remove what a person attached and needs no supplied-data suppression: a step that already has Step Ingredients is simply not its business. Heading rows are never linked. A step that genuinely uses nothing stays bare and may be examined again by later runs.
 
+**Hidden Item**:
+Something a reader has chosen not to be shown: Recipe Provenance, Nutrition Information, a recipe's notes, its rating, favourites, the measurement conversion control, or recipe timers. Hiding belongs to that reader alone and is kept per device, like every visibility preference — a cramped phone can hide what a desktop keeps. It suppresses the item everywhere it would appear for them, so hiding the rating takes the recipe page's stars, the library chip and the rating filter together, while the items that exist only on the recipe page simply make it slimmer. It settles nothing about the recipe: what is stored, what may be edited and what Recipe Enrichment produces are all unchanged, and a recipe read by someone signed out shows everything. An origin flag beside a recipe's title is chrome rather than Recipe Provenance, so it stays when Recipe Provenance is hidden.
+_Avoid_: Disabled (suggests the thing stops working), Hidden Section (not every hidden item is a section), Display Preference (names where it is stored, not what it is)
+
 ### Imports & AI
 
 **AI Runtime**:
@@ -79,6 +83,16 @@ _Avoid_: Unknown post
 **yt-dlp Version**:
 The release of the downloader binary a server is actually running. A report, not a setting: production fixes it by image and development by first download, and no Norish setting changes it.
 _Avoid_: Configured yt-dlp version
+
+### People & Presentation
+
+**Avatar**:
+A person's profile picture, shown as a circle at every size wherever the person appears; absent or unloadable, it degrades to their initials. Offline it is best-effort: initials are the accepted rendering, not a defect.
+_Avoid_: User icon (ambiguous with App Icon), profile photo
+
+**App Icon**:
+The Norish mark as an installed platform presents it — home screen, dock, favicon. Norish supplies a flat, fully opaque, full-bleed square; the platform applies its own shape, masking, and effects, which Norish neither imitates nor overrides.
+_Avoid_: PWA icon (names one mechanism, not the thing), User icon
 
 ### Connectivity & Offline
 

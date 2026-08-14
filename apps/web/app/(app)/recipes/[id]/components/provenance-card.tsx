@@ -2,6 +2,7 @@
 
 import { useRecipeContext } from "@/app/(app)/recipes/[id]/context";
 import OriginFlag from "@/components/recipes/origin-flag";
+import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
 import { Card, Chip, Skeleton } from "@heroui/react";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -12,13 +13,17 @@ import { countryEndonym } from "@norish/shared/lib/recipe-provenance";
  * Whether the Recipe Provenance section has anything to show: something
  * stored, or a run in flight. Queued and processing both read as "working";
  * a quiet automatic failure simply leaves the section showing whatever is
- * stored. The page layouts read this too, so the rules they draw between
- * sections come from the same answer the section itself renders by.
+ * stored. A reader who has hidden Recipe Provenance sees no section at all,
+ * even mid-run — hiding is a reading preference, and enrichment keeps
+ * storing regardless. The page layouts read this too, so the rules they
+ * draw between sections come from the same answer the section itself
+ * renders by.
  */
 export function useProvenanceSectionVisible(): boolean {
   const { recipe, enrichment } = useRecipeContext();
+  const { showProvenance } = useHiddenItemVisibility();
 
-  if (!recipe) return false;
+  if (!recipe || !showProvenance) return false;
 
   return hasSubstantiveProvenance(recipe) || enrichment.isBusy("recipe-provenance");
 }
@@ -81,7 +86,7 @@ function ProvenanceDisplay({ inCard = true }: { inCard?: boolean }) {
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="text-muted text-sm">{t("cuisines")}</span>
               {recipe.cuisines.map((cuisine) => (
-                <Chip key={cuisine.id} size="sm" variant="soft">
+                <Chip key={cuisine.id} size="sm" variant="tertiary">
                   {/* A canonical identifier: shown verbatim in every locale. */}
                   {cuisine.name}
                 </Chip>

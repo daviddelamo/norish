@@ -81,11 +81,20 @@ export function OfflineCacheController({ children }: { children: ReactNode }) {
   const wasOffline = useRef(false);
   const startedForOwner = useRef<string | null>(null);
   const previousWsStatus = useRef(wsStatus);
+  const hasEverConnected = useRef(false);
 
   useEffect(() => {
     const socketConnected = previousWsStatus.current !== "connected" && wsStatus === "connected";
+    // Only a *re*connection can have missed anything. The first connect of a
+    // page load happens alongside the page's own first fetches, which already
+    // read the live server.
+    const socketReconnected = socketConnected && hasEverConnected.current;
 
     previousWsStatus.current = wsStatus;
+
+    if (wsStatus === "connected") {
+      hasEverConnected.current = true;
+    }
 
     if (isOffline) {
       wasOffline.current = true;
@@ -102,19 +111,26 @@ export function OfflineCacheController({ children }: { children: ReactNode }) {
 
     wasOffline.current = false;
 
-    if (!starting && !returningLive && !socketConnected) {
+    if (!starting && !returningLive && !socketReconnected) {
       return;
     }
 
     startedForOwner.current = owner;
-    void recovery.recover();
+    // Startup follows the page's own fetches, so recovery does not refresh the
+    // reads again unless Replay actually sent something. Coming back online or
+    // reconnecting always refreshes — those genuinely may have missed changes.
+    void recovery.recover(returningLive || socketReconnected ? "resync" : "startup");
   }, [isLive, isOffline, owner, recovery, wsStatus]);
 
   // CacheManager clears the outgoing QueryClient before activating the
   // incoming owner, but that work crosses an async boundary. Do not let the
   // incoming account render against the previous owner's still-live cache in
   // the render between the session change and reconciliation completing.
-  if (sessionUserId !== null && owner !== sessionUserId) {
+  // Only an actual live-owner mismatch hides children: on a cold start the
+  // applied owner is still null while the session resolves, and nothing
+  // foreign is in memory yet — hiding there would unmount and remount the
+  // entire app on every launch.
+  if (sessionUserId !== null && owner !== null && owner !== sessionUserId) {
     return null;
   }
 
