@@ -104,6 +104,17 @@ const ServerConfigSchema = z.object({
     .pipe(z.array(z.string())),
   UPLOADS_DIR: z.string().default(defaultUploadsDir),
 
+  // Auth endpoint rate limiting. Defaults are the production values; they are
+  // overridable so a harness driving many sessions against one server (the
+  // browser E2E stack reuses a single server across a whole project) is not
+  // throttled into failures that say nothing about the code under test.
+  AUTH_RATE_LIMIT_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  AUTH_RATE_LIMIT_WINDOW: z.coerce.number().int().positive().default(60),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+
   // During build, allow placeholder DB URL so server-only modules can be imported
   // without requiring runtime secrets. Runtime still enforces a real URL.
   DATABASE_URL: isBuild

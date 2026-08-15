@@ -40,6 +40,20 @@ openssl rand -base64 32
 `TRUSTED_ORIGINS` is useful when Norish is reached from more than one origin, for
 example `http://192.168.1.100:3000,https://norish.example.com`.
 
+## Auth rate limiting
+
+| Variable                  | Description                        | Default |
+| ------------------------- | ---------------------------------- | ------- |
+| `AUTH_RATE_LIMIT_ENABLED` | Enable auth endpoint rate limiting | `true`  |
+| `AUTH_RATE_LIMIT_WINDOW`  | Window length in seconds           | `60`    |
+| `AUTH_RATE_LIMIT_MAX`     | Requests allowed per window        | `20`    |
+
+:::warning
+
+Turning this off removes brute-force protection from sign-in.
+
+:::
+
 ## Registration
 
 | Variable              | Description                 | Default |

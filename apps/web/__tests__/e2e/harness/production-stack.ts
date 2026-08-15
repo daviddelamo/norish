@@ -315,6 +315,12 @@ export class ProductionStack {
       LOG_LEVEL: "error",
       NEXT_PUBLIC_LOG_LEVEL: "error",
       TRPC_LOG_LEVEL: "error",
+      // A project's tests share one server, and every test opens a fresh browser
+      // context that re-fetches the session. Production's 20-per-60s auth
+      // ceiling is reached partway through a project, after which `get-session`
+      // returns 429 and pages that need client-side session data hang on their
+      // skeletons — a failure about the harness, not the code under test.
+      AUTH_RATE_LIMIT_ENABLED: "false",
       ...this.options.environment,
     };
   }
