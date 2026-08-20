@@ -61,7 +61,12 @@
     },
     "archiveImport": {
       "title": "Importar arquivo de receitas",
-      "description": "Importe receitas de exportações do Mela (.melarecipes), Paprika (.paprikarecipes) ou Mealie/Tandoor (.zip)"
+      "description": "Importe receitas de exportações do Norish (.norishrecipes), Mela (.melarecipes), Paprika (.paprikarecipes) ou Mealie/Tandoor (.zip)"
+    },
+    "archiveExport": {
+      "title": "Exportar arquivo de receitas",
+      "description": "Baixe todas as receitas que você pode ver.",
+      "button": "Exportar"
     },
     "siteAuthTokens": {
       "title": "Tokens de autenticação de sites",
@@ -351,7 +356,12 @@
       "saveLocales": "Salvar configurações de idioma",
       "localesSaved": "Configurações de idioma salvas",
       "localesError": "Falha ao salvar configurações de idioma",
-      "atLeastOneLocale": "Pelo menos um idioma deve estar ativado"
+      "atLeastOneLocale": "Pelo menos um idioma deve estar ativado",
+      "export": {
+        "title": "Arquivo de receitas",
+        "description": "Baixe todas as receitas deste servidor.",
+        "button": "Exportar arquivo de receitas"
+      }
     },
     "registration": {
       "title": "Cadastro",
@@ -799,6 +809,15 @@
       "empty": "Nenhuma culinária ainda.",
       "duplicate": "Já existe uma culinária com esse nome.",
       "saveFailed": "Não foi possível salvar essa culinária."
+    }
+  },
+  "archiveExport": {
+    "progress": "Exportando… {size}",
+    "errors": {
+      "failedTitle": "Falha na exportação",
+      "failedDescription": "Não foi possível baixar o arquivo de receitas. Tente novamente.",
+      "signedOut": "Sua sessão expirou. Entre novamente para exportar.",
+      "notAllowed": "Você não tem permissão para exportar isso."
     }
   }
 }

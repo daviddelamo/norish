@@ -61,7 +61,12 @@
     },
     "archiveImport": {
       "title": "Импортиране на архив с рецепти",
-      "description": "Импортирай рецепти от Mela (.melarecipes), Paprika (.paprikarecipes) или Mealie/Tandoor (.zip) експорти"
+      "description": "Импортирай рецепти от Norish (.norishrecipes), Mela (.melarecipes), Paprika (.paprikarecipes) или Mealie/Tandoor (.zip) експорти"
+    },
+    "archiveExport": {
+      "title": "Експортиране на архив с рецепти",
+      "description": "Изтеглете всяка рецепта, която виждате.",
+      "button": "Експортиране"
     },
     "siteAuthTokens": {
       "title": "Токени за удостоверяване на сайтове",
@@ -351,7 +356,12 @@
       "saveLocales": "Запази езиковите настройки",
       "localesSaved": "Езиковите настройки са запазени",
       "localesError": "Запазването на езиковите настройки не бе успешно",
-      "atLeastOneLocale": "Трябва да е разрешен поне един език"
+      "atLeastOneLocale": "Трябва да е разрешен поне един език",
+      "export": {
+        "title": "Архив с рецепти",
+        "description": "Изтеглете всяка рецепта на този сървър.",
+        "button": "Експортиране на архив с рецепти"
+      }
     },
     "registration": {
       "title": "Регистрация",
@@ -799,6 +809,15 @@
       "empty": "Все още няма кухни.",
       "duplicate": "Вече съществува кухня с това име.",
       "saveFailed": "Кухнята не можа да бъде запазена."
+    }
+  },
+  "archiveExport": {
+    "progress": "Експортиране… {size}",
+    "errors": {
+      "failedTitle": "Експортирането е неуспешно",
+      "failedDescription": "Архивът с рецепти не можа да бъде изтеглен. Опитайте отново.",
+      "signedOut": "Сесията ви изтече. Влезте отново, за да експортирате.",
+      "notAllowed": "Нямате права да експортирате това."
     }
   }
 }

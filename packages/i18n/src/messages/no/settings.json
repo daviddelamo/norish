@@ -61,7 +61,12 @@
     },
     "archiveImport": {
       "title": "Importer oppskriftarkiv",
-      "description": "Importer oppskrifter fra Mela (.melarecipes), Paprika (.paprikarecipes) eller Mealie/Tandoor (.zip)-eksporter"
+      "description": "Importer oppskrifter fra Norish (.norishrecipes), Mela (.melarecipes), Paprika (.paprikarecipes) eller Mealie/Tandoor (.zip)-eksporter"
+    },
+    "archiveExport": {
+      "title": "Eksporter oppskriftsarkiv",
+      "description": "Last ned alle oppskriftene du kan se.",
+      "button": "Eksporter"
     },
     "siteAuthTokens": {
       "title": "Nettstedsautentiseringstokens",
@@ -351,7 +356,12 @@
       "saveLocales": "Lagre språkinnstillinger",
       "localesSaved": "Språkinnstillinger lagret",
       "localesError": "Kunne ikke lagre språkinnstillinger",
-      "atLeastOneLocale": "Minst ett språk må være aktivert"
+      "atLeastOneLocale": "Minst ett språk må være aktivert",
+      "export": {
+        "title": "Oppskriftsarkiv",
+        "description": "Last ned alle oppskriftene på denne serveren.",
+        "button": "Eksporter oppskriftsarkiv"
+      }
     },
     "registration": {
       "title": "Registrering",
@@ -799,6 +809,15 @@
       "empty": "Ingen kjøkken ennå.",
       "duplicate": "Et kjøkken med det navnet finnes allerede.",
       "saveFailed": "Kunne ikke lagre det kjøkkenet."
+    }
+  },
+  "archiveExport": {
+    "progress": "Eksporterer… {size}",
+    "errors": {
+      "failedTitle": "Eksporten mislyktes",
+      "failedDescription": "Oppskriftsarkivet kunne ikke lastes ned. Prøv igjen.",
+      "signedOut": "Økten din er utløpt. Logg inn igjen for å eksportere.",
+      "notAllowed": "Du har ikke tillatelse til å eksportere dette."
     }
   }
 }

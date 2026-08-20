@@ -1,6 +1,6 @@
 import type {
   ArchiveImportError,
-  ArchiveSkippedItem,
+  ArchiveImportNote,
   RecipeDashboardDTO,
 } from "@norish/shared/contracts";
 import {
@@ -17,9 +17,8 @@ import { router } from "../../trpc";
 import { recipeEmitter } from "../recipes/emitter";
 
 /**
- * Import recipes from an archive (Mela .melarecipes or Mealie/Tandoor .zip export).
- * Progress is streamed via onArchiveProgress subscription
- * Recipe data is emitted via recipeBatchCreated subscription
+ * Import recipes from an archive (Norish .norishrecipes, Mela .melarecipes,
+ * Paprika .paprikarecipes, or Mealie/Tandoor .zip export).
  */
 const importArchive = authedProcedure
   .input(formDataInputSchema)
@@ -34,8 +33,9 @@ const importArchive = authedProcedure
       return { success: false, error: "No file provided" };
     }
 
-    // Validate file name - accept .melarecipes, .paprikarecipes, and .zip
+    // Validate file name - accept .norishrecipes, .melarecipes, .paprikarecipes, and .zip
     const fileName = file.name.toLowerCase();
+    const isNorish = fileName.endsWith(".norishrecipes");
     const isMela = fileName.endsWith(".melarecipes");
     const isPaprikaRecipes = fileName.endsWith(".paprikarecipes");
     const isZip = fileName.endsWith(".zip");
@@ -45,12 +45,13 @@ const importArchive = authedProcedure
       "Archive file received"
     );
 
-    if (!isMela && !isPaprikaRecipes && !isZip) {
+    if (!isNorish && !isMela && !isPaprikaRecipes && !isZip) {
       log.warn({ userId: ctx.user.id, fileName: file.name }, "Archive import: invalid file type");
 
       return {
         success: false,
-        error: "Invalid file type. Expected .melarecipes, .paprikarecipes, or .zip file.",
+        error:
+          "Invalid file type. Expected .norishrecipes, .melarecipes, .paprikarecipes, or .zip file.",
       };
     }
 
@@ -75,7 +76,7 @@ const importArchive = authedProcedure
         return {
           success: false,
           error:
-            "Unknown archive format. Expected .melarecipes, .paprikarecipes, Mealie .zip, or Tandoor .zip export",
+            "Unknown archive format. Expected .norishrecipes, .melarecipes, .paprikarecipes, Mealie .zip, or Tandoor .zip export",
         };
       }
 
@@ -96,8 +97,7 @@ const importArchive = authedProcedure
           log.error({ err, userId: ctx.user.id }, "Archive import failed");
           recipeEmitter.emitToUser(ctx.user.id, "archiveCompleted", {
             imported: 0,
-            skipped: 0,
-            skippedItems: [],
+            notes: [],
             errors: [{ file: "archive", error: String(err) }],
           });
         }
@@ -126,7 +126,7 @@ async function runArchiveImportAsync(
 ): Promise<void> {
   const allImported: RecipeDashboardDTO[] = [];
   const allErrors: ArchiveImportError[] = [];
-  const allSkipped: ArchiveSkippedItem[] = [];
+  const allNotes: ArchiveImportNote[] = [];
 
   // Calculate dynamic batch size based on total
   const batchSize = Math.max(1, calculateBatchSize(total));
@@ -141,7 +141,7 @@ async function runArchiveImportAsync(
     currentCount: number,
     recipe?: RecipeDashboardDTO,
     error?: ArchiveImportError,
-    skipped?: ArchiveSkippedItem
+    note?: ArchiveImportNote
   ) => {
     current = currentCount;
 
@@ -155,12 +155,12 @@ async function runArchiveImportAsync(
       allErrors.push(error);
     }
 
-    if (skipped) {
-      allSkipped.push(skipped);
+    if (note) {
+      allNotes.push(note);
     }
 
     // Emit on batch boundaries or completion
-    // Always emit progress, even if all recipes were skipped
+    // Always emit progress, even when nothing landed in this batch
     const shouldEmit = current % batchSize === 0 || current === total;
 
     if (shouldEmit) {
@@ -184,7 +184,7 @@ async function runArchiveImportAsync(
           current,
           total,
           imported: allImported.length,
-          skipped: allSkipped.length,
+          notes: allNotes.length,
           batchSize: batchRecipes.length,
           errors: batchErrors.length,
         },
@@ -206,7 +206,7 @@ async function runArchiveImportAsync(
         total,
         batchSize,
         imported: result.imported.length,
-        skipped: allSkipped.length,
+        notes: allNotes.length,
         errors: result.errors.length,
       },
       "Archive import complete"
@@ -219,13 +219,12 @@ async function runArchiveImportAsync(
   // Emit completion to importing user only
   recipeEmitter.emitToUser(userId, "archiveCompleted", {
     imported: allImported.length,
-    skipped: allSkipped.length,
-    skippedItems: allSkipped,
+    notes: allNotes,
     errors: allErrors,
   });
 
   log.info(
-    { imported: allImported.length, skipped: allSkipped.length, errors: allErrors.length },
+    { imported: allImported.length, notes: allNotes.length, errors: allErrors.length },
     "Archive import completed"
   );
 }
