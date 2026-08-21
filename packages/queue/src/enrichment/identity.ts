@@ -40,6 +40,7 @@ export const ENRICHMENT_QUEUE_NAMES: Record<RecipeEnrichmentKind, QueueName> = {
   "nutrition-estimation": QUEUE_NAMES.NUTRITION_ESTIMATION,
   "recipe-provenance": QUEUE_NAMES.RECIPE_PROVENANCE,
   "ingredient-linking": QUEUE_NAMES.INGREDIENT_LINKING,
+  "image-generation": QUEUE_NAMES.IMAGE_GENERATION,
 };
 
 /** The BullMQ job name each queue's worker processes. */
@@ -50,6 +51,7 @@ export const ENRICHMENT_JOB_NAMES: Record<RecipeEnrichmentKind, string> = {
   "nutrition-estimation": "estimate",
   "recipe-provenance": "infer-provenance",
   "ingredient-linking": "link-ingredients",
+  "image-generation": "generate-image",
 };
 
 /**

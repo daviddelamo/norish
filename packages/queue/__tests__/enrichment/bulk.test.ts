@@ -21,6 +21,7 @@ vi.mock("@norish/db/repositories/recipes", () => ({
 vi.mock("@norish/shared-server/config/server-config-loader", () => ({
   isAIEnabled,
   getAutomaticEnrichmentConfig,
+  isImageGenerationConfigured: vi.fn(async () => true),
 }));
 
 vi.mock("@norish/shared-server/logger", () => ({
@@ -44,9 +45,10 @@ const ALL_ON = {
   nutritionEstimation: true,
   recipeProvenance: true,
   ingredientLinking: true,
+  imageGeneration: true,
 };
 
-const KIND_COUNT = 6;
+const KIND_COUNT = 7;
 
 function recipe(id: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -55,6 +57,8 @@ function recipe(id: string, overrides: Record<string, unknown> = {}) {
     recipeIngredients: [{ ingredientName: "flour" }],
     steps: [{ step: "Mix the flour in.", systemUsed: "metric", order: 0 }],
     categories: [],
+    image: null,
+    images: [],
     calories: null,
     fat: null,
     carbs: null,
@@ -110,6 +114,7 @@ describe("enrollEnrichmentForAllRecipes", () => {
       nutritionEstimation: false,
       recipeProvenance: false,
       ingredientLinking: false,
+      imageGeneration: false,
     });
 
     const result = await enrollEnrichmentForAllRecipes(requester);

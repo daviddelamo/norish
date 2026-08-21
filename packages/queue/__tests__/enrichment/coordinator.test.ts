@@ -7,6 +7,7 @@ const getHouseholdMemberIds = vi.fn();
 const getAllergiesForUsers = vi.fn();
 const isAIEnabled = vi.fn();
 const getAutomaticEnrichmentConfig = vi.fn();
+const isImageGenerationConfigured = vi.fn();
 const addEnrichmentJob = vi.fn();
 
 vi.mock("@norish/db", () => ({
@@ -18,6 +19,7 @@ vi.mock("@norish/db", () => ({
 vi.mock("@norish/shared-server/config/server-config-loader", () => ({
   isAIEnabled,
   getAutomaticEnrichmentConfig,
+  isImageGenerationConfigured,
 }));
 
 vi.mock("@norish/shared-server/logger", () => ({
@@ -46,9 +48,10 @@ const ALL_ON = {
   nutritionEstimation: true,
   recipeProvenance: true,
   ingredientLinking: true,
+  imageGeneration: true,
 };
 
-const KIND_COUNT = 6;
+const KIND_COUNT = 7;
 
 function recipe(overrides: Record<string, unknown> = {}) {
   return {
@@ -57,6 +60,8 @@ function recipe(overrides: Record<string, unknown> = {}) {
     recipeIngredients: [{ ingredientName: "flour" }],
     steps: [{ step: "Mix the flour in.", systemUsed: "metric", order: 0 }],
     categories: [],
+    image: null,
+    images: [],
     calories: null,
     fat: null,
     carbs: null,
@@ -80,6 +85,7 @@ beforeEach(() => {
   getAllergiesForUsers.mockResolvedValue(["Milk"]);
   isAIEnabled.mockResolvedValue(true);
   getAutomaticEnrichmentConfig.mockResolvedValue(ALL_ON);
+  isImageGenerationConfigured.mockResolvedValue(true);
   addEnrichmentJob.mockImplementation(async (_queue, data) => ({
     kind: data.kind,
     status: "queued",
@@ -121,6 +127,7 @@ describe("automatic enrollment", () => {
     ["autoCategorization", "auto-categorization"],
     ["nutritionEstimation", "nutrition-estimation"],
     ["recipeProvenance", "recipe-provenance"],
+    ["imageGeneration", "image-generation"],
   ] as const)("skips %s when its automatic switch is off", async (setting, kind) => {
     getAutomaticEnrichmentConfig.mockResolvedValue({ ...ALL_ON, [setting]: false });
 
@@ -375,6 +382,88 @@ describe("automatic enrollment", () => {
   });
 });
 
+describe("image generation eligibility", () => {
+  it("skips an ordinary automatic run for a recipe with a gallery image", async () => {
+    getRecipeFull.mockResolvedValue(
+      recipe({ images: [{ image: "/recipes/recipe-1/photo.jpg", order: 0 }] })
+    );
+
+    const results = await enrichRecipe(context, { origin: "automatic" });
+
+    expect(outcome(results, "image-generation")).toEqual({
+      kind: "image-generation",
+      status: "skipped",
+      reason: "supplied-data-present",
+    });
+    expect(outcome(results, "auto-tagging")?.status).toBe("queued");
+  });
+
+  it("skips an ordinary automatic run for a recipe with only the legacy scalar", async () => {
+    getRecipeFull.mockResolvedValue(recipe({ image: "/recipes/recipe-1/hero.jpg", images: [] }));
+
+    const results = await enrichRecipe(context, { origin: "automatic" });
+
+    expect(outcome(results, "image-generation")).toEqual({
+      kind: "image-generation",
+      status: "skipped",
+      reason: "supplied-data-present",
+    });
+  });
+
+  it("treats a blank legacy scalar as no image at all", async () => {
+    getRecipeFull.mockResolvedValue(recipe({ image: "   ", images: [] }));
+
+    const results = await enrichRecipe(context, { origin: "automatic" });
+
+    expect(outcome(results, "image-generation")?.status).toBe("queued");
+  });
+
+  it("does not skip a manual request over a stored image", async () => {
+    getRecipeFull.mockResolvedValue(
+      recipe({ images: [{ image: "/recipes/recipe-1/photo.jpg", order: 0 }] })
+    );
+
+    const results = await enrichRecipe(context, { origin: "manual", kind: "image-generation" });
+
+    expect(results[0]?.status).toBe("queued");
+  });
+
+  it("does not skip an administrator's refresh over a stored image", async () => {
+    getRecipeFull.mockResolvedValue(
+      recipe({ images: [{ image: "/recipes/recipe-1/photo.jpg", order: 0 }] })
+    );
+
+    const results = await enrichRecipe(context, { origin: "automatic", replaceExisting: true });
+
+    expect(outcome(results, "image-generation")?.status).toBe("queued");
+  });
+
+  it.each([
+    ["an automatic run", { origin: "automatic" }],
+    ["a manual request", { origin: "manual", kind: "image-generation" }],
+    ["an administrator's refresh", { origin: "automatic", replaceExisting: true }],
+  ] as const)("skips %s when no image provider is configured", async (_origin, request) => {
+    isImageGenerationConfigured.mockResolvedValue(false);
+
+    const results = await enrichRecipe(context, request as never);
+
+    expect(outcome(results, "image-generation")).toEqual({
+      kind: "image-generation",
+      status: "skipped",
+      reason: "no-image-provider",
+    });
+  });
+
+  it("leaves the other kinds untouched by an unconfigured image provider", async () => {
+    isImageGenerationConfigured.mockResolvedValue(false);
+
+    const results = await enrichRecipe(context, { origin: "automatic" });
+
+    expect(outcome(results, "auto-tagging")?.status).toBe("queued");
+    expect(outcome(results, "recipe-provenance")?.status).toBe("queued");
+  });
+});
+
 describe("automatic enrollment asked to replace", () => {
   it("suspends every Supplied Recipe Data skip, because redoing them is the point", async () => {
     getRecipeFull.mockResolvedValue(
@@ -473,6 +562,7 @@ describe("manual enrollment", () => {
     ["nutritionEstimation", "nutrition-estimation"],
     ["recipeProvenance", "recipe-provenance"],
     ["ingredientLinking", "ingredient-linking"],
+    ["imageGeneration", "image-generation"],
   ] as const)("ignores the %s automatic switch", async (setting, kind) => {
     getAutomaticEnrichmentConfig.mockResolvedValue({ ...ALL_ON, [setting]: false });
 

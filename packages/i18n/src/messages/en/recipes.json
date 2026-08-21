@@ -324,7 +324,8 @@
       "auto-categorization": "Auto-categorization",
       "nutrition-estimation": "Nutrition estimation",
       "recipe-provenance": "Recipe Provenance",
-      "ingredient-linking": "Ingredient Linking"
+      "ingredient-linking": "Ingredient Linking",
+      "image-generation": "Image Generation"
     }
   },
   "provenance": {

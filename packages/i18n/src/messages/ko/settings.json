@@ -789,7 +789,8 @@
         "recipe-provenance": "레시피 유래",
         "ingredient-linking": "재료 연결",
         "caldav-sync": "CalDAV sync",
-        "scheduled-tasks": "Scheduled tasks"
+        "scheduled-tasks": "Scheduled tasks",
+        "image-generation": "이미지 생성"
       },
       "summary": {
         "failed": "{count} failed"

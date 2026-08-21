@@ -789,7 +789,8 @@
         "recipe-provenance": "Rezeptherkunft",
         "ingredient-linking": "Zutatenverknüpfung",
         "caldav-sync": "CalDAV sync",
-        "scheduled-tasks": "Scheduled tasks"
+        "scheduled-tasks": "Scheduled tasks",
+        "image-generation": "Bildgenerierung"
       },
       "summary": {
         "failed": "{count} failed"

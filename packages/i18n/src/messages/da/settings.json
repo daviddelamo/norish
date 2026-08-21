@@ -789,7 +789,8 @@
         "recipe-provenance": "Opskriftens oprindelse",
         "ingredient-linking": "Ingredienstilknytning",
         "caldav-sync": "CalDAV sync",
-        "scheduled-tasks": "Scheduled tasks"
+        "scheduled-tasks": "Scheduled tasks",
+        "image-generation": "Billedgenerering"
       },
       "summary": {
         "failed": "{count} failed"

@@ -146,6 +146,7 @@ describe("requestEnrichment", () => {
   it.each([
     ["insufficient-input", "does not have enough information"],
     ["no-household-allergies", "No allergies configured"],
+    ["no-image-provider", "No image provider is configured"],
   ])("explains a %s skip", async (reason, message) => {
     enrichRecipe.mockResolvedValue([{ kind: "allergy-detection", status: "skipped", reason }]);
 

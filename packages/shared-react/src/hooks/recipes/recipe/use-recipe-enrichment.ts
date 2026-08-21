@@ -63,6 +63,7 @@ const IDLE_STATES: RecipeEnrichmentStateMap = {
   "nutrition-estimation": "idle",
   "recipe-provenance": "idle",
   "ingredient-linking": "idle",
+  "image-generation": "idle",
 };
 
 const STATE_FRESHNESS: Record<RecipeEnrichmentLifecycleState, number> = {
@@ -141,6 +142,7 @@ export function createUseRecipeEnrichment({ useTRPC }: CreateRecipeHooksOptions)
       "nutrition-estimation": 0,
       "recipe-provenance": 0,
       "ingredient-linking": 0,
+      "image-generation": 0,
     });
 
     const { data, isLoading } = useQuery({

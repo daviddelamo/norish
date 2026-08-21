@@ -17,7 +17,7 @@ import {
 } from "@norish/shared/lib/recipe-enrichment";
 
 describe("ENRICHMENT_KINDS", () => {
-  it("names the six independent enrichment kinds", () => {
+  it("names the seven independent enrichment kinds", () => {
     expect([...ENRICHMENT_KINDS]).toEqual([
       "auto-tagging",
       "allergy-detection",
@@ -25,6 +25,7 @@ describe("ENRICHMENT_KINDS", () => {
       "nutrition-estimation",
       "recipe-provenance",
       "ingredient-linking",
+      "image-generation",
     ]);
   });
 });

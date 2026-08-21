@@ -23,6 +23,7 @@ import { getQueueByName } from "@norish/queue/registry";
 import {
   getAutomaticEnrichmentConfig,
   isAIEnabled,
+  isImageGenerationConfigured,
 } from "@norish/shared-server/config/server-config-loader";
 import { createLogger } from "@norish/shared-server/logger";
 import {
@@ -98,12 +99,15 @@ export async function enrichRecipe(
   const attempts = kinds.map(async (kind): Promise<RecipeEnrichmentEnrollment> => {
     const householdHasAllergies =
       kind === "allergy-detection" ? await loadHouseholdHasAllergies(context) : false;
+    const imageProviderConfigured =
+      kind === "image-generation" ? await isImageGenerationConfigured() : true;
     const eligibility = evaluate(kind, {
       recipe,
       origin: request.origin,
       replaceExisting,
       automaticEnabled: automatic[SETTING_BY_KIND[kind]],
       householdHasAllergies,
+      imageProviderConfigured,
     });
 
     if (!eligibility.eligible) {
@@ -151,6 +155,7 @@ const SETTING_BY_KIND = {
   "nutrition-estimation": "nutritionEstimation",
   "recipe-provenance": "recipeProvenance",
   "ingredient-linking": "ingredientLinking",
+  "image-generation": "imageGeneration",
 } as const satisfies Record<RecipeEnrichmentKind, string>;
 
 interface EvaluationInput {
@@ -159,10 +164,23 @@ interface EvaluationInput {
   replaceExisting: boolean;
   automaticEnabled: boolean;
   householdHasAllergies: boolean;
+  imageProviderConfigured: boolean;
+}
+
+/** Any stored image at all: a gallery row, or the legacy scalar. */
+function hasAnyImage(recipe: FullRecipeDTO): boolean {
+  return recipe.images.length > 0 || (recipe.image ?? "").trim() !== "";
 }
 
 function evaluate(kind: RecipeEnrichmentKind, input: EvaluationInput): Eligibility {
-  const { recipe, origin, replaceExisting, automaticEnabled, householdHasAllergies } = input;
+  const {
+    recipe,
+    origin,
+    replaceExisting,
+    automaticEnabled,
+    householdHasAllergies,
+    imageProviderConfigured,
+  } = input;
   // The kinds below defer to Supplied Recipe Data by asking whether their slot
   // is already answered. A run that may overwrite that slot has no reason to
   // ask, so the question is only put to an ordinary automatic run: a manual
@@ -225,6 +243,21 @@ function evaluate(kind: RecipeEnrichmentKind, input: EvaluationInput): Eligibili
       // replacing write is what differs, not the eligibility. Steps are its
       // raw material, so none means nothing to do.
       return recipe.steps.length === 0 ? ineligible("insufficient-input") : ELIGIBLE;
+
+    case "image-generation":
+      // A kind can be unreachable while AI is enabled (ADR-0024): most
+      // providers cannot draw, so an unconfigured image provider skips every
+      // origin, manual included — the action is unavailable, never broken.
+      if (!imageProviderConfigured) return ineligible("no-image-provider");
+
+      // The strictest gap-filler in the product: any stored image at all —
+      // a gallery row or the legacy scalar — suppresses an ordinary
+      // automatic run, so background work never destroys a photograph
+      // (ADR-0025). A manual request and an administrator's refresh are the
+      // two deliberate destructive paths, and they run regardless.
+      return defersToSuppliedData && hasAnyImage(recipe)
+        ? ineligible("supplied-data-present")
+        : ELIGIBLE;
   }
 }
 

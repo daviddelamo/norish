@@ -48,6 +48,7 @@ const QUEUE_OPTIONS = [
   "allergy-detection",
   "recipe-provenance",
   "ingredient-linking",
+  "image-generation",
   "caldav-sync",
   "scheduled-tasks",
 ] as const;

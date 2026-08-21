@@ -789,7 +789,8 @@
         "recipe-provenance": "Herkomst van recept",
         "ingredient-linking": "Ingrediëntkoppeling",
         "caldav-sync": "CalDAV sync",
-        "scheduled-tasks": "Scheduled tasks"
+        "scheduled-tasks": "Scheduled tasks",
+        "image-generation": "Afbeeldingen genereren"
       },
       "summary": {
         "failed": "{count} failed"

@@ -789,6 +789,7 @@ const ENRICHMENT_SKIP_MESSAGES: Record<RecipeEnrichmentSkipReason, string> = {
   "insufficient-input": "This recipe does not have enough information for that enrichment",
   "no-household-allergies": "No allergies configured for your household",
   "supplied-data-present": "This recipe already has that information",
+  "no-image-provider": "No image provider is configured on this server",
 };
 
 /**

@@ -324,7 +324,8 @@
       "auto-categorization": "Автоматично категоризиране",
       "nutrition-estimation": "Оценка на хранителните стойности",
       "recipe-provenance": "Произход на рецептата",
-      "ingredient-linking": "Свързване на съставките"
+      "ingredient-linking": "Свързване на съставките",
+      "image-generation": "Генериране на изображения"
     }
   },
   "provenance": {

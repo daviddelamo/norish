@@ -14,6 +14,7 @@ export const ENRICHMENT_KINDS = [
   "nutrition-estimation",
   "recipe-provenance",
   "ingredient-linking",
+  "image-generation",
 ] as const;
 
 export type RecipeEnrichmentKind = (typeof ENRICHMENT_KINDS)[number];
@@ -88,7 +89,9 @@ export type RecipeEnrichmentSkipReason =
   /** Allergy detection has nothing to look for. */
   | "no-household-allergies"
   /** Supplied Recipe Data already answers everything this kind could add. */
-  | "supplied-data-present";
+  | "supplied-data-present"
+  /** No image provider is configured (ADR-0024). Applies to every origin, manual included. */
+  | "no-image-provider";
 
 /** Per-kind coordinator outcome. Automatic enrollment never waits for the job itself. */
 export type RecipeEnrichmentEnrollment =
