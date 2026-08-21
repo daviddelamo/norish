@@ -712,6 +712,47 @@
             special case, and server-side export artifacts.
           </p>
         </li>
+        <li>
+          <a href="ui/0023-recipe-pages-take-their-hue-from-the-dish.md"
+            >ADR-0023 &mdash; Recipe pages take their hue from the dish</a
+          >
+          <p>
+            <b>Accepted and implemented.</b> One Dish Colour is extracted server-side from a
+            recipe's primary image and kept on the recipe; the page container scopes it as hue
+            and clamped saturation only, so lightness stays with the reader's theme and contrast
+            is unchanged by construction. Rejects browser-side extraction on render, using the
+            colour directly with luminance-chosen text, and tinting the page while leaving cards
+            neutral. Not a reversal of ADR-0020: a tinted surface is still an opaque object.
+          </p>
+        </li>
+        <li>
+          <a href="ai/0024-image-generation-is-the-runtimes-third-entry-point.md"
+            >ADR-0024 &mdash; Image generation is the runtime's third entry point, on its own
+            provider</a
+          >
+          <p>
+            <b>Proposed.</b> The AI Runtime gains <code>generateImage</code> beside
+            <code>generateStructured</code> and <code>transcribe</code>, reading its own provider
+            block rather than the server's, because only four of eleven providers expose an image
+            model at all. One feature, two requests: a structured call writes a short English
+            visual brief, and the image model draws from it. Rejects a lone
+            <code>imageModel</code> field beside <code>visionModel</code>, an OpenAI-compatible
+            endpoint as the only route, and going straight from recipe to image model.
+          </p>
+        </li>
+        <li>
+          <a href="recipes/0025-a-generated-image-takes-the-primary-slot.md"
+            >ADR-0025 &mdash; A Generated Image takes the recipe's primary slot</a
+          >
+          <p>
+            <b>Proposed.</b> A Generated Image is always order 0, and writing one deletes the row
+            and file that held that slot; a recipe holds at most one. Eligibility is the
+            counterweight &mdash; automatic runs and default sweeps skip any recipe that already
+            has an image, so only a manual action or an explicit overwrite sweep can reach stored
+            media. Rejects demoting instead of deleting, sparing supplied photographs, and a
+            confirmation on the manual action.
+          </p>
+        </li>
       </ul>
 
       <h2>Validation policy</h2>

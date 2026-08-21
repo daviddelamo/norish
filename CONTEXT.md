@@ -11,7 +11,7 @@ A recipe whose creation transaction has succeeded and whose stored state can be 
 _Avoid_: Complete Recipe (suggests optional fields must be present)
 
 **Recipe Enrichment**:
-Optional AI-assisted processing that adds or refreshes recipe tags, allergy indications, meal categories, nutrition values, provenance, or Step Ingredients after a recipe is usable. It includes both automatic runs for newly usable recipes and manually requested runs; its outcome does not determine whether recipe creation or import succeeded.
+Optional AI-assisted processing that adds or refreshes recipe tags, allergy indications, meal categories, nutrition values, provenance, Step Ingredients, or a picture of the dish after a recipe is usable. It includes both automatic runs for newly usable recipes and manually requested runs; its outcome does not determine whether recipe creation or import succeeded.
 _Avoid_: Post-Import Enrichment (excludes manual creation and manual runs)
 
 **Automatic Recipe Enrichment**:
@@ -26,7 +26,7 @@ _Avoid_: Scheduled enrichment, Enrichment saga
 A single enrichment explicitly requested by a recipe editor. Its lifecycle remains visible and a terminal failure is reported to the requester.
 
 **Supplied Recipe Data**:
-Recipe information intentionally entered by a person or explicitly present in an import source and stored with the recipe. It outranks Automatic Recipe Enrichment for exactly what it covers: substantive supplied categories and complete Nutrition Information suppress their kinds, and supplied Recipe Provenance slots are kept while an automatic run fills the rest of the group (ADR-0018). Null and empty values do not count. AI may read source material to extract supplied facts, but information inferred beyond the source is Recipe Enrichment.
+Recipe information intentionally entered by a person or explicitly present in an import source and stored with the recipe. It outranks Automatic Recipe Enrichment for exactly what it covers: substantive supplied categories and complete Nutrition Information suppress their kinds, any stored image suppresses automatic Image Generation, and supplied Recipe Provenance slots are kept while an automatic run fills the rest of the group (ADR-0018). Null and empty values do not count. AI may read source material to extract supplied facts, but information inferred beyond the source is Recipe Enrichment.
 
 **Imported Recipe Data**:
 Supplied Recipe Data explicitly present in an import source and preserved during import. It remains imported data even when AI is required to read the source.
@@ -53,6 +53,14 @@ _Avoid_: Ingredient Link (suggests a hyperlink in the text rather than a usage r
 
 **Ingredient Linking**:
 The Recipe Enrichment kind that infers Step Ingredients. It is a gap-filler in every case — automatic or manual, it only ever adds links to steps that have none, so it can never replace or remove what a person attached and needs no supplied-data suppression: a step that already has Step Ingredients is simply not its business. Heading rows are never linked. A step that genuinely uses nothing stays bare and may be examined again by later runs.
+
+**Image Generation**:
+The Recipe Enrichment kind that draws a recipe a picture of its dish. It is the only kind whose output is invented rather than inferred: a tag, a category or a provenance note can be right or wrong about the recipe, while a Generated Image can only be apt or unconvincing. An automatic run is the strictest gap-filler in the product: any stored image at all, of any origin, and it stands down — while a manual request and an administrator's refresh run whatever is stored (ADR-0025). It is also the one kind that cannot follow the server's configured AI provider, because most providers cannot draw at all (ADR-0024).
+_Avoid_: Auto Image (names the automatic path only), Image Inference (nothing is inferred; the picture is invented)
+
+**Generated Image**:
+A picture of a dish that AI drew rather than a camera captured, stored in the recipe's gallery like any other image and recorded as generated. A recipe holds at most one, always as its primary image, and producing a new one destroys whatever held that slot before (ADR-0025). The marking is for the record and never for the reader — no surface distinguishes it from a photograph — but it is stored content rather than derivation, so unlike the Dish Colour it travels in a Recipe Archive with its marking intact and a receiving instance is told what it received.
+_Avoid_: AI Photo (it is a photograph of nothing), Placeholder Image (it is the recipe's real primary image, not a stand-in for one)
 
 **Hidden Item**:
 Something a reader has chosen not to be shown: Recipe Provenance, Nutrition Information, a recipe's notes, its rating, favourites, the measurement conversion control, or recipe timers. Hiding belongs to that reader alone and is kept per device, like every visibility preference — a cramped phone can hide what a desktop keeps. It suppresses the item everywhere it would appear for them, so hiding the rating takes the recipe page's stars, the library chip and the rating filter together, while the items that exist only on the recipe page simply make it slimmer. It settles nothing about the recipe: what is stored, what may be edited and what Recipe Enrichment produces are all unchanged, and a recipe read by someone signed out shows everything. An origin flag beside a recipe's title is chrome rather than Recipe Provenance, so it stays when Recipe Provenance is hidden.
@@ -85,11 +93,11 @@ The portable file a Norish instance writes so recipes can leave it: everything t
 _Avoid_: Export (the act, not the artifact), Backup (promises restoration an archive refuses to make), Instance export (suggests instance state is inside)
 
 **AI Runtime**:
-The single seam through which Norish issues a model request — structured generation and transcription, both on one shared transport. A feature never constructs a provider client, never reads Generation Preferences, and never calls the SDK: it hands the runtime its Prompt's name, its schema, and its Prompt Sections, and gets a validated result or a typed error that says whether retrying is worth it (ADR-0015).
+The single seam through which Norish issues a model request — structured generation, transcription, and image generation, all on one shared transport. A feature never constructs a provider client, never reads Generation Preferences, and never calls the SDK: it hands the runtime its Prompt's name and its Prompt Sections, plus a schema where there is something to validate, and gets a result or a typed error that says whether retrying is worth it (ADR-0015, ADR-0024). It owns all AI egress but no longer reads one configuration: structured generation follows the server's AI provider, transcription and image generation each follow their own.
 _Avoid_: AI executor (names the deleted prototype that had no callers), AI client (suggests a per-provider object, which is what the runtime hides)
 
 **Prompt**:
-The administrator-editable base every AI request starts from. There are nine, one per request shape, each stored in configuration with a shipped default, and the runtime will not accept a finished prompt string in their place — which is what makes every request tunable by construction (ADR-0016).
+The administrator-editable base every AI request starts from. There are eleven, one per request shape, each stored in configuration with a shipped default, and the runtime will not accept a finished prompt string in their place — which is what makes every request tunable by construction (ADR-0016).
 _Avoid_: Prompt template (implies placeholders a feature fills; a Prompt is appended to, not filled in)
 
 **Prompt Section**:
