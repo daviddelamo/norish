@@ -6,11 +6,11 @@ The colour is derived from the image, not supplied with the recipe, so it is not
 
 **Blocked by:** None — can start immediately, independently of the layout work.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A migration adds the colour column to `recipes`
-- [ ] Extraction runs on upload, URL import, archive import, and an image-replacing edit — one test per path
-- [ ] A backfill populates existing recipes that have a primary image
-- [ ] A recipe with no image has no Dish Colour, and its page falls back to theme colours
-- [ ] The colour is absent from Recipe Archive output and ignored on archive import
-- [ ] Extraction failure never fails the write that carried the image
+- [x] A migration adds the colour column to `recipes`
+- [x] Extraction runs on upload, URL import, archive import, and an image-replacing edit — one test per path
+- [x] A backfill populates existing recipes that have a primary image
+- [x] A recipe with no image has no Dish Colour, and its page falls back to theme colours
+- [x] The colour is absent from Recipe Archive output and ignored on archive import
+- [x] Extraction failure never fails the write that carried the image

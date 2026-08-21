@@ -14,6 +14,7 @@ import { getDecryptedTokensByUserId } from "@norish/db/repositories/site-auth-to
 import { requireQueueApiHandler } from "@norish/queue/api-handlers";
 import { getRecipePermissionPolicy } from "@norish/shared-server/config/server-config-loader";
 import { createLogger } from "@norish/shared-server/logger";
+import { withDishColor } from "@norish/shared-server/media/dish-color";
 import { deleteRecipeImagesDir } from "@norish/shared-server/media/storage";
 import { emitByPolicy } from "@norish/shared-server/realtime/policy";
 import { recipeEmitter } from "@norish/shared-server/realtime/recipes";
@@ -97,7 +98,8 @@ async function processImportJob(job: Job<RecipeImportJobData>): Promise<void> {
   await completeStep(job, { usedAI: parseResult.usedAI });
 
   await reportStep(job, "saving");
-  const created = await createRecipeWithRefs(recipeId, userId, parseResult.recipe);
+  // The Dish Colour is taken from the image the import just stored.
+  const created = await createRecipeWithRefs(recipeId, userId, await withDishColor(parseResult.recipe));
   const createdId = created?.recipeId;
 
   if (!createdId) {
@@ -170,7 +172,8 @@ async function handleJobFailed(
  * Start the recipe import worker (lazy - starts on demand).
  * Call during server startup.
  */
-const processRecipeImportJob = (job: Job<RecipeImportJobData>) =>
+// Exported for tests, like the other import workers' processors.
+export const processRecipeImportJob = (job: Job<RecipeImportJobData>) =>
   withTimeout(
     () => processImportJob(job),
     RECIPE_IMPORT_PROCESSING_TIMEOUT_MS,

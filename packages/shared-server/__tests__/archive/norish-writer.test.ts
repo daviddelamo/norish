@@ -120,6 +120,18 @@ describe("norish archive writer", () => {
     ]);
   });
 
+  it("never exports the Dish Colour — it is derived from the image, not recipe data", async () => {
+    const zip = await writeArchive({
+      records: [{ recipe: { ...buildFullRecipe(), dishColor: "#a1b2c3" } }],
+      exporter,
+      exportedAt,
+    });
+
+    const recipeJson = await readJson(zip, "11111111-1111-4111-8111-111111111111/recipe.json");
+
+    expect("dishColor" in recipeJson).toBe(false);
+  });
+
   it("nulls instance-local ingredient ids and travels ingredients by name", async () => {
     const zip = await writeArchive({
       records: [{ recipe: buildFullRecipe() }],

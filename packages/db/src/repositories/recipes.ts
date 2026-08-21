@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, like, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, like, lte, or, sql } from "drizzle-orm";
 import z from "zod";
 
 import type { RecipePermissionPolicy } from "@norish/config/zod/server-config";
@@ -684,6 +684,7 @@ export async function createRecipeWithRefs(
     notes: payload.notes ?? null,
     url: payload.url ?? null,
     image: payload.image ?? null,
+    dishColor: payload.dishColor ?? null,
     servings: payload.servings ?? 1,
     systemUsed: payload.systemUsed,
     prepMinutes: payload.prepMinutes ?? null,
@@ -973,6 +974,7 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
     notes: full.notes ?? null,
     url: full.url ?? null,
     image: full.image ?? null,
+    dishColor: full.dishColor ?? null,
     servings: full.servings ?? 1,
     prepMinutes: full.prepMinutes ?? null,
     cookMinutes: full.cookMinutes ?? null,
@@ -1368,6 +1370,7 @@ export async function updateRecipeWithRefs(
     if (payload.notes !== undefined) updateData.notes = payload.notes;
     if (payload.url !== undefined) updateData.url = payload.url;
     if (payload.image !== undefined) updateData.image = payload.image;
+    if (payload.dishColor !== undefined) updateData.dishColor = payload.dishColor;
     if (payload.servings !== undefined) updateData.servings = payload.servings;
     if (payload.prepMinutes !== undefined) updateData.prepMinutes = payload.prepMinutes;
     if (payload.cookMinutes !== undefined) updateData.cookMinutes = payload.cookMinutes;
@@ -2049,4 +2052,49 @@ export async function listGalleryImagesWithLegacyUrls(): Promise<
 
 export async function updateGalleryImageUrl(imageId: string, imageUrl: string): Promise<void> {
   await db.update(recipeImages).set({ image: imageUrl }).where(eq(recipeImages.id, imageId));
+}
+
+/**
+ * Dish Colour helpers (ADR-0023). The listing feeds the startup backfill:
+ * rows stored before the colour existed, with whatever media could supply
+ * one. Rows whose extraction fails stay null and are simply offered again
+ * next startup — null is the defined "no colour" outcome, not an error state.
+ */
+export async function listRecipesMissingDishColor(): Promise<
+  { id: string; image: string | null; galleryImages: { image: string; order: number | null }[] }[]
+> {
+  const [missing, galleryImages] = await Promise.all([
+    db
+      .select({ id: recipes.id, image: recipes.image })
+      .from(recipes)
+      .where(isNull(recipes.dishColor)),
+    db
+      .select({ recipeId: recipeImages.recipeId, image: recipeImages.image, order: recipeImages.order })
+      .from(recipeImages),
+  ]);
+
+  const galleryByRecipe = new Map<string, { image: string; order: number | null }[]>();
+
+  for (const galleryImage of galleryImages) {
+    const list = galleryByRecipe.get(galleryImage.recipeId) ?? [];
+
+    // `order` is a numeric column, so the driver hands it back as a string.
+    list.push({
+      image: galleryImage.image,
+      order: galleryImage.order === null ? null : Number(galleryImage.order),
+    });
+    galleryByRecipe.set(galleryImage.recipeId, list);
+  }
+
+  return missing.map((recipe) => ({
+    ...recipe,
+    galleryImages: galleryByRecipe.get(recipe.id) ?? [],
+  }));
+}
+
+export async function updateRecipeDishColor(
+  recipeId: string,
+  dishColor: string | null
+): Promise<void> {
+  await db.update(recipes).set({ dishColor }).where(eq(recipes.id, recipeId));
 }

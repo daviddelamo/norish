@@ -48,6 +48,11 @@ export const recipes = pgTable(
     originCountryName: text("origin_country_name"),
     originRegion: text("origin_region"),
     provenanceNote: text("provenance_note"),
+    // The Dish Colour (ADR-0023): one colour extracted from the recipe's
+    // primary image when that image is stored, as a `#rrggbb` hex string.
+    // Derived, never supplied — it does not travel in a Recipe Archive, and
+    // a recipe with no image simply has none.
+    dishColor: text("dish_color"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     categories: recipeCategoryEnum("categories").array().notNull().default([]),

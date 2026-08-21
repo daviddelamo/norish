@@ -48,6 +48,9 @@ export const RecipeDashboardSchema = RecipeSelectBaseSchema.omit({
   originCountryName: true,
   originRegion: true,
   provenanceNote: true,
+  // The Dish Colour tints recipe pages only (ADR-0023); the library never
+  // tints, so the dashboard has no use for it.
+  dishColor: true,
 }).extend({
   tags: z.array(TagSummarySchema).default([]),
   categories: z.array(recipeCategorySchema).default([]),

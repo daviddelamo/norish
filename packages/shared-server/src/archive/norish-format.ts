@@ -72,6 +72,10 @@ export const NorishArchiveRecipeSchema = FullRecipeInsertSchema.omit({
   // Archive ids are folder keys only; the importer mints fresh ids.
   id: true,
   cuisines: true,
+  // The Dish Colour is derived from the image, not supplied with the recipe
+  // (ADR-0023): it never travels in an archive, and a hand-edited value in
+  // recipe.json is stripped here — the receiving instance extracts its own.
+  dishColor: true,
 }).extend({
   cuisines: z.array(z.string()).default([]),
   authorName: z.string().nullable().optional(),

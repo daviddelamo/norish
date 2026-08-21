@@ -14,6 +14,10 @@ import { listCuisines } from "@norish/db/repositories/cuisines";
 import { addFavorite } from "@norish/db/repositories/favorites";
 import { rateRecipe } from "@norish/db/repositories/ratings";
 import { serverLogger as log } from "@norish/shared-server/logger";
+import {
+  withDishColor,
+  withDishColorForUpdate,
+} from "@norish/shared-server/media/dish-color";
 import { FullRecipeInsertDTO, RecipeDashboardDTO } from "@norish/shared/contracts";
 
 import {
@@ -393,7 +397,13 @@ export async function importRecipeItems(
 
         const overwriteDto = await rehomeArchiveMediaToRecipe(dto, existingId);
 
-        await updateRecipeWithRefs(existingId, overwriteUserId, overwriteDto);
+        // The receiving instance extracts its own Dish Colour from the
+        // media it just rehomed; nothing colour-shaped travels in an archive.
+        await updateRecipeWithRefs(
+          existingId,
+          overwriteUserId,
+          await withDishColorForUpdate(overwriteDto)
+        );
 
         await applyImportedMarks(userId, existingId, importedRating, importedFavorite);
 
@@ -414,7 +424,7 @@ export async function importRecipeItems(
         throw new Error("Archive recipe missing preallocated recipe ID");
       }
 
-      const created = await createRecipeWithRefs(recipeId, userId, dto);
+      const created = await createRecipeWithRefs(recipeId, userId, await withDishColor(dto));
 
       if (created) {
         await applyImportedMarks(userId, created.recipeId, importedRating, importedFavorite);

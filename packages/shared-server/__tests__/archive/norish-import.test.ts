@@ -59,6 +59,19 @@ vi.mock("@norish/shared-server/archive/mela-parser", () => ({
   parseMelaRecipeToDTO: vi.fn(),
 }));
 
+// Extraction is pinned by media/dish-color.test.ts; the sentinel proves the
+// importer derives its own colour rather than trusting the archive's.
+vi.mock("@norish/shared-server/media/dish-color", () => ({
+  withDishColor: vi.fn(async (dto: Record<string, unknown>) => ({
+    ...dto,
+    dishColor: "#0e6b3a",
+  })),
+  withDishColorForUpdate: vi.fn(async (data: Record<string, unknown>) => ({
+    ...data,
+    dishColor: "#0e6b3a",
+  })),
+}));
+
 vi.mock("@norish/shared-server/archive/mealie-parser", () => ({
   parseMealieArchive: vi.fn(),
   parseMealieRecipeToDTO: vi.fn(),
@@ -191,6 +204,39 @@ describe("norish archive rides the shared import loop", () => {
 
     expect(mockRateRecipe).toHaveBeenCalledWith("user-1", createdId, 4);
     expect(mockAddFavorite).toHaveBeenCalledWith("user-1", createdId);
+  });
+
+  it("stores its own extracted Dish Colour for an imported recipe (archive path)", async () => {
+    const zipBytes = await buildArchiveBytes([
+      { folderKey: FOLDER_KEY, json: JSON.stringify(buildArchiveRecipeJson()) },
+    ]);
+
+    const { importArchive } = await import("@norish/shared-server/archive/parser");
+
+    await importArchive("user-1", ["user-1"], zipBytes);
+
+    const dto = mockCreateRecipeWithRefs.mock.calls[0]![2] as Record<string, unknown>;
+
+    expect(dto.dishColor).toBe("#0e6b3a");
+  });
+
+  it("ignores a dishColor smuggled into recipe.json — the colour never travels", async () => {
+    const zipBytes = await buildArchiveBytes([
+      {
+        folderKey: FOLDER_KEY,
+        json: JSON.stringify(buildArchiveRecipeJson({ dishColor: "#facade" })),
+      },
+    ]);
+
+    const { importArchive } = await import("@norish/shared-server/archive/parser");
+
+    const result = await importArchive("user-1", ["user-1"], zipBytes);
+
+    expect(result.errors).toHaveLength(0);
+
+    const dto = mockCreateRecipeWithRefs.mock.calls[0]![2] as Record<string, unknown>;
+
+    expect(dto.dishColor).toBe("#0e6b3a");
   });
 
   it("overwrites a matching recipe instead of duplicating it", async () => {

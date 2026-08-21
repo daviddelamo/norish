@@ -10,6 +10,7 @@
     "./config/server-config-loader": "./src/config/server-config-loader.ts",
     "./media/storage": "./src/media/storage.ts",
     "./media/avatar-cleanup": "./src/media/avatar-cleanup.ts",
+    "./media/dish-color": "./src/media/dish-color.ts",
     "./recipes/randomizer": "./src/recipes/randomizer.ts",
     "./config/defaults": "./src/config/defaults.ts",
     "./archive/parser": "./src/archive/parser.ts",

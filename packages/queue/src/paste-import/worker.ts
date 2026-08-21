@@ -23,6 +23,7 @@ import {
   isAIEnabled,
 } from "@norish/shared-server/config/server-config-loader";
 import { createLogger } from "@norish/shared-server/logger";
+import { withDishColor } from "@norish/shared-server/media/dish-color";
 import { deleteRecipeImagesDir } from "@norish/shared-server/media/storage";
 import { emitByPolicy } from "@norish/shared-server/realtime/policy";
 import { recipeEmitter } from "@norish/shared-server/realtime/recipes";
@@ -124,7 +125,11 @@ async function createStructuredRecipe(
     return null;
   }
 
-  const created = await createRecipeWithRefs(structuredRecipe.recipeId, userId, parsed.data);
+  const created = await createRecipeWithRefs(
+    structuredRecipe.recipeId,
+    userId,
+    await withDishColor(parsed.data)
+  );
 
   if (!created) {
     return null;
@@ -188,7 +193,11 @@ export async function processPasteImportJob(
     const parseResult = await parseFromPastedText(text, recipeId, forceAI);
 
     await reportStep(job, "saving");
-    const textResult = await createRecipeWithRefs(recipeId, userId, parseResult.recipe);
+    const textResult = await createRecipeWithRefs(
+      recipeId,
+      userId,
+      await withDishColor(parseResult.recipe)
+    );
 
     if (!textResult) {
       throw new Error("Failed to save imported recipe");

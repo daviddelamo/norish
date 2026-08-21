@@ -6,15 +6,22 @@ const createRecipeWithRefs = vi.fn();
 const dashboardRecipe = vi.fn();
 const getAllergiesForUsers = vi.fn();
 const addRecipeImages = vi.fn();
+const updateRecipeDishColor = vi.fn();
 const emitByPolicy = vi.fn();
 const extractRecipeFromImages = vi.fn();
 const saveImageBytes = vi.fn();
+const dishColorForImageUrl = vi.fn();
 
 vi.mock("@norish/db", () => ({
   addRecipeImages,
   createRecipeWithRefs,
   dashboardRecipe,
   getAllergiesForUsers,
+  updateRecipeDishColor,
+}));
+
+vi.mock("@norish/shared-server/media/dish-color", () => ({
+  dishColorForImageUrl,
 }));
 
 vi.mock("@norish/shared-server/config/server-config-loader", () => ({
@@ -89,6 +96,7 @@ describe("processImageImportJob", () => {
     createRecipeWithRefs.mockResolvedValue({ status: "inserted", recipeId: "recipe-123" });
     dashboardRecipe.mockResolvedValue({ id: "recipe-123", name: "Extracted Recipe" });
     saveImageBytes.mockResolvedValue("/recipes/recipe-123/uploaded.jpg");
+    dishColorForImageUrl.mockResolvedValue("#5a3c21");
   });
 
   it("passes the job recipeId through extraction and image persistence", async () => {
@@ -123,5 +131,31 @@ describe("processImageImportJob", () => {
     expect(addRecipeImages).toHaveBeenCalledWith("recipe-123", [
       { image: "/recipes/recipe-123/uploaded.jpg", order: 0 },
     ]);
+  });
+
+  it("stores the Dish Colour extracted from the saved image (vision path)", async () => {
+    const { processImageImportJob } = await import("../../src/image-import/worker");
+
+    await processImageImportJob({
+      id: "job-2",
+      attemptsMade: 0,
+      opts: {},
+      data: {
+        recipeId: "recipe-123",
+        userId: "user-1",
+        householdKey: "household-1",
+        householdUserIds: null,
+        files: [
+          {
+            data: Buffer.from("img").toString("base64"),
+            mimeType: "image/jpeg",
+            filename: "recipe.jpg",
+          },
+        ],
+      },
+    } as any);
+
+    expect(dishColorForImageUrl).toHaveBeenCalledWith("/recipes/recipe-123/uploaded.jpg");
+    expect(updateRecipeDishColor).toHaveBeenCalledWith("recipe-123", "#5a3c21");
   });
 });

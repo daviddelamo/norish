@@ -1,0 +1,161 @@
+// @vitest-environment node
+/**
+ * The Dish Colour extraction boundary (ADR-0023): an image goes in, one
+ * `#rrggbb` colour comes out, and nothing that goes wrong on the way ever
+ * escapes as a throw — a recipe write must never fail because its photo
+ * would not yield a colour.
+ *
+ * Extraction runs against real sharp on generated buffers; the URL
+ * resolution runs against a real temp uploads dir, mirroring the shapes
+ * media/storage.ts writes.
+ */
+import { mkdtempSync } from "node:fs";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import sharp from "sharp";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+
+const uploadsDir = mkdtempSync(path.join(os.tmpdir(), "dish-color-test-"));
+
+vi.mock("@norish/config/env-config-server", () => ({
+  SERVER_CONFIG: {
+    UPLOADS_DIR: uploadsDir,
+  },
+}));
+
+const {
+  dishColorForImageUrl,
+  extractDishColor,
+  primaryImageForDishColor,
+  withDishColor,
+  withDishColorForUpdate,
+} = await import("@norish/shared-server/media/dish-color");
+
+const RECIPE_ID = "0f8b7c6d-1e2a-4b3c-8d4e-5f6a7b8c9d0e";
+
+function solidJpeg(r: number, g: number, b: number): Promise<Buffer> {
+  return sharp({
+    create: { width: 24, height: 24, channels: 3, background: { r, g, b } },
+  })
+    .jpeg()
+    .toBuffer();
+}
+
+describe("extractDishColor", () => {
+  it("extracts the dominant colour of an image as #rrggbb", async () => {
+    const tomatoRed = await solidJpeg(200, 40, 30);
+    const color = await extractDishColor(tomatoRed);
+
+    expect(color).toMatch(/^#[0-9a-f]{6}$/);
+
+    // JPEG encoding shifts channels a little; the dominant must still be
+    // unmistakably the red the image is made of.
+    const r = parseInt(color!.slice(1, 3), 16);
+    const g = parseInt(color!.slice(3, 5), 16);
+    const b = parseInt(color!.slice(5, 7), 16);
+
+    expect(r).toBeGreaterThan(150);
+    expect(g).toBeLessThan(100);
+    expect(b).toBeLessThan(100);
+  });
+
+  it("returns null rather than throwing for bytes that are not an image", async () => {
+    await expect(extractDishColor(Buffer.from("not an image"))).resolves.toBeNull();
+  });
+});
+
+describe("dishColorForImageUrl", () => {
+  beforeAll(async () => {
+    await fs.mkdir(path.join(uploadsDir, "recipes", RECIPE_ID), { recursive: true });
+    await fs.writeFile(
+      path.join(uploadsDir, "recipes", RECIPE_ID, "stored.jpg"),
+      await solidJpeg(30, 160, 60)
+    );
+  });
+
+  it("resolves a stored recipe-image URL and extracts its colour", async () => {
+    const color = await dishColorForImageUrl(`/recipes/${RECIPE_ID}/stored.jpg`);
+
+    expect(color).toMatch(/^#[0-9a-f]{6}$/);
+    expect(parseInt(color!.slice(3, 5), 16)).toBeGreaterThan(100);
+  });
+
+  it("returns null for a URL whose file does not exist", async () => {
+    await expect(dishColorForImageUrl(`/recipes/${RECIPE_ID}/missing.jpg`)).resolves.toBeNull();
+  });
+
+  it("returns null for remote and legacy URL shapes rather than fetching", async () => {
+    await expect(dishColorForImageUrl("https://example.com/photo.jpg")).resolves.toBeNull();
+    await expect(dishColorForImageUrl("/recipes/images/legacy.jpg")).resolves.toBeNull();
+    await expect(dishColorForImageUrl(null)).resolves.toBeNull();
+    await expect(dishColorForImageUrl(undefined)).resolves.toBeNull();
+  });
+});
+
+describe("primaryImageForDishColor", () => {
+  it("prefers the first gallery image by order, matching the hero the page renders", () => {
+    expect(
+      primaryImageForDishColor({
+        image: "/recipes/x/legacy.jpg",
+        images: [
+          { image: "/recipes/x/second.jpg", order: 2 },
+          { image: "/recipes/x/first.jpg", order: 1 },
+        ],
+      })
+    ).toBe("/recipes/x/first.jpg");
+  });
+
+  it("falls back to the legacy single image when the gallery is empty", () => {
+    expect(primaryImageForDishColor({ image: "/recipes/x/legacy.jpg", images: [] })).toBe(
+      "/recipes/x/legacy.jpg"
+    );
+  });
+
+  it("resolves to nothing when the recipe carries no media", () => {
+    expect(primaryImageForDishColor({})).toBeNull();
+    expect(primaryImageForDishColor({ image: null, images: [] })).toBeNull();
+  });
+});
+
+describe("withDishColor", () => {
+  it("overwrites a supplied colour — the Dish Colour is derived, never supplied", async () => {
+    const dto = await withDishColor({
+      image: `/recipes/${RECIPE_ID}/stored.jpg`,
+      dishColor: "#123456",
+    });
+
+    expect(dto.dishColor).not.toBe("#123456");
+    expect(dto.dishColor).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it("yields null for a recipe with no image", async () => {
+    await expect(withDishColor({ image: null })).resolves.toMatchObject({ dishColor: null });
+  });
+});
+
+describe("withDishColorForUpdate", () => {
+  it("recomputes when the update touches the media", async () => {
+    const dto = await withDishColorForUpdate({ image: `/recipes/${RECIPE_ID}/stored.jpg` });
+
+    expect(dto.dishColor).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it("clears the colour when the update removes the image", async () => {
+    await expect(withDishColorForUpdate({ image: null })).resolves.toMatchObject({
+      dishColor: null,
+    });
+  });
+
+  it("says nothing about the colour when the update says nothing about the media", async () => {
+    const dto = await withDishColorForUpdate({ name: "Renamed" } as { name: string });
+
+    expect("dishColor" in dto).toBe(false);
+  });
+
+  it("drops a colour the payload tried to supply directly", async () => {
+    const dto = await withDishColorForUpdate({ dishColor: "#bad000" } as { dishColor: string });
+
+    expect("dishColor" in dto).toBe(false);
+  });
+});
