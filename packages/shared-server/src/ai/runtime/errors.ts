@@ -11,7 +11,7 @@
  * how Norish reacts to it.
  */
 
-import { APICallError, NoObjectGeneratedError } from "ai";
+import { APICallError, NoImageGeneratedError, NoObjectGeneratedError } from "ai";
 
 export abstract class AIError extends Error {
   /** Whether the same request could succeed on a retry, without operator action. */
@@ -100,6 +100,12 @@ export function toAIError(error: unknown): AIError {
     return new AIResponseError("The model's response did not match the expected shape.", {
       cause: error,
     });
+  }
+
+  if (NoImageGeneratedError.isInstance(error)) {
+    // The provider answered but produced no usable image — the image-model
+    // sibling of a schema mismatch, and just as worth a retry.
+    return new AIResponseError("The model returned no usable image.", { cause: error });
   }
 
   if (APICallError.isInstance(error)) {

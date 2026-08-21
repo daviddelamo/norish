@@ -9,7 +9,7 @@
  * file.
  */
 
-import type { TranscriptionModel } from "ai";
+import type { ImageModel, TranscriptionModel } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createAzure } from "@ai-sdk/azure";
 import { createDeepSeek } from "@ai-sdk/deepseek";
@@ -22,6 +22,7 @@ import { createPerplexity } from "@ai-sdk/perplexity";
 import { createOllama } from "ai-sdk-ollama";
 import OpenAI from "openai";
 
+import type { ImageGenerationProvider } from "@norish/config/zod/server-config";
 import { aiLogger } from "@norish/shared-server/logger";
 
 import type { AIProvider, ModelConfig } from "./types";
@@ -228,6 +229,100 @@ function createProviderModels(config: {
 
     default:
       throw new Error(`Unknown AI provider: ${provider}`);
+  }
+}
+
+// ============================================================================
+// Image models — beside the language models they belong with (ADR-0024)
+// ============================================================================
+
+/** An image model plus how to ask it for the widest landscape it supports. */
+export interface ImageModelConfig {
+  model: ImageModel;
+  providerName: string;
+  /** Providers differ in whether they take a size or an aspect ratio. */
+  landscape: { size?: `${number}x${number}`; aspectRatio?: `${number}:${number}` };
+}
+
+/**
+ * The widest landscape OpenAI's image models accept. The DALL·E family tops
+ * out at 1792×1024, the gpt-image family at 1536×1024; a model this guess is
+ * wrong about fails at request time with the provider's own message, exactly
+ * as a mistyped model name does (ADR-0024).
+ */
+function openAILandscapeSize(model: string): `${number}x${number}` {
+  return model.startsWith("dall-e") ? "1792x1024" : "1536x1024";
+}
+
+/**
+ * Build an image model from the Image Generation block. Only the providers
+ * whose SDK package exposes an image model are constructible here — the
+ * config schema is what keeps the rest out.
+ */
+export function createImageModelFromConfig(config: {
+  provider: Exclude<ImageGenerationProvider, "disabled">;
+  model: string;
+  endpoint?: string;
+  apiKey?: string;
+  timeoutMs?: number;
+}): ImageModelConfig {
+  const { provider, model, endpoint, apiKey, timeoutMs } = config;
+  const customFetch = createFetchWithTimeout(timeoutMs as number);
+
+  switch (provider) {
+    case "openai": {
+      if (!apiKey) throw new Error("API Key is required for OpenAI provider");
+
+      return {
+        model: createOpenAI({ apiKey, fetch: customFetch }).image(model),
+        providerName: "OpenAI",
+        landscape: { size: openAILandscapeSize(model) },
+      };
+    }
+
+    case "google": {
+      if (!apiKey) throw new Error("API Key is required for Google AI provider");
+
+      return {
+        model: createGoogleGenerativeAI({ apiKey, fetch: customFetch }).image(model),
+        providerName: "Google AI",
+        landscape: { aspectRatio: "16:9" },
+      };
+    }
+
+    case "azure": {
+      if (!apiKey) throw new Error("API Key is required for Azure OpenAI provider");
+
+      const azure = endpoint
+        ? createAzure({ apiKey, baseURL: normalizeAzureEndpoint(endpoint), fetch: customFetch })
+        : createAzure({ apiKey, fetch: customFetch });
+
+      return {
+        model: azure.image(model),
+        providerName: "Azure OpenAI",
+        landscape: { size: openAILandscapeSize(model) },
+      };
+    }
+
+    case "lm-studio":
+    case "generic-openai": {
+      if (!endpoint) throw new Error("Endpoint is required for this provider");
+
+      const compatible = createOpenAICompatible({
+        name: provider === "lm-studio" ? "lmstudio" : "generic-openai",
+        baseURL: normalizeOpenAICompatibleEndpoint(endpoint),
+        headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined,
+        fetch: customFetch,
+      });
+
+      return {
+        model: compatible.imageModel(model),
+        providerName: provider === "lm-studio" ? "LM Studio" : "Generic OpenAI",
+        // No published size list to lean on, so ask for exactly the stored
+        // shape: self-hosted image servers generally accept arbitrary sizes.
+        landscape: { size: "1280x720" },
+      };
+    }
   }
 }
 
