@@ -1,18 +1,9 @@
 "use client";
 
 import { Fragment } from "react";
-import AuthorChip from "@/components/recipes/author-chip";
 import OriginFlag from "@/components/recipes/origin-flag";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
-import {
-  CakeIcon,
-  ClockIcon,
-  FireIcon,
-  MoonIcon,
-  SunIcon,
-  UserGroupIcon,
-} from "@heroicons/react/16/solid";
-import { Chip } from "@heroui/react";
+import { ClockIcon, FireIcon, TagIcon, UserGroupIcon } from "@heroicons/react/16/solid";
 import { useTranslations } from "next-intl";
 
 import type { RecipeCategory } from "@norish/shared/contracts";
@@ -32,7 +23,6 @@ export type RecipeHeaderRecipeLike = {
   totalMinutes: number | null;
   servings?: number | null;
   calories?: number | null;
-  author?: { id?: string; name?: string | null; image?: string | null } | null;
   /** Alpha-2, so the flag and its label are resolved at render time. */
   originCountry?: string | null;
 };
@@ -47,13 +37,6 @@ type RecipeHeaderMobileProps = {
    * hidden fact is exactly the bug a restating bar invites.
    */
   showCalories?: boolean;
-};
-
-const categoryIcons: Record<RecipeCategory, typeof FireIcon> = {
-  Breakfast: FireIcon,
-  Lunch: SunIcon,
-  Dinner: MoonIcon,
-  Snack: CakeIcon,
 };
 
 type GlanceEntry = {
@@ -98,11 +81,68 @@ function GlanceBar({ entries }: { entries: GlanceEntry[] }) {
 }
 
 /**
- * The phone's recipe header, on the page background rather than inside a
- * card: what the dish is, who wrote it down, and the Glance Bar, before the
- * first section starts. Shared by the recipe page and the share page so a
- * shared link looks like Norish; the desktop pages keep
+ * What the recipe is filed under, as one quiet line rather than a paragraph of
+ * chips: a dozen chips below the title compete with the title for the eye, and
+ * none of them is what the reader came for.
+ *
+ * Allergen tags are the exception and keep their fill and their place at the
+ * front, because a warning that reads like the rest of the list is not a
+ * warning. Categories join the same line — they are another way the recipe is
+ * filed, and the library and the calendar are where filing earns its space.
+ */
+function TagLine({
+  categories,
+  tags,
+  allergies,
+  allergySet,
+}: {
+  categories: RecipeCategory[];
+  tags: RecipeTagLike[];
+  allergies: string[];
+  allergySet: Set<string>;
+}) {
+  const tForm = useTranslations("recipes.form");
+
+  const sorted = sortTagsWithAllergyPriority(tags, allergies);
+  const allergens = sorted.filter((tag) => isAllergenTag(tag.name, allergySet));
+  const plain = [
+    ...categories.map((category) => tForm(`category.${category.toLowerCase()}`)),
+    ...sorted.filter((tag) => !isAllergenTag(tag.name, allergySet)).map((tag) => tag.name),
+  ];
+
+  if (allergens.length === 0 && plain.length === 0) return null;
+
+  // Inline flow rather than a flex row: the icon leads the sentence and wraps
+  // with it, instead of being stranded on a line of its own once the list is
+  // longer than the screen.
+  return (
+    <p className="text-muted text-center text-xs leading-relaxed">
+      <TagIcon aria-hidden className="mr-1.5 inline size-3.5 -translate-y-px" />
+      <span className="sr-only">{tForm("tags")}</span>
+
+      {allergens.map((tag) => (
+        <span
+          key={tag.name}
+          className="bg-warning text-warning-foreground mr-1.5 rounded-full px-2 py-0.5 font-medium"
+        >
+          {tag.name}
+        </span>
+      ))}
+
+      {plain.join(", ")}
+    </p>
+  );
+}
+
+/**
+ * The phone's recipe header, centred under the photo it fades out of rather
+ * than inside a card: what the dish is, what it is like, and the Glance Bar,
+ * before the first section starts. Shared by the recipe page and the share
+ * page so a shared link looks like Norish; the desktop pages keep
  * `ReadonlyRecipeSummary` untouched.
+ *
+ * Who added the recipe is not here — it sits with where the recipe came from,
+ * in the Source card, which is the same question asked twice.
  */
 export default function RecipeHeaderMobile({
   recipe,
@@ -112,7 +152,6 @@ export default function RecipeHeaderMobile({
 }: RecipeHeaderMobileProps) {
   const t = useTranslations("recipes.glanceBar");
   const tNutrition = useTranslations("recipes.nutrition");
-  const tForm = useTranslations("recipes.form");
 
   const entries: GlanceEntry[] = [];
   const totalTime = recipe.totalMinutes ? formatMinutesHM(recipe.totalMinutes) : undefined;
@@ -145,63 +184,26 @@ export default function RecipeHeaderMobile({
   }
 
   return (
-    <header className="space-y-4">
-      {recipe.categories.length > 0 && (
-        <div className="text-muted flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          {recipe.categories.map((category) => {
-            const IconComponent = categoryIcons[category] ?? SunIcon;
-
-            return (
-              <span key={category} className="flex items-center gap-1">
-                <IconComponent className="size-4" />
-                {tForm(`category.${category.toLowerCase()}`)}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      <h1 className="text-2xl leading-tight font-bold">
+    <header className="space-y-4 text-center">
+      <h1 className="text-3xl leading-tight font-bold text-balance">
         <OriginFlag className="mr-2" originCountry={recipe.originCountry} />
         {recipe.name}
       </h1>
 
-      {recipe.author && (
-        <div className="w-fit">
-          <AuthorChip
-            image={recipe.author.image}
-            name={recipe.author.name}
-            userId={recipe.author.id}
-          />
-        </div>
-      )}
-
       {recipe.description && (
-        <div className="text-base leading-relaxed">
+        <div className="text-muted text-base leading-relaxed text-balance">
           <SmartMarkdownRenderer text={recipe.description} />
         </div>
       )}
 
       <GlanceBar entries={entries} />
 
-      {recipe.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {sortTagsWithAllergyPriority(recipe.tags, allergies).map((tag) => {
-            const isAllergen = isAllergenTag(tag.name, allergySet);
-
-            return (
-              <Chip
-                key={tag.name}
-                className={isAllergen ? "bg-warning text-warning-foreground" : ""}
-                size="sm"
-                variant="tertiary"
-              >
-                {tag.name}
-              </Chip>
-            );
-          })}
-        </div>
-      )}
+      <TagLine
+        allergies={allergies}
+        allergySet={allergySet}
+        categories={recipe.categories}
+        tags={recipe.tags}
+      />
     </header>
   );
 }

@@ -111,6 +111,9 @@ vi.mock("@/app/(app)/recipes/[id]/components/cookingmode", () => ({
 vi.mock("@/app/(app)/recipes/[id]/components/ingredient-list", () => ({
   default: () => <div data-testid="ingredients-list" />,
 }));
+vi.mock("@/app/(app)/recipes/[id]/components/ingredients-options-menu", () => ({
+  default: () => <div data-testid="ingredients-options" />,
+}));
 vi.mock("@/app/(app)/recipes/[id]/components/servings-control", () => ({
   default: () => <div data-testid="servings-control" />,
 }));

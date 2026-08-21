@@ -27,3 +27,18 @@ screen-reader text so nothing is lost by ear.
 
 - [x] The Glance Bar draws no border, and each entry is icon + value on one line
 - [x] Each entry keeps its written label for a screen reader
+
+**Amended again after review:** the header is centred under a photo that fades
+into the page rather than stopping at a hard edge, so the title reads as
+continuing the picture instead of sitting on a lid dropped over it. Categories
+leave the top of the header and join the tags on one quiet filing line below
+the Glance Bar — a dozen chips under the title compete with the title, and none
+of them is what the reader came for. Allergen tags are the exception and keep
+their fill and their place at the front of that line. The author leaves the
+header entirely for the Source card: where a recipe came from and who brought
+it in are the same question asked twice.
+
+- [x] The photo dissolves into the page background; the title sits in the tail of that fade
+- [x] Title and description are centred
+- [x] Categories and tags render as one line, allergens first and still marked
+- [x] The header names no author

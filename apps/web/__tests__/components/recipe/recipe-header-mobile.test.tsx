@@ -5,19 +5,11 @@ import "@testing-library/jest-dom";
 
 import RecipeHeaderMobile from "@/components/recipes/recipe-header-mobile";
 
-vi.mock("@/components/recipes/author-chip", () => ({
-  default: ({ name }: { name?: string | null }) => <div data-testid="author-chip">{name}</div>,
-}));
 vi.mock("@/components/recipes/origin-flag", () => ({
   default: () => <span data-testid="origin-flag" />,
 }));
 vi.mock("@/components/shared/smart-markdown-renderer", () => ({
   default: ({ text }: { text: string }) => <p>{text}</p>,
-}));
-vi.mock("@heroui/react", () => ({
-  Chip: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <span className={className}>{children}</span>
-  ),
 }));
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) => (key: string) => `${namespace}.${key}`,
@@ -34,7 +26,6 @@ const baseRecipe = (): HeaderRecipe => ({
   servings: 2,
   calories: 520,
   originCountry: "IT",
-  author: { id: "u1", name: "Nonna", image: null },
 });
 
 const TOTAL_TIME = "recipes.glanceBar.totalTime";
@@ -100,7 +91,7 @@ describe("Glance Bar", () => {
 });
 
 describe("RecipeHeaderMobile", () => {
-  it("reads categories, title, author, description, glance bar, tags", () => {
+  it("reads title, description, glance bar, then the filing line", () => {
     render(
       <RecipeHeaderMobile
         allergies={["Nuts"]}
@@ -110,12 +101,10 @@ describe("RecipeHeaderMobile", () => {
     );
 
     const order = [
-      screen.getByText("recipes.form.category.dinner"),
       screen.getByRole("heading", { name: /Cacio e Pepe/ }),
-      screen.getByTestId("author-chip"),
       screen.getByText("A Roman classic."),
       screen.getByText(TOTAL_TIME),
-      screen.getByText("Quick"),
+      screen.getByText(/Quick/),
     ];
 
     for (let i = 0; i < order.length - 1; i++) {
@@ -125,7 +114,17 @@ describe("RecipeHeaderMobile", () => {
     }
   });
 
-  it("sorts allergen tags first and marks them", () => {
+  it("files categories and tags on one quiet line rather than a wall of chips", () => {
+    render(
+      <RecipeHeaderMobile
+        recipe={{ ...baseRecipe(), tags: [{ name: "Quick" }, { name: "Weeknight" }] }}
+      />
+    );
+
+    expect(screen.getByText("recipes.form.category.dinner, Quick, Weeknight")).toBeInTheDocument();
+  });
+
+  it("keeps allergen tags at the front of that line, and marked", () => {
     render(
       <RecipeHeaderMobile
         allergies={["Nuts"]}
@@ -134,16 +133,18 @@ describe("RecipeHeaderMobile", () => {
       />
     );
 
-    const allergen = screen.getByText("Nuts");
-    const other = screen.getByText("Quick");
+    const line = screen.getByText(/Quick/).textContent ?? "";
 
-    expect(allergen.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(allergen.className).toContain("bg-warning");
+    // A warning that reads like the rest of the list is not a warning: it
+    // leads the line and it keeps its fill.
+    expect(line.indexOf("Nuts")).toBeLessThan(line.indexOf("Quick"));
+    expect(screen.getByText("Nuts").className).toContain("bg-warning");
   });
 
-  it("carries no source link beside the title", () => {
+  it("names neither the author nor a source — both belong to the Source card", () => {
     render(<RecipeHeaderMobile recipe={baseRecipe()} />);
 
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.queryByText("Nonna")).not.toBeInTheDocument();
   });
 });

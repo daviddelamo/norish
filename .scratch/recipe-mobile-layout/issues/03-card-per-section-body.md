@@ -26,3 +26,11 @@ looking. What is drawn instead is the stepper: `−` and `+` as two halves of on
 filled segment pair.
 
 - [x] The servings row has no border; the `−` / `+` pair is one filled segmented control
+
+**Amended again after review:** every amount the servings row scales rolls to
+its new value rather than being repainted, so a reader can see that the figure
+moved rather than that the page redrew. Readers who ask for less motion get the
+plain swap.
+
+- [x] Ingredient amounts and the servings count transition when they change
+- [x] `prefers-reduced-motion` renders the swap without animation

@@ -12,3 +12,13 @@
 - [x] Neither control renders in the mobile Ingredients heading row any more
 - [x] `recipe-page-desktop.tsx` is unchanged
 - [x] New menu strings are added across every supported locale and `pnpm i18n:check` passes
+
+**Amended after review:** the two controls did not stay in the `⋯` menu. They
+act on the ingredient list, so they are reached from it — a reader looking at
+"1½ cups" and wanting "1.5" looks at the list, not at the page. Both fold into
+one options menu on the Ingredients card header, and the page menu keeps only
+the actions that act on the recipe.
+
+- [x] The Ingredients card header carries an options menu with the amount display and the conversions
+- [x] Neither control remains in the `⋯` menu
+- [x] Conversion keeps its Hidden Item gate and its AI marking wherever it is drawn

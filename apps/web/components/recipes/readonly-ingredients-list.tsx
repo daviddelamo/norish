@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { GroceryCheckbox } from "@/components/groceries/grocery-checkbox";
+import { AnimatedAmount } from "@/components/recipes/animated-amount";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
 import { useAmountDisplayPreference } from "@/hooks/use-amount-display-preference";
 import { useUnitFormatter } from "@/hooks/use-unit-formatter";
@@ -135,13 +136,14 @@ function ReadonlyIngredientsListContent({
                   }`}
                 >
                   {amount !== "" && (
-                    <span
+                    // Servings and unit conversions both rewrite this in
+                    // place, so it moves rather than blinks.
+                    <AnimatedAmount
                       className={`text-base font-bold tabular-nums ${
                         interactive && isChecked ? "text-muted line-through" : "text-foreground"
                       }`}
-                    >
-                      {amount}
-                    </span>
+                      value={amount}
+                    />
                   )}
                   {unit && (
                     <span

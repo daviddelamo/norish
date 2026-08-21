@@ -11,3 +11,11 @@
 - [x] The title carries no source icon
 - [x] The card renders on share-mobile
 - [x] New strings are added across every supported locale and `pnpm i18n:check` passes
+
+**Amended after review:** the card also names who imported the recipe. It used
+to sit under the title on the phone, where it competed with the dish for the
+top of the page; where the recipe came from and who brought it in are the same
+question, so they answer it together. The card renders for either on its own.
+
+- [x] The Source card names the importer beside the source URL
+- [x] A recipe with an importer but no URL still renders the card

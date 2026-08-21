@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatedAmount } from "@/components/recipes/animated-amount";
 import { MinusIcon, PlusIcon } from "@heroicons/react/16/solid";
 import { Button } from "@heroui/react";
 import { useTranslations } from "next-intl";
@@ -95,7 +96,10 @@ export default function ServingsControl({
     // drawn instead is the stepper itself, as a single filled segment pair.
     return (
       <div className="flex w-full items-center justify-between gap-3">
-        <span className="text-base font-medium">{t("servingsCount", { count: servings })}</span>
+        <AnimatedAmount
+          className="text-base font-medium"
+          value={t("servingsCount", { count: servings })}
+        />
         <div className="bg-surface-secondary flex shrink-0 items-center rounded-full">
           {decrease}
           <span aria-hidden className="bg-border h-5 w-px shrink-0" />

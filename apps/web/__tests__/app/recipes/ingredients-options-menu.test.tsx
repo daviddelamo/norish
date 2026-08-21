@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import "@testing-library/jest-dom";
 
-import ActionsMenu from "@/app/(app)/recipes/[id]/components/actions-menu";
+import IngredientsOptionsMenu from "@/app/(app)/recipes/[id]/components/ingredients-options-menu";
 
 const mocks = vi.hoisted(() => ({
   hidden: [] as string[],
@@ -16,45 +16,12 @@ const mocks = vi.hoisted(() => ({
   toggleAmountMode: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
-}));
-
-vi.mock("@/components/Panel/consumers", () => ({
-  MiniCalendar: () => null,
-  MiniGroceries: () => null,
-}));
-
-vi.mock("@/components/shared/delete-recipe-modal", () => ({
-  DeleteRecipeModal: () => null,
-}));
-
-vi.mock("@/app/(app)/recipes/[id]/components/recipe-share-panel", () => ({
-  default: () => null,
-}));
-
-vi.mock("@/app/(app)/recipes/[id]/components/wake-lock-context", () => ({
-  useWakeLockContext: () => ({ isSupported: false, isActive: false, toggle: vi.fn() }),
-}));
-
 vi.mock("@/context/permissions-context", () => ({
-  usePermissionsContext: () => ({
-    canEditRecipe: () => true,
-    canDeleteRecipe: () => true,
-    isAIEnabled: mocks.isAIEnabled,
-  }),
-}));
-
-vi.mock("@/context/recipes-context", () => ({
-  useRecipesContext: () => ({ deleteRecipe: vi.fn() }),
+  usePermissionsContext: () => ({ isAIEnabled: mocks.isAIEnabled }),
 }));
 
 vi.mock("@/context/hidden-items-context", () => ({
   useHiddenItems: () => mocks.hidden,
-}));
-
-vi.mock("@/hooks/user", () => ({
-  useActiveAllergies: () => ({ allergies: [] }),
 }));
 
 vi.mock("@/hooks/use-amount-display-preference", () => ({
@@ -69,15 +36,12 @@ vi.mock("@/app/(app)/recipes/[id]/context", () => ({
   useRecipeContextRequired: () => ({
     recipe: {
       id: "recipe-1",
-      userId: "owner-1",
       name: "Cacio e Pepe",
-      version: 1,
       systemUsed: mocks.systemUsed,
       recipeIngredients: mocks.ingredientSystems.map((systemUsed) => ({ systemUsed })),
     },
     convertingTo: mocks.convertingTo,
     startConversion: mocks.startConversion,
-    enrichment: { states: {}, isBusy: () => false, request: vi.fn() },
   }),
 }));
 
@@ -107,7 +71,6 @@ vi.mock("@heroui/react", () => ({
     Item: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   }),
   Label: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-  useOverlayState: () => ({ isOpen: false, open: vi.fn(), close: vi.fn() }),
 }));
 
 vi.mock("next-intl", () => ({
@@ -126,14 +89,14 @@ beforeEach(() => {
 });
 
 /**
- * The phone's Ingredients card has room for the servings row and nothing
- * else, so measurement conversion and the amount display preference are
- * drawn here instead. Conversion keeps its Hidden Item gate: hiding it takes
- * the action, not just the old control.
+ * Fractions-versus-decimals and the measurement system act on the ingredient
+ * list, so they are reached from the Ingredients card rather than from the
+ * page's `⋯` menu. Conversion keeps its Hidden Item gate: hiding it takes the
+ * action, not just the control it used to be drawn as.
  */
-describe("ActionsMenu measurement controls", () => {
+describe("IngredientsOptionsMenu", () => {
   it("offers the systems the recipe is not already in", () => {
-    render(<ActionsMenu id="recipe-1" />);
+    render(<IngredientsOptionsMenu />);
 
     expect(screen.getByText("recipes.convert.toUS")).toBeInTheDocument();
     // Converting to the system it is already in is not an action.
@@ -141,7 +104,7 @@ describe("ActionsMenu measurement controls", () => {
   });
 
   it("converts on press", () => {
-    render(<ActionsMenu id="recipe-1" />);
+    render(<IngredientsOptionsMenu />);
 
     fireEvent.click(screen.getByText("recipes.convert.toUS").closest("button")!);
 
@@ -151,7 +114,7 @@ describe("ActionsMenu measurement controls", () => {
   it("drops the conversion action for a reader who has hidden conversion", () => {
     mocks.hidden = ["conversion"];
 
-    render(<ActionsMenu id="recipe-1" />);
+    render(<IngredientsOptionsMenu />);
 
     expect(screen.queryByText("recipes.convert.toUS")).not.toBeInTheDocument();
     expect(screen.queryByText("recipes.convert.toMetric")).not.toBeInTheDocument();
@@ -160,7 +123,7 @@ describe("ActionsMenu measurement controls", () => {
   it("offers nothing to convert to when only one system is reachable", () => {
     mocks.ingredientSystems = ["metric"];
 
-    render(<ActionsMenu id="recipe-1" />);
+    render(<IngredientsOptionsMenu />);
 
     expect(screen.queryByText("recipes.convert.toUS")).not.toBeInTheDocument();
   });
@@ -169,17 +132,15 @@ describe("ActionsMenu measurement controls", () => {
     mocks.ingredientSystems = ["metric"];
     mocks.isAIEnabled = true;
 
-    render(<ActionsMenu id="recipe-1" />);
+    render(<IngredientsOptionsMenu />);
 
     expect(screen.getByText("recipes.convert.toUS")).toBeInTheDocument();
   });
 
   it("toggles the app-wide amount display", () => {
-    render(<ActionsMenu id="recipe-1" />);
+    render(<IngredientsOptionsMenu />);
 
-    const item = screen.getByText("recipes.detail.switchToFraction");
-
-    fireEvent.click(item.closest("button")!);
+    fireEvent.click(screen.getByText("recipes.detail.switchToFraction").closest("button")!);
 
     expect(mocks.toggleAmountMode).toHaveBeenCalled();
   });
@@ -187,7 +148,7 @@ describe("ActionsMenu measurement controls", () => {
   it("names the other display mode once fractions are showing", () => {
     mocks.amountMode = "fraction";
 
-    render(<ActionsMenu id="recipe-1" />);
+    render(<IngredientsOptionsMenu />);
 
     expect(screen.getByText("recipes.detail.switchToDecimal")).toBeInTheDocument();
   });
@@ -195,9 +156,10 @@ describe("ActionsMenu measurement controls", () => {
   it("keeps the amount display for a reader who has hidden conversion", () => {
     mocks.hidden = ["conversion"];
 
-    render(<ActionsMenu id="recipe-1" />);
+    render(<IngredientsOptionsMenu />);
 
-    // Fractions-versus-decimals is not the conversion Hidden Item.
+    // Fractions-versus-decimals is not the conversion Hidden Item, so the menu
+    // still has something to say.
     expect(screen.getByText("recipes.detail.switchToFraction")).toBeInTheDocument();
   });
 });

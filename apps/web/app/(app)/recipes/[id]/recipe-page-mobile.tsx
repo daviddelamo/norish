@@ -3,6 +3,7 @@ import ActionsMenu from "@/app/(app)/recipes/[id]/components/actions-menu";
 import AddToGroceries from "@/app/(app)/recipes/[id]/components/add-to-groceries-button";
 import CookingMode from "@/app/(app)/recipes/[id]/components/cookingmode";
 import IngredientsList from "@/app/(app)/recipes/[id]/components/ingredient-list";
+import IngredientsOptionsMenu from "@/app/(app)/recipes/[id]/components/ingredients-options-menu";
 import NotesCard from "@/app/(app)/recipes/[id]/components/notes-card";
 import NutritionCard from "@/app/(app)/recipes/[id]/components/nutrition-card";
 import ProvenanceCard from "@/app/(app)/recipes/[id]/components/provenance-card";
@@ -66,6 +67,11 @@ export default function RecipePageMobile() {
         className="relative w-full overflow-hidden"
         style={{ height: MOBILE_RECIPE_MEDIA_HEIGHT_STYLE }}
       >
+        {/* The photo runs out rather than stopping: it dissolves into the
+            page's own ground over its lower half, so the title reads as
+            continuing the picture instead of sitting on a lid dropped over
+            it. Drawn over the media rather than as a lightened image, so a
+            video and a carousel fade the same way a still does. */}
         <DoubleTapContainer
           className="h-full w-full"
           doubleTapEnabled={showFavorites}
@@ -107,12 +113,17 @@ export default function RecipePageMobile() {
             }
           />
         </DoubleTapContainer>
+
+        <div
+          aria-hidden
+          className="from-background via-background/45 pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-20% via-55% to-transparent"
+        />
       </div>
 
-      {/* The header sits on the page background; only the sections are cards. */}
-      {/* The trailing padding clears the floating cook pill, so the last card
-          is never hidden behind it. */}
-      <div className="bg-background relative z-10 -mt-6 flex flex-col gap-4 rounded-t-3xl px-4 pt-5 pb-12">
+      {/* The header sits in the tail of that fade, on the page background;
+          only the sections below it are cards. The trailing padding clears the
+          floating cook pill, so the last card is never hidden behind it. */}
+      <div className="relative z-10 -mt-24 flex flex-col gap-4 px-4 pb-12">
         {/* The Glance Bar restates what the sections below render, so it reads
             the servings the ingredients are actually scaled to rather than the
             stored figure — a bar disagreeing with the row under it is exactly
@@ -126,7 +137,13 @@ export default function RecipePageMobile() {
 
         <Card className="rounded-2xl">
           <Card.Content className="space-y-4 p-5">
-            <h2 className="text-lg font-semibold">{t("ingredients")}</h2>
+            {/* Fractions-versus-decimals and the measurement system act on this
+                list, so they are reached from it rather than from the page's
+                `⋯` menu. */}
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">{t("ingredients")}</h2>
+              <IngredientsOptionsMenu />
+            </div>
 
             {recipe.servings ? <ServingsControl variant="row" /> : null}
 
