@@ -85,7 +85,7 @@ export default function CookingTimeCard({ recipe, inCard = true }: CookingTimeCa
   if (!inCard) return content;
 
   return (
-    <Card className="dish-tint-exempt rounded-2xl">
+    <Card className="rounded-2xl">
       <Card.Content className="p-5">{content}</Card.Content>
     </Card>
   );

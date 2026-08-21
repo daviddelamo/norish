@@ -95,3 +95,7 @@ The phone recipe page becomes a **header on the page background followed by a st
 - The screenshots that prompted this are a third-party iOS app. Two of its elements are deliberately not copied: its translucent cards (ADR-0020) and its use of the extracted colour at full strength (ADR-0023).
 - Definition of done follows the repo gates plus feature docs: release notes for Target Version `0.21.0-beta` and a docs page per `docs/agents/feature-docs.md`, and `pnpm i18n:check` across all locales for the new strings.
 - Preparatory work — the header extraction, the `⋯` menu absorbing two controls, and deleting the orphaned `add-to-calendar-button.tsx` — belongs as separate commits in the same PR, per the maintainer's convention.
+
+## Comments
+
+**2026-08-21, post-review amendment (maintainer feedback on the live pages):** the Glance Bar and Cooking Time card exemptions are dropped — on a tinted page the two exempt surfaces read as stark white islands rather than restraint, so every surface now adjusts. In their place the tint is graded by role: the page ground carries the Dish Colour's chroma in full (ceiling raised 0.04 → 0.05), the cards take 0.3× of it at a 0.99 lightness cap so they stand off the ground, the in-card surfaces 0.7×, and `--default` (the chips and quiet controls) 0.5× so nothing on a warm page reads cold. Card-versus-ground contrast comes from that chroma spread plus the cards' near-white cap — lightness stays the theme's, per ADR-0023.

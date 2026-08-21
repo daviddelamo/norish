@@ -17,7 +17,13 @@ const globalsCss = fs.readFileSync(
   "utf8"
 );
 
-const TINTED_TOKENS = ["background", "surface", "surface-secondary", "surface-tertiary"] as const;
+const TINTED_TOKENS = [
+  "background",
+  "surface",
+  "surface-secondary",
+  "surface-tertiary",
+  "default",
+] as const;
 
 function blockOf(source: string, selector: string): string {
   const start = source.indexOf(selector);
@@ -42,9 +48,12 @@ describe("dish tint CSS invariants", () => {
   });
 
   it("rebuilds each tinted token from its own untinted lightness and the dish channels", () => {
+    // The chroma may be the dish's in full or scaled down by a fixed factor
+    // (ground at full strength, cards light, chips between); the hue is
+    // always the dish's, the lightness always the untinted token's own.
     for (const token of TINTED_TOKENS) {
       const declaration = new RegExp(
-        `--${token}:\\s*oklch\\(\\s*from var\\(--untinted-${token}\\)\\s*(l|calc\\(min\\(l,[^)]*\\)\\))\\s*var\\(--dish-c[^)]*\\)\\s*var\\(--dish-h[^)]*\\)\\s*\\)`
+        `--${token}:\\s*oklch\\(\\s*from var\\(--untinted-${token}\\)\\s*(l|calc\\(min\\(l,[^)]*\\)\\))\\s*(var\\(--dish-c[^)]*\\)|calc\\(var\\(--dish-c[^)]*\\)\\s*\\*\\s*[\\d.]+\\s*\\))\\s*var\\(--dish-h[^)]*\\)\\s*\\)`
       );
 
       expect(tintScope).toMatch(declaration);
@@ -57,14 +66,6 @@ describe("dish tint CSS invariants", () => {
       .filter((name) => !name!.startsWith("untinted-") && !name!.startsWith("dish-"));
 
     expect(overridden.sort()).toEqual([...TINTED_TOKENS].sort());
-  });
-
-  it("lets the exempt surfaces re-pin exactly the tokens the tint moves", () => {
-    const exempt = blockOf(globalsCss, ".dish-tint-exempt");
-
-    for (const token of TINTED_TOKENS) {
-      expect(exempt).toContain(`--${token}: var(--untinted-${token});`);
-    }
   });
 
   it("introduces no lightness of the dish's own anywhere in the tint", () => {

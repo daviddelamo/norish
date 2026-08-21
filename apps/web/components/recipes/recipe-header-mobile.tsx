@@ -65,7 +65,7 @@ function GlanceBar({ entries }: { entries: GlanceEntry[] }) {
 
   return (
     <dl
-      className="bg-surface dish-tint-exempt flex items-center rounded-2xl px-2 py-3 shadow-sm"
+      className="bg-surface flex items-center rounded-2xl px-2 py-3 shadow-sm"
       data-testid="glance-bar"
     >
       {entries.map((entry, index) => (

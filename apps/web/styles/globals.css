@@ -210,32 +210,31 @@
     --untinted-surface: var(--surface);
     --untinted-surface-secondary: var(--surface-secondary);
     --untinted-surface-tertiary: var(--surface-tertiary);
+    --untinted-default: var(--default);
   }
 
+  /* One hue, three strengths: the page ground carries the dish's chroma in
+     full — the enveloping warmth is most of the effect — while the cards
+     take a light wash of the same hue so they stand off the ground instead
+     of melting into it, and the in-card surfaces and chips sit in between
+     so nothing on a warm page reads cold. Every surface adjusts, none at
+     the same strength; the contrast between card and ground is chroma's,
+     lightness stays the theme's. */
   [data-dish-tint] {
     --background: oklch(from var(--untinted-background) l var(--dish-c, 0) var(--dish-h, 0));
     /* The light theme's card is pure white, and at lightness 1 no chroma
        survives gamut mapping — the card could never take any hue at all.
-       The 0.98 ceiling is the theme's own, dish-independent allowance for a
+       The 0.99 ceiling is the theme's own, dish-independent allowance for a
        tinted card; every other lightness passes through untouched. */
     --surface: oklch(
-      from var(--untinted-surface) calc(min(l, 0.98)) var(--dish-c, 0) var(--dish-h, 0)
+      from var(--untinted-surface) calc(min(l, 0.99)) calc(var(--dish-c, 0) * 0.3) var(--dish-h, 0)
     );
     --surface-secondary: oklch(
-      from var(--untinted-surface-secondary) l var(--dish-c, 0) var(--dish-h, 0)
+      from var(--untinted-surface-secondary) l calc(var(--dish-c, 0) * 0.7) var(--dish-h, 0)
     );
     --surface-tertiary: oklch(
-      from var(--untinted-surface-tertiary) l var(--dish-c, 0) var(--dish-h, 0)
+      from var(--untinted-surface-tertiary) l calc(var(--dish-c, 0) * 0.7) var(--dish-h, 0)
     );
-  }
-
-  /* The Glance Bar and the Cooking Time card sit out of the tint: both draw
-     quantitative colour (the time bar's two hues, the bar's figures) and
-     read them against the plain theme surface. */
-  .dish-tint-exempt {
-    --background: var(--untinted-background);
-    --surface: var(--untinted-surface);
-    --surface-secondary: var(--untinted-surface-secondary);
-    --surface-tertiary: var(--untinted-surface-tertiary);
+    --default: oklch(from var(--untinted-default) l calc(var(--dish-c, 0) * 0.5) var(--dish-h, 0));
   }
 }

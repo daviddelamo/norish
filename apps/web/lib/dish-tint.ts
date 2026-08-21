@@ -18,11 +18,13 @@ import { oklchHueChromaFromSrgb } from "@norish/shared/lib/oklab";
  */
 
 /**
- * How much saturation a dish may put into the page. The theme's own neutral
- * ground sits at ~0.008–0.016 chroma, so this is a clearly visible warmth
- * without ever approaching the accent's 0.083.
+ * How much saturation a dish may put into the page ground. The theme's own
+ * neutral ground sits at ~0.008–0.016 chroma, so this is a clearly visible
+ * warmth without approaching the accent's 0.083; the cards take only a
+ * fraction of it (globals.css), so the ceiling also sets how far a card can
+ * stand off the ground.
  */
-export const MAX_DISH_TINT_CHROMA = 0.04;
+export const MAX_DISH_TINT_CHROMA = 0.05;
 
 export type DishTintStyle = CSSProperties & {
   "--dish-h": string;
