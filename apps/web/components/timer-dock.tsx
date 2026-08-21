@@ -177,7 +177,7 @@ export function TimerDock({
             {/* Morphing Container */}
             <motion.div
               layout
-              className={`border-border bg-surface pointer-events-auto overflow-hidden border shadow-xl ${isExpanded ? "w-80 rounded-2xl" : "rounded-full"}`}
+              className={`border-border bg-surface overflow-hidden border shadow-xl ${floatingDock.pillClassName} ${isExpanded ? "w-80 rounded-2xl" : "rounded-full"}`}
               transition={{
                 duration: 0.25,
                 ease: [0.4, 0, 0.2, 1],

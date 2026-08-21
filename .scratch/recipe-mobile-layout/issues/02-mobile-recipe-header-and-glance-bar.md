@@ -42,3 +42,11 @@ it in are the same question asked twice.
 - [x] Title and description are centred
 - [x] Categories and tags render as one line, allergens first and still marked
 - [x] The header names no author
+
+**Amended a third time:** a long imported description ran to a dozen centred
+lines and pushed the ingredients off the screen. It gets four and a control to
+ask for the rest; a description that already fits is drawn plain, with nothing
+offered for something there is no more of.
+
+- [x] The description clamps to four lines with a show-more control
+- [x] A description that already fits draws no control

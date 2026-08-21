@@ -39,6 +39,8 @@
     "viewOriginal": "Bekijk origineel recept",
     "ingredients": "Ingrediënten",
     "ingredientOptions": "Ingrediëntopties",
+    "showMore": "Meer tonen",
+    "showLess": "Minder tonen",
     "steps": "Stappen",
     "notes": "Notities",
     "addToGroceries": "Toevoegen aan boodschappen",
@@ -55,6 +57,7 @@
     "switchToFraction": "Toon breuken",
     "servingsCount": "{count, plural, one {# portie} other {# porties}}",
     "source": "Bron",
+    "addedBy": "Toegevoegd door {name}",
     "decreaseServings": "Minder porties",
     "increaseServings": "Meer porties"
   },

@@ -19,3 +19,7 @@ question, so they answer it together. The card renders for either on its own.
 
 - [x] The Source card names the importer beside the source URL
 - [x] A recipe with an importer but no URL still renders the card
+
+**Amended after review:** the importer is a row in the same shape as the source
+link above it, not a bordered chip. The card is already the object here, and a
+chip inside it is a second edge saying nothing the row does not.

@@ -39,6 +39,8 @@
     "viewOriginal": "Виж оригиналната рецепта",
     "ingredients": "Съставки",
     "ingredientOptions": "Опции за съставките",
+    "showMore": "Покажи повече",
+    "showLess": "Покажи по-малко",
     "steps": "Стъпки",
     "notes": "Бележки",
     "addToGroceries": "Добави в продуктите",
@@ -55,6 +57,7 @@
     "switchToFraction": "Покажи дроби",
     "servingsCount": "{count, plural, one {# порция} other {# порции}}",
     "source": "Източник",
+    "addedBy": "Добавено от {name}",
     "decreaseServings": "По-малко порции",
     "increaseServings": "Повече порции"
   },

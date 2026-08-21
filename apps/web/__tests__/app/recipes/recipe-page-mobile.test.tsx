@@ -392,9 +392,11 @@ describe("RecipePageMobile hidden items", () => {
     render(<RecipePageMobile />);
 
     // The bar restates what the sections below render, so it cannot disagree
-    // with the servings row an inch under it.
-    expect(screen.getByText("5")).toBeInTheDocument();
-    expect(screen.getByText("recipes.glanceBar.servings")).toBeInTheDocument();
+    // with the stepper an inch under it. Read off the bar's own entry, since
+    // the stepper is showing the same figure elsewhere on the page.
+    const entry = screen.getByText("recipes.glanceBar.servings").parentElement;
+
+    expect(entry?.textContent).toContain("5");
   });
 
   it("drops the notes card for a reader who has hidden notes", () => {

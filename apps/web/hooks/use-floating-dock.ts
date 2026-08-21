@@ -15,6 +15,12 @@ type FloatingDockOptions = {
   align: "start" | "end";
   /** Hold the dock at full size whatever the nav does, e.g. while expanded. */
   disabled?: boolean;
+  /**
+   * Leave with the nav rather than shrinking with it. For a control the reader
+   * can come back for at any time — a dock carrying a running timer has
+   * something to say while it is scrolled past, and a cook button does not.
+   */
+  hideWithNav?: boolean;
 };
 
 /**
@@ -27,14 +33,20 @@ type FloatingDockOptions = {
  * shrink about the bar's own anchor — slightly smaller, slightly further in —
  * which is what keeps the two aligned at either size.
  */
-export function useFloatingDock({ align, disabled = false }: FloatingDockOptions) {
+export function useFloatingDock({
+  align,
+  disabled = false,
+  hideWithNav = false,
+}: FloatingDockOptions) {
   const isMobile = useIsMobile();
   const { isVisible } = useAutoHide({ disabled });
 
   const isShrunken = isMobile && !isVisible;
+  const isHidden = isShrunken && hideWithNav;
 
   return {
     isNavVisible: isVisible,
+    isHidden,
     /**
      * The row spans the viewport so the shrink pivots on the same centre the
      * nav's does; only the pill inside it takes pointer events.
@@ -42,6 +54,8 @@ export function useFloatingDock({ align, disabled = false }: FloatingDockOptions
     className: `pointer-events-none fixed inset-x-0 flex px-4 ${
       align === "end" ? "justify-end" : "justify-start"
     }`,
+    /** Applied to the pill itself, so a hidden dock cannot swallow a tap. */
+    pillClassName: isHidden ? "pointer-events-none" : "pointer-events-auto",
     style: {
       bottom: isMobile ? cssFloatingDockBottomWithNav : cssFloatingDockBottomDesktop,
       originY: 1,
@@ -50,6 +64,8 @@ export function useFloatingDock({ align, disabled = false }: FloatingDockOptions
       ? {
           bottom: isShrunken ? cssFloatingDockBottomWithShrunkenNav : cssFloatingDockBottomWithNav,
           scale: isShrunken ? MOBILE_NAV_SHRUNKEN_SCALE : 1,
+          opacity: isHidden ? 0 : 1,
+          y: isHidden ? 24 : 0,
         }
       : {},
     transition: { duration: 0.25, ease: "easeInOut" as const },

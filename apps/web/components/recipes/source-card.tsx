@@ -1,6 +1,6 @@
 "use client";
 
-import AuthorChip from "@/components/recipes/author-chip";
+import UserAvatar from "@/components/shared/user-avatar";
 import { ArrowTopRightOnSquareIcon, GlobeAltIcon } from "@heroicons/react/16/solid";
 import { Card } from "@heroui/react";
 import { useTranslations } from "next-intl";
@@ -37,7 +37,9 @@ function sourceLabel(url: string): string {
 export default function SourceCard({ recipe, inCard = true }: SourceCardProps) {
   const t = useTranslations("recipes.detail");
 
-  const author = recipe.author?.name ? recipe.author : null;
+  // Narrowed to a name that is actually there, so the credit line never reads
+  // "Added by null".
+  const author = recipe.author?.name ? { ...recipe.author, name: recipe.author.name } : null;
 
   if (!recipe.url && !author) return null;
 
@@ -60,8 +62,12 @@ export default function SourceCard({ recipe, inCard = true }: SourceCardProps) {
       )}
 
       {author && (
-        <div className="w-fit">
-          <AuthorChip image={author.image} name={author.name} userId={author.id} />
+        // A row in the same shape as the source link above it, not a bordered
+        // pill: the card is already the object here, and a chip inside it is a
+        // second edge saying nothing the row does not.
+        <div className="flex items-center gap-2 text-base">
+          <UserAvatar image={author.image} name={author.name} size="xs" userId={author.id} />
+          <span className="text-muted truncate">{t("addedBy", { name: author.name })}</span>
         </div>
       )}
     </div>

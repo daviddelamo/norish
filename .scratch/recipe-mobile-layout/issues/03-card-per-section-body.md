@@ -34,3 +34,15 @@ plain swap.
 
 - [x] Ingredient amounts and the servings count transition when they change
 - [x] `prefers-reduced-motion` renders the swap without animation
+
+**Amended a third time:** the servings stepper is not a row of its own. It sits
+inline with the Ingredients heading in the same shape the Nutrition card uses
+for portions, with the options menu beside it — two controls that do the same
+job on the same page, drawn the same way. The roll is per character rather than
+per value, the way an odometer moves: a digit that did not change stays still.
+Only the figure rolls, never the word beside it, and the Nutrition card's own
+figures roll too.
+
+- [x] The servings stepper is inline with the heading, sized as the Nutrition one
+- [x] Amounts roll per digit, and only the figure rolls
+- [x] Calories, macros and the portion count roll the same way

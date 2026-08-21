@@ -39,6 +39,8 @@
     "viewOriginal": "원본 레시피 보기",
     "ingredients": "재료",
     "ingredientOptions": "재료 옵션",
+    "showMore": "더 보기",
+    "showLess": "간략히 보기",
     "steps": "단계",
     "notes": "메모",
     "addToGroceries": "장보기에 추가",
@@ -55,6 +57,7 @@
     "switchToFraction": "분수 표시",
     "servingsCount": "{count}인분",
     "source": "출처",
+    "addedBy": "{name} 님이 추가함",
     "decreaseServings": "인분 줄이기",
     "increaseServings": "인분 늘리기"
   },

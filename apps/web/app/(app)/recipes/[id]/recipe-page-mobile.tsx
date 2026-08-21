@@ -137,15 +137,18 @@ export default function RecipePageMobile() {
 
         <Card className="rounded-2xl">
           <Card.Content className="space-y-4 p-5">
-            {/* Fractions-versus-decimals and the measurement system act on this
-                list, so they are reached from it rather than from the page's
-                `⋯` menu. */}
-            <div className="flex items-center justify-between gap-3">
+            {/* The same header shape the Nutrition card uses: the heading, the
+                stepper that scales what is under it, and the options that act
+                on it. Fractions-versus-decimals and the measurement system are
+                reached from the list rather than from the page's `⋯` menu,
+                because the list is what they change. */}
+            <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">{t("ingredients")}</h2>
-              <IngredientsOptionsMenu />
+              <div className="flex shrink-0 items-center gap-1">
+                {recipe.servings ? <ServingsControl /> : null}
+                <IngredientsOptionsMenu />
+              </div>
             </div>
-
-            {recipe.servings ? <ServingsControl variant="row" /> : null}
 
             <IngredientsList />
 

@@ -5,6 +5,7 @@ import { useAmountDisplayPreference } from "@/hooks/use-amount-display-preferenc
 import {
   AdjustmentsHorizontalIcon,
   ArrowsRightLeftIcon,
+  CalculatorIcon,
   SparklesIcon,
 } from "@heroicons/react/20/solid";
 import { Button, Dropdown, Label } from "@heroui/react";
@@ -47,11 +48,9 @@ export default function IngredientsOptionsMenu() {
     {
       key: "amount-display",
       label: mode === "fraction" ? t("switchToDecimal") : t("switchToFraction"),
-      icon: (
-        <span aria-hidden className="flex size-5 items-center justify-center text-xs font-medium">
-          {mode === "fraction" ? "0.5" : "½"}
-        </span>
-      ),
+      // A solid icon like the two beside it: a text glyph at this size reads
+      // as a different weight and never lines up with them.
+      icon: <CalculatorIcon className="size-5" />,
       onPress: toggleMode,
     },
   ];
@@ -81,14 +80,16 @@ export default function IngredientsOptionsMenu() {
 
   return (
     <Dropdown isOpen={isOpen} onOpenChange={setIsOpen}>
+      {/* Sized exactly as the stepper beside it: three controls in one header
+          that are almost the same size read as a mistake. */}
       <Button
         isIconOnly
         aria-label={t("ingredientOptions")}
-        className="text-muted size-8 min-w-8 rounded-full"
+        className="bg-surface-secondary text-muted"
         size="sm"
         variant="tertiary"
       >
-        <AdjustmentsHorizontalIcon className="size-5" />
+        <AdjustmentsHorizontalIcon className="size-4" />
       </Button>
 
       <Dropdown.Popover className="bg-overlay z-[500]">

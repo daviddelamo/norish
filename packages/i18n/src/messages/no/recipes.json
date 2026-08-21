@@ -39,6 +39,8 @@
     "viewOriginal": "Se original oppskrift",
     "ingredients": "Ingredienser",
     "ingredientOptions": "Ingrediensalternativer",
+    "showMore": "Vis mer",
+    "showLess": "Vis mindre",
     "steps": "Fremgangsmåte",
     "notes": "Notater",
     "addToGroceries": "Legg til i handleliste",
@@ -55,6 +57,7 @@
     "switchToFraction": "Vis brøker",
     "servingsCount": "{count, plural, one {# porsjon} other {# porsjoner}}",
     "source": "Kilde",
+    "addedBy": "Lagt til av {name}",
     "decreaseServings": "Færre porsjoner",
     "increaseServings": "Flere porsjoner"
   },

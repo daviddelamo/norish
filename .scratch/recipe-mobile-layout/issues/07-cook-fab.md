@@ -31,3 +31,13 @@ itself as well.
 - [x] Neither floating item drops behind the nav when the nav hides; both shrink with it
 - [x] Both are inset with the nav's own edges at either size
 - [x] The collapsed timer dock is the same height as the cook pill
+
+**Amended again:** the cook pill leaves with the nav rather than riding along
+shrunken, and both sit closer to the bar than they did. The two floating items
+part company here on purpose: a dock carrying a running timer has something to
+say while it is scrolled past, and a cook button does not — it is one gesture
+away when the reader stops. A pill on its way out takes no taps either.
+
+- [x] The cook pill fades out with the nav and comes back with it
+- [x] The timer dock still shrinks rather than leaving
+- [x] Neither takes a tap while it is hidden

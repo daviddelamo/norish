@@ -56,7 +56,7 @@ export const MOBILE_NAV_SHRUNKEN_SCALE = 0.8;
 // rise and fall with the nav together instead of drifting apart. Both offsets
 // are measured from the nav's own anchor, which is what makes the shrunken
 // pair scale about the same point and stay aligned.
-const FLOATING_DOCK_ABOVE_NAV_REM = 4.5;
+const FLOATING_DOCK_ABOVE_NAV_REM = 3.75;
 export const cssFloatingDockBottomWithNav = `calc(max(env(safe-area-inset-bottom), 1rem) + ${FLOATING_DOCK_ABOVE_NAV_REM}rem)`;
 export const cssFloatingDockBottomWithShrunkenNav = `calc(max(env(safe-area-inset-bottom), 1rem) + ${FLOATING_DOCK_ABOVE_NAV_REM * MOBILE_NAV_SHRUNKEN_SCALE}rem)`;
 export const cssFloatingDockBottomDesktop = "1rem";

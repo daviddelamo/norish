@@ -39,6 +39,8 @@
     "viewOriginal": "Ver receita original",
     "ingredients": "Ingredientes",
     "ingredientOptions": "Opções de ingredientes",
+    "showMore": "Mostrar mais",
+    "showLess": "Mostrar menos",
     "steps": "Etapas",
     "notes": "Notas",
     "addToGroceries": "Adicionar à lista de compras",
@@ -55,6 +57,7 @@
     "switchToFraction": "Mostrar frações",
     "servingsCount": "{count, plural, one {# porção} other {# porções}}",
     "source": "Fonte",
+    "addedBy": "Adicionado por {name}",
     "decreaseServings": "Menos porções",
     "increaseServings": "Mais porções"
   },

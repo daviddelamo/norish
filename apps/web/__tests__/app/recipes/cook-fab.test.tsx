@@ -5,11 +5,7 @@ import "@testing-library/jest-dom";
 
 import CookingMode from "@/app/(app)/recipes/[id]/components/cookingmode/cooking-mode";
 
-import {
-  cssFloatingDockBottomWithNav,
-  cssFloatingDockBottomWithShrunkenNav,
-  MOBILE_NAV_SHRUNKEN_SCALE,
-} from "@norish/web/config/css-tokens";
+import { cssFloatingDockBottomWithNav } from "@norish/web/config/css-tokens";
 
 const mocks = vi.hoisted(() => ({
   isMobile: true,
@@ -71,6 +67,7 @@ vi.mock("motion/react", () => ({
     }) => (
       <div
         data-animate-bottom={String(animate?.bottom ?? "")}
+        data-animate-opacity={String(animate?.opacity ?? "")}
         data-animate-scale={String(animate?.scale ?? "")}
         data-style-bottom={String(style?.bottom ?? "")}
       >
@@ -82,8 +79,16 @@ vi.mock("motion/react", () => ({
 }));
 
 vi.mock("@heroui/react", () => ({
-  Button: ({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) => (
-    <button type="button" onClick={onPress}>
+  Button: ({
+    children,
+    className,
+    onPress,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    onPress?: () => void;
+  }) => (
+    <button className={className} type="button" onClick={onPress}>
       {children}
     </button>
   ),
@@ -121,22 +126,32 @@ describe("Floating cook pill", () => {
     expect(pill().dataset.animateBottom).toBe(cssFloatingDockBottomWithNav);
   });
 
-  it("shrinks with the nav rather than dropping behind it", () => {
+  it("leaves with the nav rather than riding along shrunken", () => {
     mocks.isNavVisible = false;
 
     render(<CookingMode floating />);
 
-    // The nav hides by shrinking in place rather than leaving, so dropping to
-    // where it used to end would land the pill on top of it. The pill keeps
-    // its station above the bar and takes the bar's own shrink instead.
-    expect(pill().dataset.animateBottom).toBe(cssFloatingDockBottomWithShrunkenNav);
-    expect(pill().dataset.animateScale).toBe(String(MOBILE_NAV_SHRUNKEN_SCALE));
+    // A reader scrolling the recipe is reading. The timer dock has something
+    // to say while it is scrolled past; a cook button does not, and it is one
+    // gesture away when they stop.
+    expect(pill().dataset.animateOpacity).toBe("0");
   });
 
-  it("stays at full size while the nav is showing", () => {
+  it("takes no taps once it has left", () => {
+    mocks.isNavVisible = false;
+
+    render(<CookingMode floating />);
+
+    expect(screen.getByText("recipes.detail.cook").closest("button")!.className).toContain(
+      "pointer-events-none"
+    );
+  });
+
+  it("is there at full size while the nav is showing", () => {
     render(<CookingMode floating />);
 
     expect(pill().dataset.animateScale).toBe("1");
+    expect(pill().dataset.animateOpacity).toBe("1");
   });
 
   it("always reads Cook, because a Cooking Session is never resumed", () => {

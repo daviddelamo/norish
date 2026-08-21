@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AnimatedNumber } from "@/components/recipes/animated-number";
 import { BeakerIcon, BoltIcon, CubeIcon, FireIcon } from "@heroicons/react/16/solid";
 import { Card, Separator } from "@heroui/react";
 import { useTranslations } from "next-intl";
@@ -86,9 +87,10 @@ function NutritionDonut({
       </svg>
       {calories != null && (
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-foreground text-2xl leading-none font-semibold tabular-nums">
-            {Math.round(calories)}
-          </span>
+          <AnimatedNumber
+            className="text-foreground text-2xl leading-none font-semibold"
+            value={String(Math.round(calories))}
+          />
           <span className="text-muted mt-1 text-xs">{t("calories")}</span>
         </div>
       )}
@@ -125,8 +127,8 @@ export function NutritionBody({
           </div>
           <span className="text-base">{t("calories")}</span>
         </div>
-        <span className="text-foreground text-base font-semibold">
-          {Math.round(values.calories)}
+        <span className="text-foreground flex items-baseline text-base font-semibold">
+          <AnimatedNumber value={String(Math.round(values.calories))} />
           <span className="text-muted ml-1 font-normal">kcal</span>
         </span>
       </div>
@@ -147,8 +149,8 @@ export function NutritionBody({
                 <style.icon className={`${style.color} size-4 shrink-0`} />
                 <span className="truncate text-base">{t(style.label)}</span>
               </dt>
-              <dd className="text-foreground text-base font-semibold tabular-nums">
-                {Math.round(value ?? macro.grams)}
+              <dd className="text-foreground flex items-baseline text-base font-semibold">
+                <AnimatedNumber value={String(Math.round(value ?? macro.grams))} />
                 <span className="text-muted ml-1 font-normal">g</span>
               </dd>
             </div>

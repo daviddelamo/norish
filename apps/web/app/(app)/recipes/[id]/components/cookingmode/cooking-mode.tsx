@@ -55,7 +55,9 @@ export default function CookingMode({
   const { disable, enable, isActive, isSupported } = useWakeLockContext();
   const tDetail = useTranslations("recipes.detail");
   const isDesktop = useIsDesktopCookingMode();
-  const floatingDock = useFloatingDock({ align: "start" });
+  // The cook pill leaves with the nav rather than shrinking with it: a reader
+  // scrolling the recipe is reading, and it is one gesture away when they stop.
+  const floatingDock = useFloatingDock({ align: "start", hideWithNav: true });
   const [isOpen, setIsOpen] = useState(false);
   const [activeView, setActiveView] = useState<CookingModeView>("steps");
   const [activeStep, setActiveStep] = useState(0);
@@ -253,7 +255,7 @@ export default function CookingMode({
           transition={floatingDock.transition}
         >
           <Button
-            className={`pointer-events-auto shadow-xl ${cssFloatingDockPill}`}
+            className={`shadow-xl ${floatingDock.pillClassName} ${cssFloatingDockPill}`}
             variant="primary"
             onPress={open}
           >

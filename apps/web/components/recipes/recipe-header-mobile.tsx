@@ -1,9 +1,10 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import OriginFlag from "@/components/recipes/origin-flag";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
 import { ClockIcon, FireIcon, TagIcon, UserGroupIcon } from "@heroicons/react/16/solid";
+import { Button } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import type { RecipeCategory } from "@norish/shared/contracts";
@@ -135,6 +136,72 @@ function TagLine({
 }
 
 /**
+ * Lines a description gets before it is standing between the reader and the
+ * recipe. Written out rather than interpolated, because Tailwind reads class
+ * names from the source and never sees a name a template literal builds.
+ */
+const DESCRIPTION_CLAMP_CLASS = "line-clamp-4";
+
+/**
+ * The description, clamped. A long import can run to a dozen centred lines and
+ * push the ingredients off the screen entirely, so it gets four and a way to
+ * ask for the rest. A description that already fits is drawn plain, with no
+ * control offered for something there is nothing more of.
+ */
+function RecipeDescription({ text }: { text: string }) {
+  const t = useTranslations("recipes.detail");
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isClamped, setIsClamped] = useState(false);
+
+  const measure = useCallback(() => {
+    const body = bodyRef.current;
+
+    if (!body) return;
+
+    // Measured while clamped, so expanding cannot make the answer flip back.
+    setIsClamped((wasClamped) => (isExpanded ? wasClamped : body.scrollHeight > body.clientHeight));
+  }, [isExpanded]);
+
+  useEffect(() => {
+    measure();
+
+    if (typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(measure);
+    const body = bodyRef.current;
+
+    if (body) observer.observe(body);
+
+    return () => observer.disconnect();
+  }, [measure, text]);
+
+  return (
+    <div className="space-y-1">
+      <div
+        ref={bodyRef}
+        className={`text-muted text-base leading-relaxed text-balance ${
+          isExpanded ? "" : DESCRIPTION_CLAMP_CLASS
+        }`}
+      >
+        <SmartMarkdownRenderer text={text} />
+      </div>
+
+      {(isClamped || isExpanded) && (
+        <Button
+          className="text-muted h-auto min-h-0 px-2 py-1 text-xs font-medium"
+          size="sm"
+          variant="tertiary"
+          onPress={() => setIsExpanded((expanded) => !expanded)}
+        >
+          {isExpanded ? t("showLess") : t("showMore")}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
  * The phone's recipe header, centred under the photo it fades out of rather
  * than inside a card: what the dish is, what it is like, and the Glance Bar,
  * before the first section starts. Shared by the recipe page and the share
@@ -190,11 +257,7 @@ export default function RecipeHeaderMobile({
         {recipe.name}
       </h1>
 
-      {recipe.description && (
-        <div className="text-muted text-base leading-relaxed text-balance">
-          <SmartMarkdownRenderer text={recipe.description} />
-        </div>
-      )}
+      {recipe.description && <RecipeDescription text={recipe.description} />}
 
       <GlanceBar entries={entries} />
 
