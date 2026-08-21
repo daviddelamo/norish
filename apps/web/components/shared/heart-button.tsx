@@ -46,12 +46,17 @@ export default function HeartButton({
       aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
       aria-pressed={isFavorite}
       // A heart carrying its own surface is a real object on the media, so the
-      // unfavourited state is drawn by the icon's colour and the button's size
-      // rather than by fading the whole control to a pane of glass (ADR-0020).
-      className={`group relative transition-all duration-300 ${showBackground ? "bg-surface hover:bg-surface-secondary rounded-full shadow-md" : ""} ${
-        isFavorite
-          ? "scale-100 opacity-100"
-          : `scale-90 hover:scale-100 ${showBackground ? "" : "opacity-70 hover:opacity-100"}`
+      // unfavourited state is drawn by the icon's colour alone rather than by
+      // fading the whole control to a pane of glass (ADR-0020). It keeps its
+      // full size either way: a backgrounded heart sits in a row with the rest
+      // of the photo's chrome, and a circle that is a little smaller than the
+      // ones beside it reads as a mistake rather than as a state.
+      className={`group relative transition-all duration-300 ${
+        showBackground
+          ? "bg-surface hover:bg-surface-secondary rounded-full shadow-md"
+          : isFavorite
+            ? "scale-100 opacity-100"
+            : "scale-90 opacity-70 hover:scale-100 hover:opacity-100"
       } ${className} `}
       size={size === "lg" ? "md" : "sm"}
       type="button"

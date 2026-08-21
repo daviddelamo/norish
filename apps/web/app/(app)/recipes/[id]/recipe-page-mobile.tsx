@@ -28,6 +28,7 @@ import { Card } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import StarRating from "@norish/ui/star-rating";
+import { cssFloatingDockContentClearance } from "@norish/web/config/css-tokens";
 
 import { useRecipeContextRequired } from "./context";
 
@@ -122,8 +123,13 @@ export default function RecipePageMobile() {
 
       {/* The header sits in the tail of that fade, on the page background;
           only the sections below it are cards. The trailing padding clears the
-          floating cook pill, so the last card is never hidden behind it. */}
-      <div className="relative z-10 -mt-24 flex flex-col gap-4 px-4 pb-12">
+          floating cook pill, so the last card is never hidden behind it —
+          read off the row's own geometry rather than guessed, because a guess
+          stops clearing the pill on a phone with a home indicator. */}
+      <div
+        className="relative z-10 -mt-24 flex flex-col gap-4 px-4"
+        style={{ paddingBottom: cssFloatingDockContentClearance }}
+      >
         {/* The Glance Bar restates what the sections below render, so it reads
             the servings the ingredients are actually scaled to rather than the
             stored figure — a bar disagreeing with the row under it is exactly

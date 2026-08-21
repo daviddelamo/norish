@@ -11,8 +11,11 @@ import {
 } from "@norish/web/config/css-tokens";
 
 type FloatingDockOptions = {
-  /** Which end of the nav pill this dock keeps station over. */
-  align: "start" | "end";
+  /**
+   * Where over the nav pill this dock keeps station: either end of it, or
+   * centred over the middle of the bar.
+   */
+  align: "start" | "center" | "end";
   /** Hold the dock at full size whatever the nav does, e.g. while expanded. */
   disabled?: boolean;
   /**
@@ -52,7 +55,7 @@ export function useFloatingDock({
      * nav's does; only the pill inside it takes pointer events.
      */
     className: `pointer-events-none fixed inset-x-0 flex px-4 ${
-      align === "end" ? "justify-end" : "justify-start"
+      align === "end" ? "justify-end" : align === "center" ? "justify-center" : "justify-start"
     }`,
     /** Applied to the pill itself, so a hidden dock cannot swallow a tap. */
     pillClassName: isHidden ? "pointer-events-none" : "pointer-events-auto",

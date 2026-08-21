@@ -14,7 +14,10 @@ import { TodaysMealsVisibilityProvider } from "@/context/todays-meals-visibility
 import { UserProvider } from "@/context/user-context";
 
 import type { AmountDisplayMode } from "@norish/shared/lib/format-amount";
-import { APP_MAIN_HORIZONTAL_PADDING_CLASS } from "@norish/web/config/css-tokens";
+import {
+  APP_MAIN_BOTTOM_PADDING_CLASS,
+  APP_MAIN_HORIZONTAL_PADDING_CLASS,
+} from "@norish/web/config/css-tokens";
 
 /**
  * The full authenticated app chrome: every provider plus navbar and main
@@ -66,7 +69,7 @@ export function AppShell({
                             />
                             <Navbar />
                             <main
-                              className={`container mx-auto flex max-w-7xl flex-1 flex-col ${APP_MAIN_HORIZONTAL_PADDING_CLASS} pb-20 md:pb-6`}
+                              className={`container mx-auto flex max-w-7xl flex-1 flex-col ${APP_MAIN_HORIZONTAL_PADDING_CLASS} ${APP_MAIN_BOTTOM_PADDING_CLASS}`}
                               style={{ paddingTop: "calc(1.5rem + env(safe-area-inset-top))" }}
                             >
                               {children}

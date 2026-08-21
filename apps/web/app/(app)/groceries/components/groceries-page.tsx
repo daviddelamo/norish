@@ -17,6 +17,7 @@ import { useTranslations } from "next-intl";
 
 import type { GroceryDto } from "@norish/shared/contracts";
 import type { RecurrencePattern } from "@norish/shared/contracts/recurrence";
+import { cssFloatingDockContentClearance } from "@norish/web/config/css-tokens";
 
 import { useGroceriesContext, useGroceriesUiContext } from "../context";
 import { useStoresContext } from "../stores-context";
@@ -123,6 +124,7 @@ export function GroceriesPage() {
       </div>
     );
   }
+
   return (
     <>
       <div
@@ -138,8 +140,8 @@ export function GroceriesPage() {
             <Button
               className="hidden rounded-full font-medium md:flex"
               size="md"
-              onPress={() => setAddGroceryPanelOpen(true)}
               variant="primary"
+              onPress={() => setAddGroceryPanelOpen(true)}
             >
               {<PlusIcon className="h-5 w-5" />}
               {t("addItem")}
@@ -154,8 +156,8 @@ export function GroceriesPage() {
                   <Dropdown.Section>
                     <Header>{t("viewMode")}</Header>
                     <Dropdown.Item
-                      id="view-store"
                       key="view-store"
+                      id="view-store"
                       textValue={t("viewByStore")}
                       onPress={() => setViewMode("store")}
                     >
@@ -164,8 +166,8 @@ export function GroceriesPage() {
                       {viewMode === "store" ? <CheckIcon className="text-accent h-4 w-4" /> : null}
                     </Dropdown.Item>
                     <Dropdown.Item
-                      id="view-recipe"
                       key="view-recipe"
+                      id="view-recipe"
                       textValue={t("viewByRecipe")}
                       onPress={() => setViewMode("recipe")}
                     >
@@ -178,8 +180,8 @@ export function GroceriesPage() {
                   <Dropdown.Section className={viewMode !== "store" ? "hidden" : undefined}>
                     <Header>{t("storeViewOptions")}</Header>
                     <Dropdown.Item
-                      id="group-similar"
                       key="group-similar"
+                      id="group-similar"
                       textValue={t("groupIngredients")}
                       onPress={() => setGroupSimilarIngredients(!groupSimilarIngredients)}
                     >
@@ -197,8 +199,8 @@ export function GroceriesPage() {
                   {viewMode === "store" ? <Separator /> : null}
                   <Dropdown.Section>
                     <Dropdown.Item
-                      id="manage-stores"
                       key="manage-stores"
+                      id="manage-stores"
                       textValue={t("manageStores")}
                       onPress={() => setStoreManagerOpen(true)}
                     >
@@ -242,6 +244,16 @@ export function GroceriesPage() {
             />
           )}
         </div>
+
+        {/* The add pill is fixed, so the list has to stop above it rather than
+            run on underneath: the shell's own padding clears the nav pill and
+            this clears the row the add pill stands in. Phone only — the
+            desktop add button lives in the header. */}
+        <div
+          aria-hidden
+          className="shrink-0 md:hidden"
+          style={{ height: cssFloatingDockContentClearance }}
+        />
 
         {/* Mobile: Floating add button that syncs with nav auto-hide */}
         <AddGroceryButton />

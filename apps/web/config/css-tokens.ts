@@ -5,6 +5,16 @@
 
 export const APP_MAIN_HORIZONTAL_PADDING_CLASS = "px-4 md:px-6";
 
+/**
+ * What the app shell keeps clear at the foot of every page: on a phone, the
+ * nav pill's own height and offset plus a gap; on desktop, an ordinary margin.
+ * `APP_MAIN_BOTTOM_PADDING_REM` is the phone figure, written out separately
+ * because Tailwind reads class names from the source and never sees one a
+ * template literal builds — keep the two in step.
+ */
+export const APP_MAIN_BOTTOM_PADDING_CLASS = "pb-20 md:pb-6";
+export const APP_MAIN_BOTTOM_PADDING_REM = 5;
+
 export const hoverInputIcon =
   "w-5 h-5 text-muted group-hover:text-foreground group-focus-within:text-accent transition-colors";
 
@@ -57,11 +67,29 @@ export const MOBILE_NAV_SHRUNKEN_SCALE = 0.8;
 // are measured from the nav's own anchor, which is what makes the shrunken
 // pair scale about the same point and stay aligned.
 const FLOATING_DOCK_ABOVE_NAV_REM = 3.75;
+
 export const cssFloatingDockBottomWithNav = `calc(max(env(safe-area-inset-bottom), 1rem) + ${FLOATING_DOCK_ABOVE_NAV_REM}rem)`;
 export const cssFloatingDockBottomWithShrunkenNav = `calc(max(env(safe-area-inset-bottom), 1rem) + ${FLOATING_DOCK_ABOVE_NAV_REM * MOBILE_NAV_SHRUNKEN_SCALE}rem)`;
 export const cssFloatingDockBottomDesktop = "1rem";
 
-// The cook pill and the collapsed timer dock are the same object at opposite
-// ends of the nav pill, so they are sized once here rather than twice by
-// coincidence.
+// The cook pill, the add pill and the collapsed timer dock are the same object
+// at different stations along the nav pill, so they are sized once here rather
+// than three times by coincidence. The height is repeated as a number for the
+// clearance below, for the same reason the shell's padding is.
+const FLOATING_DOCK_PILL_HEIGHT_REM = 2.5;
+
 export const cssFloatingDockPill = "h-10 min-h-10 rounded-full px-4";
+
+/**
+ * What a page owes the dock row on top of the clearance the shell already
+ * gives the nav: the row's offset above the nav, the pill standing in it, and
+ * a gap — so the last thing on the page stops above the pill instead of
+ * disappearing under its edge. Mobile only; on desktop nothing floats there.
+ *
+ * Read off the same figures the row is positioned by, because a page that
+ * guesses its own number is a page that stops clearing the pill the moment the
+ * row moves.
+ */
+export const cssFloatingDockContentClearance = `calc(max(env(safe-area-inset-bottom), 1rem) + ${
+  FLOATING_DOCK_ABOVE_NAV_REM + FLOATING_DOCK_PILL_HEIGHT_REM + 1 - APP_MAIN_BOTTOM_PADDING_REM
+}rem)`;

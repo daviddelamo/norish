@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTimersEnabledQuery } from "@/hooks/config";
+import { useDockedTimers } from "@/hooks/use-docked-timers";
 import { useFloatingDock } from "@/hooks/use-floating-dock";
 import { useNotificationPermission } from "@/hooks/use-notification-permission";
 import { useTimerStore } from "@/stores/timers";
@@ -58,10 +59,10 @@ export function TimerDock({
   const { timersEnabled } = useTimersEnabledQuery();
   const timers = useTimerStore((state) => state.timers);
   const clearAll = useTimerStore((state) => state.clearAll);
-  const runningTimers = timers.filter((t) => t.status === "running");
-  const pausedTimers = timers.filter((t) => t.status === "paused");
-  const completedTimers = timers.filter((t) => t.status === "completed");
-  const allActiveOrPaused = [...runningTimers, ...pausedTimers, ...completedTimers];
+  // What the dock shows, and — read by anything else that floats above the
+  // nav — whether the dock is in its corner at all.
+  const dockedTimers = useDockedTimers();
+  const completedTimers = dockedTimers.filter((timer) => timer.status === "completed");
   const t = useTranslations("common");
   const router = useRouter();
   const [uncontrolledExpanded, setUncontrolledExpanded] = useState(false);
@@ -75,7 +76,6 @@ export function TimerDock({
 
     setUncontrolledExpanded(next);
   };
-  const [isClient, setIsClient] = useState(false);
   // Track whether dock has been expanded before — distinguishes a collapse
   // transition (needs crossfade) from a fresh appearance (outer container handles fade)
   const hasExpandedRef = useRef(false);
@@ -88,11 +88,6 @@ export function TimerDock({
     align: "end",
     disabled: isExpanded,
   });
-
-  // Hydration fix
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   // Clear all timers when feature is disabled
   useEffect(() => {
@@ -128,7 +123,7 @@ export function TimerDock({
       stop();
     };
   }, [stop]);
-  const hasTimers = allActiveOrPaused.length > 0;
+  const hasTimers = dockedTimers.length > 0;
 
   // Reset to collapsed when all timers are removed
   useEffect(() => {
@@ -138,16 +133,16 @@ export function TimerDock({
       hasExpandedRef.current = false;
     }
   }, [hasTimers, onExpandedChange]);
-  if (!isClient || !timersEnabled) return null;
+  if (!timersEnabled) return null;
 
   // Sort: completed first (to alert), then active by remaining time
-  const sortedTimers = [...allActiveOrPaused].sort((a, b) => {
+  const sortedTimers = [...dockedTimers].sort((a, b) => {
     if (a.status === "completed" && b.status !== "completed") return -1;
     if (b.status === "completed" && a.status !== "completed") return 1;
     return a.remainingMs - b.remainingMs;
   });
   const topTimer = sortedTimers[0];
-  const timerCount = allActiveOrPaused.length;
+  const timerCount = dockedTimers.length;
 
   return (
     <>
