@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] `add-to-calendar-button.tsx` is deleted and nothing references it
-- [ ] `SystemConvertMenu` appears in the recipe actions menu, retaining its permission gate and its `showConversion` Hidden Item behaviour
-- [ ] `AmountDisplayToggle` appears in the recipe actions menu and still drives the app-wide amount display preference
-- [ ] Neither control renders in the mobile Ingredients heading row any more
-- [ ] `recipe-page-desktop.tsx` is unchanged
-- [ ] New menu strings are added across every supported locale and `pnpm i18n:check` passes
+- [x] `add-to-calendar-button.tsx` is deleted and nothing references it
+- [x] `SystemConvertMenu` appears in the recipe actions menu, retaining its permission gate and its `showConversion` Hidden Item behaviour
+- [x] `AmountDisplayToggle` appears in the recipe actions menu and still drives the app-wide amount display preference
+- [x] Neither control renders in the mobile Ingredients heading row any more
+- [x] `recipe-page-desktop.tsx` is unchanged
+- [x] New menu strings are added across every supported locale and `pnpm i18n:check` passes

@@ -89,19 +89,16 @@ vi.mock("@/components/shared/media-carousel", () => ({
 
 vi.mock("@/app/(app)/recipes/[id]/components/provenance-card", () => ({
   default: () => <div>provenance-card</div>,
-  ProvenanceSection: () => <div>provenance-section</div>,
   useProvenanceSectionVisible: () => true,
 }));
 
 vi.mock("@/app/(app)/recipes/[id]/components/nutrition-card", () => ({
   default: () => <div>nutrition-card</div>,
-  NutritionSection: () => <div>nutrition-section</div>,
   useNutritionSectionVisible: () => true,
 }));
 
 vi.mock("@/app/(app)/recipes/[id]/components/notes-card", () => ({
   default: () => <div>notes-card</div>,
-  NotesSection: () => <div>notes-section</div>,
   useNotesSectionVisible: () => false,
 }));
 

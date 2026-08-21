@@ -1,8 +1,8 @@
 "use client";
 
 import type { CookingModeDialogProps } from "./types";
-import { CookingModeTabs } from "./cooking-mode-tabs";
+import { CookingModeShell } from "./cooking-mode-shell";
 
 export function MobileCookingModeDialog(props: CookingModeDialogProps) {
-  return <CookingModeTabs {...props} showIngredientsTitle={false} />;
+  return <CookingModeShell {...props} showIngredientsTitle={false} />;
 }

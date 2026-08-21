@@ -8,12 +8,22 @@ Hero chrome moves onto the photo as opaque circular buttons — back top-left, f
 
 **Status:** ready-for-agent
 
-- [ ] The mobile header renders on the page background in the order: categories, flag + title, author, description, Glance Bar, tags
-- [ ] Tags keep allergen-first sorting and the warning fill
-- [ ] The Glance Bar shows total time, servings and calories, and omits any entry the recipe does not store
-- [ ] Hiding Nutrition Information removes the calories entry; a recipe storing none of the three renders no bar at all
-- [ ] Back, favourite and `⋯` float on the photo as opaque buttons with no `backdrop-blur` or see-through fill
-- [ ] The author chip renders under the title, not on the photo
-- [ ] The "back to recipes" row and the title's external-link icon are gone
-- [ ] `ReadonlyRecipeSummary` is byte-for-byte unchanged and both desktop surfaces render as before
-- [ ] Share-mobile renders the same header, with no favourite and no actions menu
+- [x] The mobile header renders on the page background in the order: categories, flag + title, author, description, Glance Bar, tags
+- [x] Tags keep allergen-first sorting and the warning fill
+- [x] The Glance Bar shows total time, servings and calories, and omits any entry the recipe does not store
+- [x] Hiding Nutrition Information removes the calories entry; a recipe storing none of the three renders no bar at all
+- [x] Back, favourite and `⋯` float on the photo as opaque buttons with no `backdrop-blur` or see-through fill
+- [x] The author chip renders under the title, not on the photo
+- [x] The "back to recipes" row and the title's external-link icon are gone
+- [x] `ReadonlyRecipeSummary` is byte-for-byte unchanged and both desktop surfaces render as before
+- [x] Share-mobile renders the same header, with no favourite and no actions menu
+
+**Amended after review:** the Glance Bar is one filled bar floating on the page
+background rather than an outlined box — the cards below already carry the
+page's edges, and a second kind of edge around three numbers read as a form
+field. Each entry is its icon and its value on one line, the way the library's
+own recipe cards already state time and servings; the written label stays as
+screen-reader text so nothing is lost by ear.
+
+- [x] The Glance Bar draws no border, and each entry is icon + value on one line
+- [x] Each entry keeps its written label for a screen reader

@@ -10,10 +10,23 @@ Step Ingredients stay a chip row below the prose — the glossary settles it, an
 
 **Status:** ready-for-agent
 
-- [ ] The header is thumbnail, title, `categories · total time`, close — with no tab bar
-- [ ] The ingredients view is reachable by horizontal swipe and by the bottom-bar button, which flips its icon while ingredients are showing
-- [ ] Neighbouring steps peek faded, clamped to two truncated lines
-- [ ] A long step collapses the peeks and scrolls within its page; the vertical swipe still changes step from the edges
-- [ ] Vertical and horizontal swipes behave exactly as they did before
-- [ ] Step Ingredients render as a chip row below the prose; timer chips remain inline
-- [ ] Cooking mode still takes the wake lock on open and releases it on close
+- [x] The header is thumbnail, title, `categories · total time`, close — with no tab bar
+- [x] The ingredients view is reachable by horizontal swipe and by the bottom-bar button, which flips its icon while ingredients are showing
+- [x] Neighbouring steps peek faded, clamped to two truncated lines
+- [x] A long step collapses the peeks and scrolls within its page; the vertical swipe still changes step from the edges
+- [x] Vertical and horizontal swipes behave exactly as they did before
+- [x] Step Ingredients render as a chip row below the prose; timer chips remain inline
+- [x] Cooking mode still takes the wake lock on open and releases it on close
+
+**Amended after review:** the step a cook is on sits in the middle of the
+screen. Both edges reserve a peek whether or not there is a neighbour to put in
+it — an edge that collapsed for want of a neighbour shoved the first and last
+steps up and down the screen while the ones between them sat still. The peeks
+are the step's own type size faded almost out rather than a small grey caption,
+which read as a footnote about the step rather than as the step either side of
+it. The accent step-number badge is gone: the bottom bar counts the steps, and
+a badge above the prose pulled the eye off the one thing the screen is for.
+
+- [x] The step is vertically centred on every page, first and last included
+- [x] Peeks render at the step's own type size, faded
+- [x] No step-number badge is drawn in the step view

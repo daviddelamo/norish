@@ -1,13 +1,14 @@
 "use client";
 
-import AuthorChip from "@/components/recipes/author-chip";
+import CookingTimeCard from "@/components/recipes/cooking-time-card";
 import { ReadonlyNutritionSection } from "@/components/recipes/readonly-nutrition";
 import {
   ReadonlyRecipeMedia,
   ReadonlyRecipeNotes,
-  ReadonlyRecipeSummary,
 } from "@/components/recipes/readonly-recipe-sections";
+import RecipeHeaderMobile from "@/components/recipes/recipe-header-mobile";
 import { MOBILE_RECIPE_MEDIA_HEIGHT_STYLE } from "@/components/recipes/recipe-layout-constants";
+import SourceCard from "@/components/recipes/source-card";
 import AuthLanguageSelector from "@/components/shared/auth-language-selector";
 import { Card, Separator } from "@heroui/react";
 import { useTranslations } from "next-intl";
@@ -34,13 +35,7 @@ export function SharedRecipePageMobile() {
           className="h-full rounded-none shadow-none"
           recipe={recipe}
           rounded={false}
-          topLeftContent={
-            recipe.author ? (
-              <div className="mt-2">
-                <AuthorChip image={recipe.author.image} name={recipe.author.name} />
-              </div>
-            ) : null
-          }
+          showAuthorFallback={false}
           topRightContent={
             <div className="mt-2">
               <AuthLanguageSelector />
@@ -51,7 +46,9 @@ export function SharedRecipePageMobile() {
 
       <Card className="bg-surface relative z-10 -mt-6 overflow-visible rounded-t-3xl rounded-b-none shadow-sm">
         <Card.Content className="space-y-6 px-4 py-5">
-          <ReadonlyRecipeSummary recipe={recipe} timeVariant="mobile" />
+          {/* A signed-out reader has no Hidden Items, so the Glance Bar shows
+              everything the recipe stores. */}
+          <RecipeHeaderMobile recipe={recipe} />
 
           <Separator />
 
@@ -86,7 +83,18 @@ export function SharedRecipePageMobile() {
             </div>
           </div>
 
+          <Separator />
+
+          <CookingTimeCard inCard={false} recipe={recipe} />
+
           <ReadonlyNutritionSection recipe={recipe} />
+
+          {recipe.url && (
+            <>
+              <Separator />
+              <SourceCard inCard={false} recipe={recipe} />
+            </>
+          )}
         </Card.Content>
       </Card>
 

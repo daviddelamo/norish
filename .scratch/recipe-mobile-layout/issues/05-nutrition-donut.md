@@ -8,10 +8,10 @@ Because the card is shared, this reaches mobile, desktop and the share page. Tha
 
 **Status:** ready-for-agent
 
-- [ ] Arcs are calorie contribution, not gram share
-- [ ] The centre shows stored calories; a recipe with macros and no stored calories shows no calorie figure
-- [ ] A recipe with calories and no macros renders no ring
-- [ ] Partial macros render only the arcs that exist
-- [ ] The portion control still scales the legend values and leaves the arcs alone
-- [ ] The enrichment-in-flight skeleton and the Hidden Item behaviour are unchanged
-- [ ] Desktop and the share page pick the donut up with no layout regression
+- [x] Arcs are calorie contribution, not gram share
+- [x] The centre shows stored calories; a recipe with macros and no stored calories shows no calorie figure
+- [x] A recipe with calories and no macros renders no ring
+- [x] Partial macros render only the arcs that exist
+- [x] The portion control still scales the legend values and leaves the arcs alone
+- [x] The enrichment-in-flight skeleton and the Hidden Item behaviour are unchanged
+- [x] Desktop and the share page pick the donut up with no layout regression

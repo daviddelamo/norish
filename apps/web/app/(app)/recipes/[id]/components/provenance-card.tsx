@@ -15,9 +15,7 @@ import { countryEndonym } from "@norish/shared/lib/recipe-provenance";
  * a quiet automatic failure simply leaves the section showing whatever is
  * stored. A reader who has hidden Recipe Provenance sees no section at all,
  * even mid-run — hiding is a reading preference, and enrichment keeps
- * storing regardless. The page layouts read this too, so the rules they
- * draw between sections come from the same answer the section itself
- * renders by.
+ * storing regardless.
  */
 export function useProvenanceSectionVisible(): boolean {
   const { recipe, enrichment } = useRecipeContext();
@@ -46,7 +44,7 @@ export function useProvenanceSectionVisible(): boolean {
  * flight, so a recipe that will never have provenance shows nothing at all.
  * Asking for a run lives in the actions menu, alongside every other kind.
  */
-function ProvenanceDisplay({ inCard = true }: { inCard?: boolean }) {
+export default function ProvenanceCard() {
   const { recipe, enrichment } = useRecipeContext();
   const locale = useLocale();
   const t = useTranslations("recipes.provenance");
@@ -62,7 +60,7 @@ function ProvenanceDisplay({ inCard = true }: { inCard?: boolean }) {
 
   const content = (
     <>
-      <div className={`flex items-center justify-between ${inCard ? "mb-3" : ""}`}>
+      <div className="mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           {!isInferring && <OriginFlag originCountry={recipe.originCountry} />}
           {country ?? t("title")}
@@ -101,21 +99,9 @@ function ProvenanceDisplay({ inCard = true }: { inCard?: boolean }) {
     </>
   );
 
-  // As a section the display draws no rule of its own: the page owns the
-  // rhythm between sections.
-  return inCard ? (
+  return (
     <Card className="rounded-2xl">
       <Card.Content className="p-5">{content}</Card.Content>
     </Card>
-  ) : (
-    <div className="space-y-2">{content}</div>
   );
-}
-
-export function ProvenanceSection() {
-  return <ProvenanceDisplay inCard={false} />;
-}
-
-export default function ProvenanceCard() {
-  return <ProvenanceDisplay inCard={true} />;
 }

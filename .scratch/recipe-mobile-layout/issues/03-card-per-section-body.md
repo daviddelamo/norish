@@ -10,11 +10,19 @@ The Ingredients card header becomes a full-width `N servings − +` row (ticket 
 
 **Status:** ready-for-agent
 
-- [ ] Each section renders as its own card; no `<Separator />` rules remain between sections on mobile
-- [ ] Card order is Ingredients, Steps, Notes, Cooking Time, Nutrition, Provenance, Source, Rating
-- [ ] Rating renders as its own card and no longer inside the Steps section
-- [ ] A card whose section has nothing stored and nothing running does not render; a section with a run in flight renders as working
-- [ ] Ingredients and Steps always render, including for a recipe that has neither
-- [ ] The Ingredients card header is a full-width servings row
-- [ ] A bare recipe (no times, calories, source, notes, provenance) renders as a shorter page with no empty boxes
-- [ ] `recipe-page-desktop.tsx` is unchanged, provenance included
+- [x] Each section renders as its own card; no `<Separator />` rules remain between sections on mobile
+- [x] Card order is Ingredients, Steps, Notes, Cooking Time, Nutrition, Provenance, Source, Rating
+- [x] Rating renders as its own card and no longer inside the Steps section
+- [x] A card whose section has nothing stored and nothing running does not render; a section with a run in flight renders as working
+- [x] Ingredients and Steps always render, including for a recipe that has neither
+- [x] The Ingredients card header is a full-width servings row
+- [x] A bare recipe (no times, calories, source, notes, provenance) renders as a shorter page with no empty boxes
+- [x] `recipe-page-desktop.tsx` is unchanged, provenance included
+
+**Amended after review:** the servings row draws no box of its own. The
+Ingredients card is already the edge, and an outline inside an outline read as
+a form field rather than as the one control on the card worth hitting without
+looking. What is drawn instead is the stepper: `−` and `+` as two halves of one
+filled segment pair.
+
+- [x] The servings row has no border; the `−` / `+` pair is one filled segmented control

@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 /**
  * Whether the notes section has anything to show: a stored note, for a
  * reader who has not hidden notes. The page layouts read this too, so the
- * rules they draw between sections come from the same answer the section
+ * rules they draw between sections come from the same answer the card
  * itself renders by — the same shape Recipe Provenance and Nutrition
  * Information already follow.
  */
@@ -20,27 +20,7 @@ export function useNotesSectionVisible(): boolean {
   return Boolean(recipe?.notes) && showNotes;
 }
 
-/** The notes section on the mobile recipe page; draws no rule of its own. */
-export function NotesSection() {
-  const { recipe } = useRecipeContext();
-  const t = useTranslations("recipes.detail");
-  const isVisible = useNotesSectionVisible();
-
-  if (!recipe?.notes || !isVisible) return null;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{t("notes")}</h2>
-      </div>
-      <div>
-        <ReadonlyRecipeNotes notes={recipe.notes} />
-      </div>
-    </div>
-  );
-}
-
-/** The notes card on the desktop recipe page. */
+/** The notes card, on both recipe pages. */
 export default function NotesCard() {
   const { recipe } = useRecipeContext();
   const t = useTranslations("recipes.detail");

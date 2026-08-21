@@ -14,6 +14,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 
+import { MOBILE_NAV_SHRUNKEN_SCALE } from "@norish/web/config/css-tokens";
 import { siteConfig } from "@norish/web/config/site";
 
 // Map hrefs to translation keys (same as navbar.tsx)
@@ -72,8 +73,10 @@ export const MobileNav = () => {
         )}
       </AnimatePresence>
 
+      {/* Shrinks in place rather than sliding away. Everything floating above
+          it reads the same scale, so the pair stays aligned at either size. */}
       <motion.div
-        animate={{ scale: isVisible ? 1 : 0.8 }}
+        animate={{ scale: isVisible ? 1 : MOBILE_NAV_SHRUNKEN_SCALE }}
         className="fixed inset-x-0 z-[60] px-4 md:hidden"
         initial={false}
         style={{

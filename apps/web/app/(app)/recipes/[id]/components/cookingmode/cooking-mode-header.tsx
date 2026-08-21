@@ -1,63 +1,62 @@
 "use client";
 
-import { BookOpenIcon, ListBulletIcon, XMarkIcon } from "@heroicons/react/20/solid";
-import { Button, Tabs, Tooltip } from "@heroui/react";
+import FallbackImage from "@/components/shared/fallback-image";
+import { XMarkIcon } from "@heroicons/react/20/solid";
+import { Button, Tooltip } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
-import type { CookingModeTab } from "./types";
+import { formatMinutesHM } from "@norish/shared/lib/helpers";
+
+import type { CookingModeRecipe } from "./types";
 
 type CookingModeHeaderProps = {
-  activeTab: CookingModeTab;
-  recipeName: string;
+  recipe: CookingModeRecipe;
   onClose: () => void;
-  onTabChange: (tab: CookingModeTab) => void;
 };
 
-export function CookingModeHeader({
-  activeTab,
-  recipeName,
-  onClose,
-  onTabChange,
-}: CookingModeHeaderProps) {
-  const tDetail = useTranslations("recipes.detail");
-  const tCookMode = useTranslations("recipes.cookMode");
+/**
+ * Cooking mode's header: enough to know which recipe is on screen, and
+ * nothing else. The Steps/Ingredients tab bar is gone — the horizontal swipe
+ * and the bottom bar's button both reach the ingredients, and the screen
+ * belongs to the step.
+ */
+export function CookingModeHeader({ recipe, onClose }: CookingModeHeaderProps) {
+  const tForm = useTranslations("recipes.form");
   const tCommon = useTranslations("common.actions");
 
-  return (
-    <header className="border-border flex shrink-0 flex-col gap-3 border-b px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 md:border-b-0 md:px-6 md:pt-5">
-      <div className="flex min-w-0 items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-muted text-xs font-semibold">{tDetail("cook")}</p>
-          <h2 className="truncate text-lg font-semibold md:text-xl">{recipeName}</h2>
-        </div>
-        <Tooltip delay={0}>
-          <Button
-            isIconOnly
-            aria-label={tCommon("close")}
-            className="size-10 min-w-10 rounded-full"
-            variant="tertiary"
-            onPress={onClose}
-          >
-            <XMarkIcon className="size-5" />
-          </Button>
-          <Tooltip.Content placement="bottom">{tCommon("close")}</Tooltip.Content>
-        </Tooltip>
-      </div>
+  const subtitle = [
+    recipe.categories.map((category) => tForm(`category.${category.toLowerCase()}`)).join(", "),
+    recipe.totalMinutes ? formatMinutesHM(recipe.totalMinutes) : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
-      <Tabs.ListContainer>
-        <Tabs.List aria-label={tDetail("cook")} className="w-full">
-          <Tabs.Tab className="flex-1" id="steps">
-            <ListBulletIcon className="size-4" />
-            {tCookMode("steps")}
-            <Tabs.Indicator />
-          </Tabs.Tab>
-          <Tabs.Tab className="flex-1" id="ingredients">
-            <BookOpenIcon className="size-4" />
-            {tCookMode("ingredients")}
-            <Tabs.Indicator />
-          </Tabs.Tab>
-        </Tabs.List>
-      </Tabs.ListContainer>
+  return (
+    <header className="border-border flex shrink-0 items-center gap-3 border-b px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 md:px-6 md:pt-5">
+      {recipe.image && (
+        <FallbackImage
+          alt=""
+          className="size-11 shrink-0 rounded-xl object-cover"
+          src={recipe.image}
+          variant="hero"
+        />
+      )}
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate text-base font-semibold md:text-lg">{recipe.name}</h2>
+        {subtitle && <p className="text-muted truncate text-xs">{subtitle}</p>}
+      </div>
+      <Tooltip delay={0}>
+        <Button
+          isIconOnly
+          aria-label={tCommon("close")}
+          className="size-10 min-w-10 shrink-0 rounded-full"
+          variant="tertiary"
+          onPress={onClose}
+        >
+          <XMarkIcon className="size-5" />
+        </Button>
+        <Tooltip.Content placement="bottom">{tCommon("close")}</Tooltip.Content>
+      </Tooltip>
     </header>
   );
 }

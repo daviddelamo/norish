@@ -70,7 +70,7 @@ function StepIngredientsRowContent({
         return (
           <Chip<"li">
             key={`${item.ingredientOrder}`}
-            className="px-2 py-0.5 text-sm"
+            className="rounded-full px-2.5 py-1 text-sm"
             render={(props) => <li {...props} />}
             variant="tertiary"
           >

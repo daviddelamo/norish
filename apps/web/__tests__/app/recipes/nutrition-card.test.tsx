@@ -38,8 +38,8 @@ vi.mock("@/app/(app)/recipes/[id]/context", () => ({
 }));
 
 vi.mock("@/components/recipes/readonly-nutrition", () => ({
-  MACROS: [],
   getNutritionData: () => ({ hasData: mocks.hasData, values: {} }),
+  NutritionBody: () => <div data-testid="nutrition-body" />,
 }));
 
 vi.mock("@/components/recipes/nutrition-portion-control", () => ({

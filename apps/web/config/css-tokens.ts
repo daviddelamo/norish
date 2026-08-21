@@ -44,3 +44,24 @@ export const cssAIGradientBg =
 
 // AI icon color
 export const cssAIIconColor = "text-fuchsia-500";
+
+// MobileNav hides by shrinking in place rather than sliding away, so a hidden
+// nav never vacates the corner. Everything that floats above it — the timer
+// dock, the cook pill — therefore shrinks with it rather than dropping to the
+// floor and landing on top of it.
+export const MOBILE_NAV_SHRUNKEN_SCALE = 0.8;
+
+// The phone's floating layer sits above the nav pill: the timer dock in the
+// right corner and the cook pill in the left read the same offsets, so they
+// rise and fall with the nav together instead of drifting apart. Both offsets
+// are measured from the nav's own anchor, which is what makes the shrunken
+// pair scale about the same point and stay aligned.
+const FLOATING_DOCK_ABOVE_NAV_REM = 4.5;
+export const cssFloatingDockBottomWithNav = `calc(max(env(safe-area-inset-bottom), 1rem) + ${FLOATING_DOCK_ABOVE_NAV_REM}rem)`;
+export const cssFloatingDockBottomWithShrunkenNav = `calc(max(env(safe-area-inset-bottom), 1rem) + ${FLOATING_DOCK_ABOVE_NAV_REM * MOBILE_NAV_SHRUNKEN_SCALE}rem)`;
+export const cssFloatingDockBottomDesktop = "1rem";
+
+// The cook pill and the collapsed timer dock are the same object at opposite
+// ends of the nav pill, so they are sized once here rather than twice by
+// coincidence.
+export const cssFloatingDockPill = "h-10 min-h-10 rounded-full px-4";

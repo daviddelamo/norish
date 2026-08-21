@@ -8,9 +8,9 @@ The three columns are independent in the schema and nothing derives or validates
 
 **Status:** ready-for-agent
 
-- [ ] A pure reconciliation function covers: agreeing split, short split (Other Time appears), overflowing split (headline flips to the sum), total-only, split-only, and no times at all
-- [ ] Other Time is labelled for what it is not, and never named as resting or proving
-- [ ] The card renders on mobile and on share-mobile, and does not render on desktop
-- [ ] The card is absent when the recipe stores no times
-- [ ] Nothing on this card projects a finish time
-- [ ] New strings are added across every supported locale and `pnpm i18n:check` passes
+- [x] A pure reconciliation function covers: agreeing split, short split (Other Time appears), overflowing split (headline flips to the sum), total-only, split-only, and no times at all
+- [x] Other Time is labelled for what it is not, and never named as resting or proving
+- [x] The card renders on mobile and on share-mobile, and does not render on desktop
+- [x] The card is absent when the recipe stores no times
+- [x] Nothing on this card projects a finish time
+- [x] New strings are added across every supported locale and `pnpm i18n:check` passes

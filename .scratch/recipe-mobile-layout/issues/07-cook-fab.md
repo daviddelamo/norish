@@ -8,9 +8,26 @@ It always reads "Cook". There is no persisted Cooking Session, so there is nothi
 
 **Status:** ready-for-agent
 
-- [ ] A floating cook pill sits bottom-left and opens cooking mode
-- [ ] It tracks `MobileNav` visibility the way `TimerDock` already does
+- [x] A floating cook pill sits bottom-left and opens cooking mode
+- [x] It tracks `MobileNav` visibility the way `TimerDock` already does
 - [ ] It never overlaps the nav pill or the timer dock, with one timer running and with several
-- [ ] It reads "Cook" always, and never "Continue"
-- [ ] The inline cooking-mode button is gone from the mobile page and still present on desktop
-- [ ] Share-mobile renders no cook button
+      — the nav and the **collapsed** dock are clear, but the **expanded** dock is `w-80`,
+      which on a phone spans the gutter and covers the pill. Predates this work (both
+      corners always shared one band); needs the dock's expanded state lifted somewhere
+      the pill can read it, so the pill steps aside while the summary is open.
+- [x] It reads "Cook" always, and never "Continue"
+- [x] The inline cooking-mode button is gone from the mobile page and still present on desktop
+- [x] Share-mobile renders no cook button
+
+**Amended after review:** `MobileNav` hides by shrinking in place rather than
+sliding away, so it never vacates the corner and a dock that dropped to the
+floor landed on top of it. The cook pill and the timer dock keep their station
+above the bar instead and take the bar's own shrink about the bar's own
+anchor — slightly smaller, slightly further in — which is what keeps the three
+aligned at either size. The geometry lives in `hooks/use-floating-dock.ts` so
+the two cannot drift apart, and `MOBILE_NAV_SHRUNKEN_SCALE` is read by the nav
+itself as well.
+
+- [x] Neither floating item drops behind the nav when the nav hides; both shrink with it
+- [x] Both are inset with the nav's own edges at either size
+- [x] The collapsed timer dock is the same height as the cook pill

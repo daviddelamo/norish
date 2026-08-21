@@ -8,10 +8,10 @@
 
 **Status:** ready-for-agent
 
-- [ ] The bottom bar shows meter, Ready At and step counter above back / timers / ingredients / keep-screen-on and Next Step
-- [ ] The back chevron changes step and is disabled on the first step
-- [ ] Ready At is anchored to when cooking mode opened, not to page load
-- [ ] Closing and reopening cooking mode restarts at the first step with a fresh Ready At
-- [ ] A recipe with no total time shows no Ready At
-- [ ] Ready At appears nowhere on the recipe page, including the Cooking Time card
-- [ ] Copy reads as a projection, and new strings pass `pnpm i18n:check` across every locale
+- [x] The bottom bar shows meter, Ready At and step counter above back / timers / ingredients / keep-screen-on and Next Step
+- [x] The back chevron changes step and is disabled on the first step
+- [x] Ready At is anchored to when cooking mode opened, not to page load
+- [x] Closing and reopening cooking mode restarts at the first step with a fresh Ready At
+- [x] A recipe with no total time shows no Ready At
+- [x] Ready At appears nowhere on the recipe page, including the Cooking Time card
+- [x] Copy reads as a projection, and new strings pass `pnpm i18n:check` across every locale
