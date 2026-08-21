@@ -6,11 +6,11 @@ The tint opt-out is **not** covered here: ticket 15 owns it, and two of its thre
 
 **Blocked by:** 03, 04, 05, 06, 07, 08, 09, 11
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The spec runs in the existing `ai` project with its fixtures, adding no new harness
-- [ ] Glance Bar contents and card order are asserted on a phone viewport
-- [ ] The cook pill is reachable at full scroll and overlaps neither the nav nor the timer dock
-- [ ] Paged steps, both swipes and the back chevron are exercised
-- [ ] Ready At is asserted present in cooking mode and absent from the recipe page
-- [ ] Hiding Nutrition Information removes the card and the Glance Bar's calories together
+- [x] The spec runs in the existing `ai` project with its fixtures, adding no new harness
+- [x] Glance Bar contents and card order are asserted on a phone viewport
+- [x] The cook pill is reachable at full scroll and overlaps neither the nav nor the timer dock
+- [x] Paged steps, both swipes and the back chevron are exercised
+- [x] Ready At is asserted present in cooking mode and absent from the recipe page
+- [x] Hiding Nutrition Information removes the card and the Glance Bar's calories together

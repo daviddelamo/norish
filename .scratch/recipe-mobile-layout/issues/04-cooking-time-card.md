@@ -6,7 +6,7 @@ The three columns are independent in the schema and nothing derives or validates
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] A pure reconciliation function covers: agreeing split, short split (Other Time appears), overflowing split (headline flips to the sum), total-only, split-only, and no times at all
 - [x] Other Time is labelled for what it is not, and never named as resting or proving

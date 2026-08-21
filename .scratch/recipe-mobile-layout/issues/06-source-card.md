@@ -4,7 +4,7 @@
 
 **Blocked by:** 02, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] The card shows the source host and opens the original in a new tab with `rel="noopener noreferrer"`
 - [x] A recipe with no URL renders no card

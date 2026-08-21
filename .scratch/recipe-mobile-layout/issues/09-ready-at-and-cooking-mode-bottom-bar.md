@@ -6,7 +6,7 @@
 
 **Blocked by:** 08
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] The bottom bar shows meter, Ready At and step counter above back / timers / ingredients / keep-screen-on and Next Step
 - [x] The back chevron changes step and is disabled on the first step

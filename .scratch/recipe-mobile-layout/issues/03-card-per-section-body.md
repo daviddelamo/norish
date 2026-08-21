@@ -8,7 +8,7 @@ The Ingredients card header becomes a full-width `N servings − +` row (ticket 
 
 **Blocked by:** 01, 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Each section renders as its own card; no `<Separator />` rules remain between sections on mobile
 - [x] Card order is Ingredients, Steps, Notes, Cooking Time, Nutrition, Provenance, Source, Rating

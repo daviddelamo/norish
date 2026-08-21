@@ -1,5 +1,5 @@
 ---
-sidebar_position: 5
+sidebar_position: 6
 title: Hidden Items
 description: Choose what you would rather not be shown, from Recipe Provenance and Nutrition Information to ratings, favorites and timers. Everything is shown by default, and hiding changes only your own view.
 ---
@@ -17,7 +17,8 @@ can choose not to see:
 
 - **Provenance**, the Recipe Provenance section: country, region, cuisines and
   the explanatory note. Country flags remain **visible** besides the title
-- **Nutrition**, the Nutrition Information section
+- **Nutrition**, the Nutrition Information section, including the calories
+  entry in the recipe page's Glance Bar
 - **Notes**, the notes section on the recipe page
 - **Ratings**, the rating section on the recipe page, the rating on library
   cards and the rating filter

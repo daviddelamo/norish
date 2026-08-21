@@ -6,11 +6,11 @@ It always reads "Cook". There is no persisted Cooking Session, so there is nothi
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] A floating cook pill sits bottom-left and opens cooking mode
 - [x] It tracks `MobileNav` visibility the way `TimerDock` already does
-- [ ] It never overlaps the nav pill or the timer dock, with one timer running and with several
+- [x] It never overlaps the nav pill or the timer dock, with one timer running and with several
       — the nav and the **collapsed** dock are clear, but the **expanded** dock is `w-80`,
       which on a phone spans the gutter and covers the pill. Predates this work (both
       corners always shared one band); needs the dock's expanded state lifted somewhere

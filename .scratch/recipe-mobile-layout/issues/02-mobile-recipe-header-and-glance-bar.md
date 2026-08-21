@@ -6,7 +6,7 @@ Hero chrome moves onto the photo as opaque circular buttons — back top-left, f
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] The mobile header renders on the page background in the order: categories, flag + title, author, description, Glance Bar, tags
 - [x] Tags keep allergen-first sorting and the warning fill

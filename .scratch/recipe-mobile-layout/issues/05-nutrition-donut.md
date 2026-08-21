@@ -6,7 +6,7 @@ Because the card is shared, this reaches mobile, desktop and the share page. Tha
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Arcs are calorie contribution, not gram share
 - [x] The centre shows stored calories; a recipe with macros and no stored calories shows no calorie figure

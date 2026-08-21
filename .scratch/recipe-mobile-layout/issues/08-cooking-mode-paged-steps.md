@@ -8,7 +8,7 @@ Step Ingredients stay a chip row below the prose — the glossary settles it, an
 
 **Blocked by:** None — can start alongside the page work.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] The header is thumbnail, title, `categories · total time`, close — with no tab bar
 - [x] The ingredients view is reachable by horizontal swipe and by the bottom-bar button, which flips its icon while ingredients are showing

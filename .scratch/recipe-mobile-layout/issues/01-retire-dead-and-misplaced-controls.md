@@ -4,7 +4,7 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] `add-to-calendar-button.tsx` is deleted and nothing references it
 - [x] `SystemConvertMenu` appears in the recipe actions menu, retaining its permission gate and its `showConversion` Hidden Item behaviour
