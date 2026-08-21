@@ -6,10 +6,10 @@ Copy must follow the glossary: **Glance Bar**, **Other Time**, **Cooking Session
 
 **Blocked by:** 13, 15
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The recipes docs page covers the new layout, both charts, the cook button and Ready At
-- [ ] The docs say a recipe page is tinted by its own photo and that a reader can choose plain theme colours instead, with where that setting lives
-- [ ] Screenshots are captured from the E2E `ai` stack and land under the docs `img/screenshots` path
-- [ ] A section is added to the `0.21.0-beta` release notes
-- [ ] Copy uses the glossary terms and words Ready At as a projection
+- [x] The recipes docs page covers the new layout, both charts, the cook button and Ready At
+- [x] The docs say a recipe page is tinted by its own photo and that a reader can choose plain theme colours instead, with where that setting lives
+- [x] Screenshots are captured from the E2E `ai` stack and land under the docs `img/screenshots` path
+- [x] A section is added to the `0.21.0-beta` release notes
+- [x] Copy uses the glossary terms and words Ready At as a projection

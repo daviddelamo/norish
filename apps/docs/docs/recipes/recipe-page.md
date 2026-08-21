@@ -61,7 +61,7 @@ step too long for its screen takes the whole page and scrolls; each step's
 ingredients and amounts are presented with it as a row of chips, so you
 never leave a step to find out how much cheese.
 
-![Cooking mode on a phone: one step per screen, the neighbours peeking, the bottom bar with Ready At](/img/screenshots/cooking-mode-mobile.png)
+![Cooking mode on a phone: the step with its ingredient chips, and the bottom bar carrying Ready At](/img/screenshots/cooking-mode-mobile.png)
 
 The bottom bar also shows **Ready At** — the time the food is projected to
 be done, counted from the moment you opened cooking mode plus the recipe's

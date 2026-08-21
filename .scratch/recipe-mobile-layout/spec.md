@@ -1,6 +1,6 @@
 # Recipe mobile layout
 
-Status: ready-for-agent
+Status: done
 
 Spec for the phone layout of a recipe and its cooking mode in `apps/web`. Vocabulary per `CONTEXT.md` (Glance Bar, Other Time, Cooking Session, Ready At, Dish Colour, Hidden Item, Step Ingredient); decisions per ADR-0023 (Recipe pages take their hue from the dish), constrained by ADR-0020 (Norish does not fake glass).
 
