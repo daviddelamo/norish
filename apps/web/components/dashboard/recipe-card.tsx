@@ -26,7 +26,11 @@ import { useTranslations } from "next-intl";
 
 import { RecipeDashboardDTO } from "@norish/shared/contracts";
 import { RECIPE_DASHBOARD_KEYS } from "@norish/shared/contracts/zod";
-import { formatMinutesHM } from "@norish/shared/lib/helpers";
+import {
+  formatMinutesHM,
+  isAllergenTag,
+  sortTagsWithAllergyPriority,
+} from "@norish/shared/lib/helpers";
 
 import { DeleteRecipeModal } from "../shared/delete-recipe-modal";
 import DoubleTapContainer from "../shared/double-tap-container";
@@ -160,9 +164,25 @@ function RecipeCardComponent({
   const timeLabel = formatMinutesHM(totalMinutes);
 
   const servings = recipe.servings;
-  const tagNames = useMemo(() => normalizeRecipeTagNames(recipe.tags), [recipe.tags]);
+  const allergySet = useMemo(() => new Set(allergies.map((a) => a.toLowerCase())), [allergies]);
+  // Allergen tags always sort ahead of the rest, so the two visible list-view
+  // chips (and the tooltip behind "+N") surface the warning instead of hiding
+  // it. The grid overlay applies the same priority inside RecipeTags.
+  const tagNames = useMemo(
+    () =>
+      sortTagsWithAllergyPriority(
+        normalizeRecipeTagNames(recipe.tags).map((name) => ({ name })),
+        allergies
+      ).map((t) => t.name),
+    [recipe.tags, allergies]
+  );
   const visibleTagNames = tagNames.slice(0, 2);
   const hiddenTagCount = tagNames.length - visibleTagNames.length;
+  // More allergens than visible slots: the overflow chip inherits the warning
+  // so the danger is never folded away into a neutral "+N".
+  const hiddenAllergenCount = tagNames
+    .slice(visibleTagNames.length)
+    .filter((tag) => isAllergenTag(tag, allergySet)).length;
   const allTags = useMemo(() => tagNames.map((name) => ({ name })), [tagNames]);
   const description = recipe.description?.trim() || "";
 
@@ -299,36 +319,51 @@ function RecipeCardComponent({
         </Chip>
       )}
 
-      {visibleTagNames.map((tag) => (
-        <Chip
-          key={tag.toLowerCase()}
-          className="max-w-[8rem] min-w-0 rounded-full px-2 text-[11px]"
-          size="sm"
-          variant="tertiary"
-        >
-          <Chip.Label className="truncate">{tag}</Chip.Label>
-        </Chip>
-      ))}
+      {visibleTagNames.map((tag) => {
+        const isAllergen = isAllergenTag(tag, allergySet);
+
+        return (
+          <Chip
+            key={tag.toLowerCase()}
+            className="max-w-[8rem] min-w-0 rounded-full px-2 text-[11px]"
+            color={isAllergen ? "warning" : undefined}
+            size="sm"
+            variant={isAllergen ? "primary" : "tertiary"}
+          >
+            <Chip.Label className="truncate">{tag}</Chip.Label>
+          </Chip>
+        );
+      })}
 
       {hiddenTagCount > 0 && (
         <Tooltip delay={0}>
           <Tooltip.Trigger aria-label={tagNames.join(", ")} onClick={stopParentActivation}>
-            <Chip className="shrink-0 rounded-full px-2 text-[11px]" size="sm" variant="tertiary">
+            <Chip
+              className="shrink-0 rounded-full px-2 text-[11px]"
+              color={hiddenAllergenCount > 0 ? "warning" : undefined}
+              size="sm"
+              variant={hiddenAllergenCount > 0 ? "primary" : "tertiary"}
+            >
               <Chip.Label>+{hiddenTagCount}</Chip.Label>
             </Chip>
           </Tooltip.Trigger>
           <Tooltip.Content className="max-w-64">
             <div className="flex flex-wrap gap-1.5 p-1">
-              {tagNames.map((tag) => (
-                <Chip
-                  key={tag.toLowerCase()}
-                  className="max-w-48 rounded-full px-2"
-                  size="sm"
-                  variant="tertiary"
-                >
-                  <Chip.Label className="truncate">{tag}</Chip.Label>
-                </Chip>
-              ))}
+              {tagNames.map((tag) => {
+                const isAllergen = isAllergenTag(tag, allergySet);
+
+                return (
+                  <Chip
+                    key={tag.toLowerCase()}
+                    className="max-w-48 rounded-full px-2"
+                    color={isAllergen ? "warning" : undefined}
+                    size="sm"
+                    variant={isAllergen ? "primary" : "tertiary"}
+                  >
+                    <Chip.Label className="truncate">{tag}</Chip.Label>
+                  </Chip>
+                );
+              })}
             </div>
           </Tooltip.Content>
         </Tooltip>

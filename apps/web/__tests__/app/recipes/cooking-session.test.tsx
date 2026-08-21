@@ -5,10 +5,17 @@ import "@testing-library/jest-dom";
 
 import CookingMode from "@/app/(app)/recipes/[id]/components/cookingmode/cooking-mode";
 
-const mocks = vi.hoisted(() => ({ totalMinutes: 90 as number | null }));
+const mocks = vi.hoisted(() => ({
+  totalMinutes: 90 as number | null,
+  dishColor: null as string | null,
+  recipePageColor: "theme" as "theme" | "dish",
+}));
 
 vi.mock("@/hooks/use-is-mobile", () => ({ useIsMobile: () => true }));
 vi.mock("@/hooks/auto-hide", () => ({ useAutoHide: () => ({ isVisible: true }) }));
+vi.mock("@/context/recipe-page-color-context", () => ({
+  useRecipePageColor: () => [mocks.recipePageColor, () => {}],
+}));
 vi.mock("@/components/timer-dock", () => ({ TimerDock: () => <div /> }));
 vi.mock("@/app/(app)/recipes/[id]/components/wake-lock-context", () => ({
   useWakeLockContext: () => ({
@@ -26,6 +33,7 @@ vi.mock("@/app/(app)/recipes/[id]/context", () => ({
       name: "Cacio e Pepe",
       categories: ["Dinner"],
       totalMinutes: mocks.totalMinutes,
+      dishColor: mocks.dishColor,
       images: [],
       image: null,
       steps: [
@@ -99,8 +107,22 @@ vi.mock("@heroui/react", () => ({
     </button>
   ),
   Modal: {
-    Backdrop: ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) =>
-      isOpen ? <div>{children}</div> : null,
+    Backdrop: ({
+      children,
+      isOpen,
+      style,
+      "data-dish-tint": dishTint,
+    }: {
+      children: React.ReactNode;
+      isOpen: boolean;
+      style?: React.CSSProperties;
+      "data-dish-tint"?: boolean;
+    }) =>
+      isOpen ? (
+        <div data-dish-tint={dishTint} data-testid="cooking-backdrop" style={style}>
+          {children}
+        </div>
+      ) : null,
     Container: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     Dialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   },
@@ -112,6 +134,8 @@ vi.mock("next-intl", () => ({
 
 beforeEach(() => {
   mocks.totalMinutes = 90;
+  mocks.dishColor = null;
+  mocks.recipePageColor = "theme";
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-08-21T16:00:00.000Z"));
 });
@@ -216,5 +240,49 @@ describe("Cooking mode swipes on a long step", () => {
     swipe(screen.getByTestId("swipe-edge"), 0, -120);
 
     expect(screen.getByTestId("cooking-dialog").dataset.activeStep).toBe("1");
+  });
+});
+
+/**
+ * The modal portals out of the recipe page's dish-tint scope, so cooking mode
+ * re-establishes it on its own backdrop (ADR-0023): the bottom bar's ground
+ * and every tinted token inside follow the dish exactly as the page does.
+ */
+describe("Cooking mode dish tint", () => {
+  it("re-establishes the dish tint scope on its backdrop", () => {
+    mocks.dishColor = "#cc7733";
+    mocks.recipePageColor = "dish";
+
+    render(<CookingMode floating />);
+    openCooking();
+
+    const backdrop = screen.getByTestId("cooking-backdrop");
+
+    expect(backdrop).toHaveAttribute("data-dish-tint");
+    expect(backdrop.style.getPropertyValue("--dish-h")).not.toBe("");
+    expect(backdrop.style.getPropertyValue("--dish-c")).not.toBe("");
+  });
+
+  it("stays untinted for a reader whose recipe pages follow the theme", () => {
+    mocks.dishColor = "#cc7733";
+    mocks.recipePageColor = "theme";
+
+    render(<CookingMode floating />);
+    openCooking();
+
+    const backdrop = screen.getByTestId("cooking-backdrop");
+
+    expect(backdrop).not.toHaveAttribute("data-dish-tint");
+    expect(backdrop.style.getPropertyValue("--dish-h")).toBe("");
+  });
+
+  it("stays untinted for a recipe with no Dish Colour", () => {
+    mocks.dishColor = null;
+    mocks.recipePageColor = "dish";
+
+    render(<CookingMode floating />);
+    openCooking();
+
+    expect(screen.getByTestId("cooking-backdrop")).not.toHaveAttribute("data-dish-tint");
   });
 });
