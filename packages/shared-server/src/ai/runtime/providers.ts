@@ -279,7 +279,14 @@ export function createGenericTranscriptionClient({
   timeoutMs,
 }: Omit<TranscriptionClientOptions, "model">): OpenAI {
   return new OpenAI({
-    apiKey,
+    // These servers are normally run with no auth at all, but openai v7 refuses
+    // to construct a client without a credential. Satisfy the constructor and
+    // then drop the header again - a null value is how this client is told to
+    // omit one - so an endpoint with no key configured sees exactly what it saw
+    // before the upgrade: no Authorization at all, rather than a made-up
+    // credential a stricter server would reject outright.
+    apiKey: apiKey || "unused",
+    ...(apiKey ? {} : { defaultHeaders: { Authorization: null } }),
     ...(endpoint && { baseURL: normalizeOpenAICompatibleEndpoint(endpoint) }),
     fetch: createFetchWithTimeout(timeoutMs),
   });
