@@ -659,8 +659,7 @@ export async function dashboardRecipe(id: string): Promise<RecipeDashboardDTO | 
  * identifier alone cannot tell the caller which happened.
  */
 export type CreateRecipeResult =
-  | { status: "inserted"; recipeId: string }
-  | { status: "existing"; recipeId: string };
+  { status: "inserted"; recipeId: string } | { status: "existing"; recipeId: string };
 
 export async function createRecipeWithRefs(
   recipeId: string,
@@ -768,6 +767,7 @@ export async function createRecipeWithRefs(
           recipeId: rid,
           image: img.image,
           order: String(img.order ?? 0),
+          generated: img.generated === true,
         }))
       );
     }
@@ -934,7 +934,7 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
         orderBy: (steps, { asc }) => [asc(steps.order)],
       },
       images: {
-        columns: { id: true, image: true, order: true, version: true },
+        columns: { id: true, image: true, order: true, generated: true, version: true },
         orderBy: (images, { asc }) => [asc(images.order)],
       },
       videos: {
@@ -955,8 +955,7 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
 
   // fetch author if exists
   let author:
-    | { id: string; name: string | null; image: string | null; version: number }
-    | undefined;
+    { id: string; name: string | null; image: string | null; version: number } | undefined;
 
   if (full.userId) {
     const { getUserAuthorInfo } = await import("./users");
@@ -1043,6 +1042,7 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
       id: img.id,
       image: img.image,
       order: Number(img.order) || 0,
+      generated: img.generated === true,
       version: img.version,
     })),
     videos: (full.videos ?? []).map((vid: any) => ({
@@ -1283,6 +1283,9 @@ async function syncRecipeImagesTx(
     const values = {
       image: image.image,
       order: String(image.order ?? index),
+      // An absent field carries no intent: an edit-form save must not clear
+      // a stored marking, so only an explicit value is written on update.
+      ...(image.generated !== undefined ? { generated: image.generated } : {}),
     };
 
     if (image.id && existingById.has(image.id)) {
@@ -1294,7 +1297,7 @@ async function syncRecipeImagesTx(
       continue;
     }
 
-    await tx.insert(recipeImages).values({ recipeId, ...values });
+    await tx.insert(recipeImages).values({ recipeId, generated: false, ...values });
   }
 
   const idsToDelete = existing
@@ -2108,9 +2111,7 @@ export async function updateRecipeDishColor(
  * The media a recipe's Dish Colour is derived from, for recomputing after a
  * direct gallery mutation. Null when the recipe does not exist.
  */
-export async function getRecipeMediaForDishColor(
-  recipeId: string
-): Promise<{
+export async function getRecipeMediaForDishColor(recipeId: string): Promise<{
   image: string | null;
   galleryImages: { image: string; order: number | null }[];
 } | null> {

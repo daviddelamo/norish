@@ -21,6 +21,7 @@ import { db } from "@norish/db/drizzle";
 import {
   ingredients,
   recipeCuisines,
+  recipeImages,
   recipeIngredients,
   recipes,
   stepIngredients,
@@ -137,6 +138,84 @@ export async function replaceRecipeNutrition(
     .returning({ id: recipes.id });
 
   return updated.length > 0;
+}
+
+/** What the Generated Image replacement did, and which files it orphaned. */
+export interface GeneratedImageReplacement {
+  /** The stored URL of the Generated Image just written, at order 0. */
+  imageUrl: string;
+  /**
+   * URLs whose rows this write deleted. The repository holds no filesystem,
+   * so removing the files is the caller's job — and only for URLs that
+   * differ from `imageUrl`, since content-hashed storage can hand a re-run
+   * the very same path.
+   */
+  replacedImageUrls: string[];
+}
+
+/**
+ * Write a Generated Image into a recipe's primary slot (ADR-0025).
+ *
+ * Deliberately destructive, and the only place a Generated Image is written:
+ * the row holding the primary slot — the first by order, whatever number
+ * that is — is deleted, the new image is written at order 0 with the marker
+ * set, and every other row keeps its contents and its relative order. Any
+ * stray marked row is swept in the same transaction, so a recipe holds at
+ * most one Generated Image and re-runs replace their own predecessor rather
+ * than accumulating toward the gallery cap.
+ *
+ * Eligibility is what keeps automatic runs off stored photographs; by the
+ * time this runs, the coordinator has decided the slot may be consumed.
+ *
+ * @returns what was written and what was displaced, or null when the recipe
+ *   does not exist.
+ */
+export async function replaceRecipePrimaryImageWithGenerated(
+  recipeId: string,
+  imageUrl: string
+): Promise<GeneratedImageReplacement | null> {
+  return await db.transaction(async (tx) => {
+    const [recipe] = await tx
+      .select({ id: recipes.id })
+      .from(recipes)
+      .where(eq(recipes.id, recipeId))
+      .for("update");
+
+    if (!recipe) return null;
+
+    const rows = await tx
+      .select({
+        id: recipeImages.id,
+        image: recipeImages.image,
+        order: recipeImages.order,
+        generated: recipeImages.generated,
+      })
+      .from(recipeImages)
+      .where(eq(recipeImages.recipeId, recipeId));
+
+    rows.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+
+    const primary = rows[0];
+    const displaced = rows.filter((row) => row.id === primary?.id || row.generated);
+
+    if (displaced.length > 0) {
+      await tx.delete(recipeImages).where(
+        inArray(
+          recipeImages.id,
+          displaced.map((row) => row.id)
+        )
+      );
+    }
+
+    await tx
+      .insert(recipeImages)
+      .values({ recipeId, image: imageUrl, order: "0", generated: true });
+
+    return {
+      imageUrl,
+      replacedImageUrls: [...new Set(displaced.map((row) => row.image))],
+    };
+  });
 }
 
 /** What one Recipe Provenance write proposes. Cuisines arrive already resolved. */
