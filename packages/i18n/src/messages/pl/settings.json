@@ -559,7 +559,8 @@
         "confirmButtonReplace": "Nadpisz wszystkie przepisy",
         "queued": "{queued, plural, =0 {Brak uruchomień w kolejce} one {# uruchomienie w kolejce} few {# uruchomienia w kolejce} many {# uruchomień w kolejce} other {# uruchomienia w kolejce}} dla {recipes, plural, one {# przepisu} few {# przepisów} many {# przepisów} other {# przepisu}}",
         "aiDisabled": "AI jest wyłączone na tym serwerze. Najpierw włącz AI.",
-        "error": "Nie udało się uruchomić masowego wzbogacania"
+        "error": "Nie udało się uruchomić masowego wzbogacania",
+        "imageCount": "{count, plural, =0 {Nie zostanie wygenerowany żaden obraz.} one {Zostanie wygenerowany # obraz.} few {Zostaną wygenerowane # obrazy.} many {Zostanie wygenerowanych # obrazów.} other {Zostanie wygenerowanych # obrazu.}}"
       }
     },
     "aiConfig": {

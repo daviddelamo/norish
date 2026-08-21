@@ -559,7 +559,8 @@
         "confirmButtonReplace": "Sovrascrivi tutte le ricette",
         "queued": "{queued, plural, =0 {Nessuna esecuzione in coda} one {# esecuzione in coda} other {# esecuzioni in coda}} per {recipes, plural, one {# ricetta} other {# ricette}}",
         "aiDisabled": "L'IA è disabilitata su questo server. Abilita prima l'IA.",
-        "error": "Avvio dell'arricchimento in blocco non riuscito"
+        "error": "Avvio dell'arricchimento in blocco non riuscito",
+        "imageCount": "{count, plural, =0 {Non verrà generata nessuna immagine.} one {Verrà generata # immagine.} other {Verranno generate # immagini.}}"
       }
     },
     "aiConfig": {

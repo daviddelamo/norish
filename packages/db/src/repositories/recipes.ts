@@ -862,6 +862,43 @@ export async function getAllRecipesForEnrichment(): Promise<
   return rows;
 }
 
+/**
+ * How many images an Enrich All Recipes sweep would generate (ADR-0025): the
+ * one kind whose cost is per recipe and lands on a bill, so the confirmation
+ * names the number before it starts. A per-request read, never stored.
+ *
+ * Mirrors the coordinator's eligibility exactly: a recipe with no ingredient
+ * rows is insufficient input for the kind, and "missing" means no image at
+ * all — no gallery row, and a null or blank legacy scalar. Do not loosen
+ * either side to make the count easier; the default sweep must stay
+ * incapable of touching a stored image.
+ */
+export async function getImageGenerationSweepCounts(): Promise<{
+  /** Recipes the overwrite sweep would draw for: everything with ingredients. */
+  eligible: number;
+  /** The default sweep's subset: eligible recipes holding no image at all. */
+  missingImage: number;
+}> {
+  const hasIngredients = sql`EXISTS (
+    SELECT 1 FROM ${recipeIngredients} WHERE ${recipeIngredients.recipeId} = ${recipes.id}
+  )`;
+  const hasNoImage = sql`NOT EXISTS (
+    SELECT 1 FROM ${recipeImages} WHERE ${recipeImages.recipeId} = ${recipes.id}
+  ) AND (${recipes.image} IS NULL OR btrim(${recipes.image}) = '')`;
+
+  const [row] = await db
+    .select({
+      eligible: sql<number>`COUNT(*) FILTER (WHERE ${hasIngredients})`,
+      missingImage: sql<number>`COUNT(*) FILTER (WHERE ${hasIngredients} AND ${hasNoImage})`,
+    })
+    .from(recipes);
+
+  return {
+    eligible: Number(row?.eligible ?? 0),
+    missingImage: Number(row?.missingImage ?? 0),
+  };
+}
+
 export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
   const full = await db.query.recipes.findFirst({
     where: eq(recipes.id, id),

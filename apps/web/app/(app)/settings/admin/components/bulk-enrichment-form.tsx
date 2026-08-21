@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTRPC } from "@/app/providers/trpc-provider";
 import { showSafeErrorToast } from "@/lib/ui/safe-error-toast";
 import { Button, toast } from "@heroui/react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 import { useTranslations } from "next-intl";
 
@@ -18,6 +18,14 @@ export default function BulkEnrichmentForm() {
   // Deliberately not remembered between openings: overwriting the library is a
   // choice to make each time, not a setting that lies in wait.
   const [replaceExisting, setReplaceExisting] = useState(false);
+  // A per-request read, fetched as the confirmation opens: how many images
+  // the sweep would generate, for the modal to name before it starts.
+  const imageCountQuery = useQuery(
+    trpc.admin.imageGenerationSweepCount.queryOptions(undefined, {
+      enabled: isConfirmOpen,
+      refetchOnMount: "always",
+    })
+  );
   const enrichAllMutation = useMutation(
     trpc.admin.enrichAllRecipes.mutationOptions({
       onError: (error) => {
@@ -62,6 +70,7 @@ export default function BulkEnrichmentForm() {
         </Button>
       </div>
       <BulkEnrichmentConfirmationModal
+        imageCounts={imageCountQuery.data}
         isOpen={isConfirmOpen}
         replaceExisting={replaceExisting}
         onClose={() => setIsConfirmOpen(false)}

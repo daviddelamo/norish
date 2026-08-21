@@ -179,3 +179,47 @@ describe("replaceRecipePrimaryImageWithGenerated", () => {
     expect(await replaceRecipePrimaryImageWithGenerated(missing, url(missing, "drawn"))).toBeNull();
   });
 });
+
+describe("getImageGenerationSweepCounts", () => {
+  it("counts eligible recipes, and the subset with no image at all", async () => {
+    const { getImageGenerationSweepCounts } = await import("@norish/db/repositories/recipes");
+
+    const withIngredients = {
+      ...BASE_RECIPE,
+      recipeIngredients: [
+        {
+          ingredientName: "flour",
+          ingredientId: null,
+          amount: 100,
+          unit: "g",
+          systemUsed: "metric" as const,
+          order: 0,
+        },
+      ],
+    };
+
+    const gapRecipe = crypto.randomUUID();
+    const galleryRecipe = crypto.randomUUID();
+    const legacyRecipe = crypto.randomUUID();
+    const bareRecipe = crypto.randomUUID();
+
+    await createRecipeWithRefs(gapRecipe, userId, { ...withIngredients, name: "Gap" });
+    await createRecipeWithRefs(galleryRecipe, userId, {
+      ...withIngredients,
+      name: "Gallery",
+      images: [{ image: url(galleryRecipe, "photo"), order: 0 }],
+    });
+    await createRecipeWithRefs(legacyRecipe, userId, {
+      ...withIngredients,
+      name: "Legacy",
+      image: url(legacyRecipe, "hero"),
+    });
+    // No ingredients: insufficient input for the kind, so in neither count.
+    await createRecipeWithRefs(bareRecipe, userId, { ...BASE_RECIPE, name: "Bare" });
+
+    const counts = await getImageGenerationSweepCounts();
+
+    // The beforeEach test recipe has no ingredients either and stays out.
+    expect(counts).toEqual({ eligible: 3, missingImage: 1 });
+  });
+});

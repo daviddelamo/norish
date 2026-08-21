@@ -11,6 +11,7 @@ import {
   TranscriptionProviderSchema,
   VideoConfigSchema,
 } from "@norish/config/zod/server-config";
+import { getImageGenerationSweepCounts } from "@norish/db/repositories/recipes";
 import { getConfig, setConfig } from "@norish/db/repositories/server-config";
 import { enrollEnrichmentForAllRecipes } from "@norish/queue";
 import {
@@ -19,8 +20,10 @@ import {
   ModelListingError,
 } from "@norish/shared-server/ai/providers/listing";
 import {
+  getAutomaticEnrichmentConfig,
   getRecipePermissionPolicy,
   isAIEnabled,
+  isImageGenerationConfigured,
 } from "@norish/shared-server/config/server-config-loader";
 import { trpcLogger as log } from "@norish/shared-server/logger";
 
@@ -278,6 +281,32 @@ const enrichAllRecipes = adminProcedure
     return result;
   });
 
+/**
+ * How many images an Enrich All Recipes sweep would generate, for the
+ * confirmation to name before it starts (ADR-0025) — the one kind whose cost
+ * is per recipe and lands on a bill. A per-request read, never stored.
+ *
+ * `enabled: false` when the kind's automatic switch is off (or AI is), so
+ * the modal renders exactly as it does today. With the switch on but no
+ * image provider configured, both counts are honestly zero: every origin
+ * would skip.
+ */
+const imageGenerationSweepCount = adminProcedure.query(async () => {
+  const automatic = await getAutomaticEnrichmentConfig();
+
+  if (!automatic.imageGeneration) {
+    return { enabled: false as const };
+  }
+
+  if (!(await isImageGenerationConfigured())) {
+    return { enabled: true as const, gapOnly: 0, overwrite: 0 };
+  }
+
+  const counts = await getImageGenerationSweepCounts();
+
+  return { enabled: true as const, gapOnly: counts.missingImage, overwrite: counts.eligible };
+});
+
 export const aiConfigProcedures = router({
   updateAIConfig,
   updateVideoConfig,
@@ -286,4 +315,5 @@ export const aiConfigProcedures = router({
   listAvailableModels,
   listAvailableTranscriptionModels,
   enrichAllRecipes,
+  imageGenerationSweepCount,
 });

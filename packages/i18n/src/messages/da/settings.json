@@ -559,7 +559,8 @@
         "confirmButtonReplace": "Overskriv alle opskrifter",
         "queued": "{queued, plural, =0 {Ingen kørsler i kø} one {# kørsel i kø} other {# kørsler i kø}} for {recipes, plural, one {# opskrift} other {# opskrifter}}",
         "aiDisabled": "AI er deaktiveret på denne server. Aktivér AI først.",
-        "error": "Kunne ikke starte masseberigelse"
+        "error": "Kunne ikke starte masseberigelse",
+        "imageCount": "{count, plural, =0 {Der genereres ingen billeder.} one {Der genereres # billede.} other {Der genereres # billeder.}}"
       }
     },
     "aiConfig": {

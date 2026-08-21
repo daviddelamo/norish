@@ -14,14 +14,19 @@ import "@testing-library/jest-dom";
 
 const mutate = vi.fn();
 const mockUseTRPC = vi.fn();
+const sweepCounts = vi.hoisted(() => ({ current: undefined as unknown }));
 
 vi.mock("@/app/providers/trpc-provider", () => ({ useTRPC: mockUseTRPC }));
 
 vi.mock("@tanstack/react-query", () => ({
   useMutation: () => ({ mutate, isPending: false, isSuccess: false, data: undefined }),
+  useQuery: () => ({ data: sweepCounts.current }),
 }));
 
-vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, unknown>) =>
+    values ? `${key}:${JSON.stringify(values)}` : key,
+}));
 
 vi.mock("@/lib/ui/safe-error-toast", () => ({ showSafeErrorToast: vi.fn() }));
 
@@ -79,8 +84,12 @@ function openConfirmation() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sweepCounts.current = undefined;
   mockUseTRPC.mockReturnValue({
-    admin: { enrichAllRecipes: { mutationOptions: (options: unknown) => options } },
+    admin: {
+      enrichAllRecipes: { mutationOptions: (options: unknown) => options },
+      imageGenerationSweepCount: { queryOptions: (_input: unknown, options: unknown) => options },
+    },
   });
 });
 
@@ -123,5 +132,27 @@ describe("BulkEnrichmentForm", () => {
     fireEvent.click(openConfirmation());
 
     expect(mutate).toHaveBeenCalledWith({ replaceExisting: false });
+  });
+});
+
+describe("the image count the confirmation names", () => {
+  it("shows the gap count by default and the overwrite count once toggled", () => {
+    sweepCounts.current = { enabled: true, gapOnly: 4, overwrite: 12 };
+    render(<BulkEnrichmentForm />);
+    openConfirmation();
+
+    expect(screen.getByText('imageCount:{"count":4}')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("replace-switch"));
+
+    expect(screen.getByText('imageCount:{"count":12}')).toBeInTheDocument();
+  });
+
+  it("leaves the modal exactly as it is today when the kind is switched off", () => {
+    sweepCounts.current = { enabled: false };
+    render(<BulkEnrichmentForm />);
+    openConfirmation();
+
+    expect(screen.queryByText(/imageCount/)).not.toBeInTheDocument();
   });
 });
