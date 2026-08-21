@@ -6,7 +6,10 @@
  * shared-server/__tests__/media/dish-color.test.ts; here the sentinel proves
  * the worker threads it into the write.
  */
+import type { Job } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { RecipeImportJobData } from "@norish/queue/contracts/job-types";
 
 const createRecipeWithRefs = vi.fn();
 const dashboardRecipe = vi.fn();
@@ -92,7 +95,7 @@ describe("processImportJob", () => {
         householdKey: "household-1",
         householdUserIds: null,
       },
-    } as any);
+    } as unknown as Job<RecipeImportJobData>);
 
     expect(withDishColor).toHaveBeenCalledWith(PARSED_RECIPE);
     expect(createRecipeWithRefs).toHaveBeenCalledWith(

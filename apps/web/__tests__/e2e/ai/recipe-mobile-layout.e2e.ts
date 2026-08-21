@@ -159,7 +159,7 @@ test.afterAll(async () => {
 test("the Glance Bar answers above the fold and the cards follow cooking order", async () => {
   await page.goto(`/recipes/${recipeId}`);
 
-  const glanceBar = page.locator("dl.dish-tint-exempt").first();
+  const glanceBar = page.getByTestId("glance-bar");
 
   await expect(glanceBar).toBeVisible();
   await expect(glanceBar).toContainText("45m");
@@ -260,7 +260,7 @@ test("hiding Nutrition Information takes the card and the Glance Bar's calories 
 
   await page.goto(`/recipes/${recipeId}`);
 
-  const glanceBar = page.locator("dl.dish-tint-exempt").first();
+  const glanceBar = page.getByTestId("glance-bar");
 
   await expect(glanceBar).toBeVisible();
   await expect(glanceBar).toContainText("45m");

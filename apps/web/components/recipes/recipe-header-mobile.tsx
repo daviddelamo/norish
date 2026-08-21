@@ -64,7 +64,10 @@ function GlanceBar({ entries }: { entries: GlanceEntry[] }) {
   if (entries.length === 0) return null;
 
   return (
-    <dl className="bg-surface dish-tint-exempt flex items-center rounded-2xl px-2 py-3 shadow-sm">
+    <dl
+      className="bg-surface dish-tint-exempt flex items-center rounded-2xl px-2 py-3 shadow-sm"
+      data-testid="glance-bar"
+    >
       {entries.map((entry, index) => (
         <Fragment key={entry.key}>
           {index > 0 && <span aria-hidden className="bg-border h-4 w-px shrink-0" />}

@@ -1,6 +1,9 @@
 // @vitest-environment node
 
+import type { Job } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { ImageImportJobData } from "@norish/queue/contracts/job-types";
 
 const createRecipeWithRefs = vi.fn();
 const dashboardRecipe = vi.fn();
@@ -153,7 +156,7 @@ describe("processImageImportJob", () => {
           },
         ],
       },
-    } as any);
+    } as unknown as Job<ImageImportJobData>);
 
     expect(dishColorForImageUrl).toHaveBeenCalledWith("/recipes/recipe-123/uploaded.jpg");
     expect(updateRecipeDishColor).toHaveBeenCalledWith("recipe-123", "#5a3c21");

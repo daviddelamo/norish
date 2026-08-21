@@ -24,10 +24,21 @@ vi.mock("@norish/config/env-config-server", () => ({
   },
 }));
 
+const { getRecipeMediaForDishColor, updateRecipeDishColor } = vi.hoisted(() => ({
+  getRecipeMediaForDishColor: vi.fn(),
+  updateRecipeDishColor: vi.fn(),
+}));
+
+vi.mock("@norish/db/repositories/recipes", () => ({
+  getRecipeMediaForDishColor,
+  updateRecipeDishColor,
+}));
+
 const {
   dishColorForImageUrl,
   extractDishColor,
   primaryImageForDishColor,
+  refreshDishColorForRecipe,
   withDishColor,
   withDishColorForUpdate,
 } = await import("@norish/shared-server/media/dish-color");
@@ -196,5 +207,44 @@ describe("withDishColorForUpdate", () => {
     const dto = await withDishColorForUpdate({ dishColor: "#bad000" } as { dishColor: string });
 
     expect("dishColor" in dto).toBe(false);
+  });
+});
+
+describe("refreshDishColorForRecipe", () => {
+  it("recomputes from the gallery-first hero and stores the result", async () => {
+    getRecipeMediaForDishColor.mockResolvedValue({
+      image: null,
+      galleryImages: [{ image: `/recipes/${RECIPE_ID}/stored.jpg`, order: 0 }],
+    });
+
+    await refreshDishColorForRecipe(RECIPE_ID);
+
+    expect(updateRecipeDishColor).toHaveBeenCalledWith(
+      RECIPE_ID,
+      expect.stringMatching(/^#[0-9a-f]{6}$/)
+    );
+  });
+
+  it("clears the colour when the recipe no longer leads with any image", async () => {
+    getRecipeMediaForDishColor.mockResolvedValue({ image: null, galleryImages: [] });
+
+    await refreshDishColorForRecipe(RECIPE_ID);
+
+    expect(updateRecipeDishColor).toHaveBeenCalledWith(RECIPE_ID, null);
+  });
+
+  it("writes nothing for a recipe that does not exist", async () => {
+    getRecipeMediaForDishColor.mockResolvedValue(null);
+    updateRecipeDishColor.mockClear();
+
+    await refreshDishColorForRecipe(RECIPE_ID);
+
+    expect(updateRecipeDishColor).not.toHaveBeenCalled();
+  });
+
+  it("never lets a failure escape to the mutation that triggered it", async () => {
+    getRecipeMediaForDishColor.mockRejectedValue(new Error("db down"));
+
+    await expect(refreshDishColorForRecipe(RECIPE_ID)).resolves.toBeUndefined();
   });
 });

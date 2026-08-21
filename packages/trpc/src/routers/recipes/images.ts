@@ -9,6 +9,7 @@ import {
   getRecipeOwnerId,
 } from "@norish/db/repositories/recipes";
 import { trpcLogger as log } from "@norish/shared-server/logger";
+import { refreshDishColorForRecipe } from "@norish/shared-server/media/dish-color";
 import {
   deleteImageByUrl,
   deleteStepImageByUrl,
@@ -234,6 +235,10 @@ const uploadGalleryImage = authedProcedure
 
         const versionedImageRecord = imageRecord as typeof imageRecord & { version: number };
 
+        // A gallery upload on a stored recipe can change what the page leads
+        // with; the Dish Colour follows the new hero (ADR-0023).
+        await refreshDishColorForRecipe(recipeId);
+
         log.info(
           { userId: ctx.user.id, recipeId, url, imageId: imageRecord.id },
           "Gallery image uploaded"
@@ -304,6 +309,10 @@ const deleteGalleryImage = authedProcedure
 
         return { success: true, stale: true };
       }
+
+      // Deleting the hero image changes what the page leads with; the Dish
+      // Colour follows what is left (ADR-0023).
+      await refreshDishColorForRecipe(imageRecord.recipeId);
 
       log.info(
         { userId: ctx.user.id, imageId: input.imageId, url: imageRecord.image },

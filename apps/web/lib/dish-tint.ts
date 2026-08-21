@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+import { oklchHueChromaFromSrgb } from "@norish/shared/lib/oklab";
+
 /**
  * The Dish Colour → page-tint derivation (ADR-0023). The stored colour is a
  * `#rrggbb` the server extracted from the recipe's primary image; what the
@@ -27,34 +29,6 @@ export type DishTintStyle = CSSProperties & {
   "--dish-c": string;
 };
 
-function srgbChannelToLinear(channel: number): number {
-  return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
-}
-
-/** Hue (degrees) and chroma of an sRGB colour in OKLCH, per Ottosson's OKLab. */
-function oklchHueChroma(red: number, green: number, blue: number): { h: number; c: number } {
-  const r = srgbChannelToLinear(red / 255);
-  const g = srgbChannelToLinear(green / 255);
-  const b = srgbChannelToLinear(blue / 255);
-
-  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
-  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
-  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-
-  const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
-  const bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
-
-  const c = Math.sqrt(a * a + bb * bb);
-
-  // A genuinely neutral colour has no meaningful hue angle; pin it so the
-  // output is stable rather than whatever atan2 makes of rounding noise.
-  if (c < 1e-6) return { h: 0, c: 0 };
-
-  const h = (Math.atan2(bb, a) * 180) / Math.PI;
-
-  return { h: h < 0 ? h + 360 : h, c };
-}
-
 const HEX_COLOR_PATTERN = /^#([0-9a-f]{6})$/i;
 
 /**
@@ -71,7 +45,7 @@ export function dishTintStyle(dishColor: string | null | undefined): DishTintSty
   if (!match) return undefined;
 
   const value = parseInt(match[1]!, 16);
-  const { h, c } = oklchHueChroma((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff);
+  const { h, c } = oklchHueChromaFromSrgb((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff);
 
   return {
     "--dish-h": h.toFixed(2),

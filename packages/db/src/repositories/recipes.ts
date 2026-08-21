@@ -2103,3 +2103,32 @@ export async function updateRecipeDishColor(
 ): Promise<void> {
   await db.update(recipes).set({ dishColor }).where(eq(recipes.id, recipeId));
 }
+
+/**
+ * The media a recipe's Dish Colour is derived from, for recomputing after a
+ * direct gallery mutation. Null when the recipe does not exist.
+ */
+export async function getRecipeMediaForDishColor(
+  recipeId: string
+): Promise<{
+  image: string | null;
+  galleryImages: { image: string; order: number | null }[];
+} | null> {
+  const [recipe] = await db
+    .select({ image: recipes.image })
+    .from(recipes)
+    .where(eq(recipes.id, recipeId))
+    .limit(1);
+
+  if (!recipe) return null;
+
+  const galleryImages = await getRecipeImages(recipeId);
+
+  return {
+    image: recipe.image,
+    galleryImages: galleryImages.map((galleryImage) => ({
+      image: galleryImage.image,
+      order: galleryImage.order,
+    })),
+  };
+}

@@ -4,6 +4,7 @@ import sharp from "sharp";
 
 import { SERVER_CONFIG } from "@norish/config/env-config-server";
 import { serverLogger as log } from "@norish/shared-server/logger";
+import { oklabFromSrgb, srgbFromOklab } from "@norish/shared/lib/oklab";
 
 /**
  * The Dish Colour (ADR-0023): one colour taken from a recipe's primary image
@@ -29,48 +30,6 @@ function toHexChannel(value: number): string {
   return Math.max(0, Math.min(255, Math.round(value)))
     .toString(16)
     .padStart(2, "0");
-}
-
-function srgbChannelToLinear(channel: number): number {
-  return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
-}
-
-function linearChannelToSrgb(channel: number): number {
-  return channel <= 0.0031308 ? channel * 12.92 : 1.055 * Math.pow(channel, 1 / 2.4) - 0.055;
-}
-
-/** sRGB (0–255) → OKLab, per Ottosson. */
-function oklabFromSrgb(
-  red: number,
-  green: number,
-  blue: number
-): { L: number; a: number; b: number } {
-  const r = srgbChannelToLinear(red / 255);
-  const g = srgbChannelToLinear(green / 255);
-  const b = srgbChannelToLinear(blue / 255);
-
-  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
-  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
-  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-
-  return {
-    L: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
-    a: 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
-    b: 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
-  };
-}
-
-/** OKLab → sRGB channels in [0, 1]; out-of-gamut values fall outside it. */
-function srgbFromOklab(L: number, a: number, b: number): { r: number; g: number; b: number } {
-  const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3);
-  const m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3);
-  const s = Math.pow(L - 0.0894841775 * a - 1.291485548 * b, 3);
-
-  return {
-    r: linearChannelToSrgb(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-    g: linearChannelToSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-    b: linearChannelToSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
-  };
 }
 
 function hexFromOklch(L: number, c: number, h: number): string {
@@ -254,4 +213,37 @@ export async function withDishColorForUpdate<T extends PrimaryImageCarrier>(
   if (rest.image === undefined && rest.images === undefined) return rest;
 
   return withDishColor(rest);
+}
+
+/**
+ * Recompute and store a recipe's Dish Colour from what it holds right now.
+ * The create and update payloads carry their colour with them; this covers
+ * the two mutations that change a stored recipe's media directly — a
+ * gallery upload and a gallery delete — where an abandoned edit would
+ * otherwise leave the page tinted for a photo it no longer leads with.
+ * Non-fatal like everything here: the mutation that changed the gallery
+ * must never fail because the colour would not refresh.
+ */
+export async function refreshDishColorForRecipe(recipeId: string): Promise<void> {
+  try {
+    // Loaded lazily: everything else in this module is pure media work, and
+    // the archive parsers import it in contexts that never touch the
+    // database — a static repository import would drag the whole db module
+    // graph (and its config) into their load path.
+    const { getRecipeMediaForDishColor, updateRecipeDishColor } = await import(
+      "@norish/db/repositories/recipes"
+    );
+    const media = await getRecipeMediaForDishColor(recipeId);
+
+    if (!media) return;
+
+    const primaryImage = primaryImageForDishColor({
+      image: media.image,
+      images: media.galleryImages,
+    });
+
+    await updateRecipeDishColor(recipeId, await dishColorForImageUrl(primaryImage));
+  } catch (err) {
+    log.warn({ err, recipeId }, "Dish Colour refresh failed; the stored colour stands");
+  }
 }
