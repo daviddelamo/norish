@@ -10,13 +10,13 @@ The share page is signed-out and carries no cookie of its own, so a visitor sees
 
 **Blocked by:** 11
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A scalar device preference `dish | theme` defaults to `dish` and persists per device
-- [ ] The provider is wired into `AppShell` and seeded server-side from the cookie
-- [ ] A reader set to `theme` renders untinted on the first frame, with no flash of tint on a server-rendered load, an offline bootstrap, or a navigation answered from the service worker's HTML cache
-- [ ] Set to `theme`, no Dish Colour variables are emitted and the page matches a no-Dish-Colour recipe exactly
-- [ ] The preference applies on mobile, desktop and the share page, and changes nothing outside recipe pages
-- [ ] Dish Colour extraction and storage are unaffected by the preference
-- [ ] A control row appears in the user preferences card, worded as a choice between two options rather than as hiding something
-- [ ] New strings are added across every supported locale and `pnpm i18n:check` passes
+- [x] A scalar device preference `dish | theme` defaults to `dish` and persists per device
+- [x] The provider is wired into `AppShell` and seeded server-side from the cookie
+- [x] A reader set to `theme` renders untinted on the first frame, with no flash of tint on a server-rendered load, an offline bootstrap, or a navigation answered from the service worker's HTML cache
+- [x] Set to `theme`, no Dish Colour variables are emitted and the page matches a no-Dish-Colour recipe exactly
+- [x] The preference applies on mobile, desktop and the share page, and changes nothing outside recipe pages
+- [x] Dish Colour extraction and storage are unaffected by the preference
+- [x] A control row appears in the user preferences card, worded as a choice between two options rather than as hiding something
+- [x] New strings are added across every supported locale and `pnpm i18n:check` passes

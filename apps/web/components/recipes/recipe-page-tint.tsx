@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useRecipePageColor } from "@/context/recipe-page-color-context";
 import { dishTintStyle } from "@/lib/dish-tint";
 
 /**
@@ -14,10 +15,13 @@ import { dishTintStyle } from "@/lib/dish-tint";
  * `display: contents` keeps this out of layout entirely: wrapping a page in
  * it moves no pixel of the untinted rendering.
  *
- * With nothing to tint with — no Dish Colour stored, or a reader who chose
- * theme colours (the caller passes null) — no attribute, no variables and
- * no underlay are emitted: the untinted page is the plain theme rendering
- * itself, not a tint at zero strength.
+ * With nothing to tint with — no Dish Colour stored, or a reader whose
+ * recipe page colour preference is `theme` — no attribute, no variables
+ * and no underlay are emitted: both resolve through the same
+ * `dishTintStyle(null)` and the untinted page is the plain theme rendering
+ * itself, not a tint at zero strength. The preference context is seeded
+ * server-side (and self-reads its cookie offline), so an opted-out reader
+ * never renders a tinted frame on any load path.
  */
 export default function RecipePageTint({
   dishColor,
@@ -26,7 +30,8 @@ export default function RecipePageTint({
   dishColor: string | null | undefined;
   children: ReactNode;
 }) {
-  const style = dishTintStyle(dishColor);
+  const [colorMode] = useRecipePageColor();
+  const style = dishTintStyle(colorMode === "dish" ? dishColor : null);
 
   return (
     <div className="contents" data-dish-tint={style ? true : undefined} style={style}>

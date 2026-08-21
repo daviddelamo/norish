@@ -138,6 +138,14 @@
           "planned": "Alleen geplande maaltijden",
           "hidden": "Verborgen"
         }
+      },
+      "recipePageColor": {
+        "title": "Kleur van receptpagina's",
+        "description": "Geef elke receptpagina een tint uit de eigen foto, of houd op dit apparaat de gewone themakleuren",
+        "options": {
+          "dish": "Uit de foto van het gerecht",
+          "theme": "Gewone themakleuren"
+        }
       }
     },
     "shareLinks": {

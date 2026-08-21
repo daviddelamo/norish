@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { AmountDisplayProvider } from "@/context/amount-display-context";
+import { RecipePageColorProvider } from "@/context/recipe-page-color-context";
 import { amountDisplayPreference } from "@/lib/amount-display";
+import { recipePageColorPreference } from "@/lib/recipe-page-color";
 
 /**
  * A shared recipe is read signed-out, but the amount format is a device
@@ -12,7 +14,9 @@ export default async function SharedRecipeLayout({ children }: { children: React
 
   return (
     <AmountDisplayProvider initialValue={amountDisplayPreference.readFrom(cookieStore)}>
-      {children}
+      <RecipePageColorProvider initialValue={recipePageColorPreference.readFrom(cookieStore)}>
+        {children}
+      </RecipePageColorProvider>
     </AmountDisplayProvider>
   );
 }

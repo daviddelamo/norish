@@ -14,7 +14,7 @@ The tint reaches mobile, desktop and the share page. It reaches nothing outside 
 - [x] Contrast between text and every tinted surface is unchanged from the untinted tokens, in both themes
 - [x] Page background and card surfaces shift together; borders, text and the accent do not
 - [x] A recipe with no Dish Colour falls back to theme colours, with no layout shift
-- [ ] The no-colour rendering and ticket 15's `theme` rendering come from the same code path, and a test asserts they are identical
+- [x] The no-colour rendering and ticket 15's `theme` rendering come from the same code path, and a test asserts they are identical
 - [x] The tint is present before the hero image has loaded, and while Offline
 - [x] The tint applies on mobile, desktop and share, and nowhere else in the app
 - [x] No `backdrop-blur` or see-through fill is introduced (ADR-0020)

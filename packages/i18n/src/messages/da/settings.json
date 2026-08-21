@@ -138,6 +138,14 @@
           "hidden": "Skjult"
         }
       },
+      "recipePageColor": {
+        "title": "Farve på opskriftssider",
+        "description": "Ton hver opskriftsside med farverne fra dens eget foto, eller behold temaets farver på denne enhed",
+        "options": {
+          "dish": "Fra rettens foto",
+          "theme": "Temaets farver"
+        }
+      },
       "applyError": "Kunne ikke anvende præference"
     },
     "shareLinks": {

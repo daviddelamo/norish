@@ -43,6 +43,15 @@ vi.mock("@/context/hidden-items-context", () => ({
   useHiddenItemsState: () => [hiddenItemsMock.hidden, hiddenItemsMock.setHidden],
 }));
 
+const recipePageColorMock = vi.hoisted(() => ({
+  mode: "dish" as "dish" | "theme",
+  setMode: vi.fn(),
+}));
+
+vi.mock("@/context/recipe-page-color-context", () => ({
+  useRecipePageColor: () => [recipePageColorMock.mode, recipePageColorMock.setMode],
+}));
+
 let timersMock = { timersEnabled: true, globalEnabled: true } as any;
 
 vi.mock("@/hooks/config", () => ({
@@ -251,6 +260,22 @@ describe("PreferencesCard", () => {
     await waitFor(() => {
       expect(mockContext.updatePreferences).toHaveBeenCalledWith({ locale: "de-informal" });
     });
+  });
+
+  it("offers the recipe page colour as a choice between the dish and the theme", () => {
+    recipePageColorMock.mode = "dish";
+
+    render(<PreferencesCard />);
+
+    const control = screen.getByRole("combobox", { name: /recipePageColor\.title/i });
+    const options = within(control).getAllByRole("option") as HTMLOptionElement[];
+
+    expect(options.map((option) => option.value)).toEqual(["dish", "theme"]);
+    expect((control as HTMLSelectElement).value).toBe("dish");
+
+    fireEvent.change(control, { target: { value: "theme" } });
+
+    expect(recipePageColorMock.setMode).toHaveBeenCalledWith("theme");
   });
 
   it("reflects the stored today's-meals rule and writes a new one", () => {

@@ -138,6 +138,14 @@
           "hidden": "Masquée"
         }
       },
+      "recipePageColor": {
+        "title": "Couleur des pages de recettes",
+        "description": "Teintez chaque page de recette aux couleurs de sa propre photo, ou gardez les couleurs du thème sur cet appareil",
+        "options": {
+          "dish": "D'après la photo du plat",
+          "theme": "Couleurs du thème"
+        }
+      },
       "applyError": "Échec de l'application du paramètre"
     },
     "shareLinks": {

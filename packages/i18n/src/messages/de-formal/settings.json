@@ -138,6 +138,14 @@
           "hidden": "Ausgeblendet"
         }
       },
+      "recipePageColor": {
+        "title": "Farbe der Rezeptseiten",
+        "description": "Färben Sie jede Rezeptseite im Ton ihres eigenen Fotos, oder behalten Sie auf diesem Gerät die normalen Themenfarben",
+        "options": {
+          "dish": "Aus dem Foto des Gerichts",
+          "theme": "Normale Themenfarben"
+        }
+      },
       "applyError": "Einstellung konnte nicht angewendet werden"
     },
     "shareLinks": {

@@ -138,6 +138,14 @@
           "hidden": "Oculta"
         }
       },
+      "recipePageColor": {
+        "title": "Color de las páginas de recetas",
+        "description": "Tiñe cada página de receta con los colores de su propia foto, o mantén los colores del tema en este dispositivo",
+        "options": {
+          "dish": "De la foto del plato",
+          "theme": "Colores del tema"
+        }
+      },
       "applyError": "No se pudo aplicar la preferencia"
     },
     "shareLinks": {

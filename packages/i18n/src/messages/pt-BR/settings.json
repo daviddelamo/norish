@@ -138,6 +138,14 @@
           "planned": "Only planned meals",
           "hidden": "Hidden"
         }
+      },
+      "recipePageColor": {
+        "title": "Cor das páginas de receitas",
+        "description": "Pinte cada página de receita com as cores da própria foto, ou mantenha as cores do tema neste dispositivo",
+        "options": {
+          "dish": "Da foto do prato",
+          "theme": "Cores do tema"
+        }
       }
     },
     "shareLinks": {

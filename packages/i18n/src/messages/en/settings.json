@@ -138,6 +138,14 @@
           "hidden": "Hidden"
         }
       },
+      "recipePageColor": {
+        "title": "Recipe page color",
+        "description": "Tint each recipe page with its own photo's color, or keep the plain theme colors on this device",
+        "options": {
+          "dish": "From the dish photo",
+          "theme": "Plain theme colors"
+        }
+      },
       "applyError": "Failed to apply preference"
     },
     "shareLinks": {

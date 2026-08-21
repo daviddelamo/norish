@@ -138,6 +138,14 @@
           "hidden": "Ukryta"
         }
       },
+      "recipePageColor": {
+        "title": "Kolor stron przepisów",
+        "description": "Zabarw każdą stronę przepisu kolorami jej własnego zdjęcia lub zachowaj kolory motywu na tym urządzeniu",
+        "options": {
+          "dish": "Ze zdjęcia potrawy",
+          "theme": "Kolory motywu"
+        }
+      },
       "applyError": "Nie udało się zastosować preferencji"
     },
     "shareLinks": {

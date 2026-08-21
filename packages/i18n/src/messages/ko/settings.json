@@ -138,6 +138,14 @@
           "hidden": "숨기기"
         }
       },
+      "recipePageColor": {
+        "title": "레시피 페이지 색상",
+        "description": "각 레시피 페이지를 요리 사진의 색으로 물들이거나 이 기기에서 기본 테마 색상을 유지합니다",
+        "options": {
+          "dish": "요리 사진에서",
+          "theme": "기본 테마 색상"
+        }
+      },
       "applyError": "환경설정을 적용하지 못했습니다"
     },
     "shareLinks": {
