@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import "@testing-library/jest-dom";
@@ -81,8 +81,8 @@ const STEPS = [
   { originalIndex: 2, stepNumber: 3, text: "Serve at once.", images: [], stepIngredients: [] },
 ];
 
-function renderStep(activeStep: number, handlers: Record<string, () => void> = {}) {
-  return render(
+function stepTree(activeStep: number, handlers: Record<string, () => void> = {}) {
+  return (
     <div onPointerDown={handlers.onPointerDown} onPointerUp={handlers.onPointerUp}>
       <CookingStepView
         activeStep={activeStep}
@@ -100,6 +100,10 @@ function renderStep(activeStep: number, handlers: Record<string, () => void> = {
       />
     </div>
   );
+}
+
+function renderStep(activeStep: number, handlers: Record<string, () => void> = {}) {
+  return render(stepTree(activeStep, handlers));
 }
 
 describe("CookingStepView Step Ingredients", () => {
@@ -205,5 +209,26 @@ describe("CookingStepView paging", () => {
     renderStep(1);
 
     expect(screen.queryByText("2")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * A page turn travels: the old page leaves while the new one arrives, so for
+ * a moment both are mounted. A swap with no travel reads as a repaint.
+ */
+describe("CookingStepView page turn", () => {
+  it("keeps the leaving page on screen while the arriving one enters, then lets it go", async () => {
+    const view = renderStep(0);
+
+    expect(view.container.querySelectorAll("[data-cooking-step-peek]")).toHaveLength(2);
+
+    view.rerender(stepTree(1));
+
+    // Two pages of two reserved edges each: the turn is a travel, not a swap.
+    expect(view.container.querySelectorAll("[data-cooking-step-peek]")).toHaveLength(4);
+
+    await waitFor(() =>
+      expect(view.container.querySelectorAll("[data-cooking-step-peek]")).toHaveLength(2)
+    );
   });
 });

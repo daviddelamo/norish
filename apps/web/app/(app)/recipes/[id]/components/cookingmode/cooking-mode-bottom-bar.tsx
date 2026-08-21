@@ -33,6 +33,11 @@ type CookingModeBottomBarProps = Pick<
  * to be ready, and the handful of things a cook reaches for mid-recipe,
  * within thumb reach.
  *
+ * The bar paints no ground of its own — it sits on whatever the dialog is,
+ * the phone's full-bleed page background or the desktop card's surface, with
+ * the rule as the separation. A ground of its own is how the desktop bar
+ * ended up the exact colour of the backdrop behind the card.
+ *
  * The back chevron is kept deliberately. The vertical swipe still changes
  * step, but a touch user who never discovers it would otherwise have no way
  * back at all.
@@ -66,7 +71,7 @@ export function CookingModeBottomBar({
   });
 
   return (
-    <div className="border-border bg-background shrink-0 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:px-6 md:pt-4 md:pb-4">
+    <div className="border-border shrink-0 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:px-6 md:pt-4 md:pb-4">
       <Meter aria-label={stepCounter} className="w-full" color="accent" value={progressValue}>
         <Meter.Track>
           <Meter.Fill />
