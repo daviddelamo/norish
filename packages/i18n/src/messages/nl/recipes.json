@@ -84,7 +84,9 @@
     "inferringProvenance": "Herkomst bepalen…",
     "linkIngredients": "Ingrediënten aan stappen koppelen",
     "linkingIngredients": "Ingrediënten koppelen…",
-    "enrichmentFailed": "Laatste poging mislukt"
+    "enrichmentFailed": "Laatste poging mislukt",
+    "generateImage": "Afbeelding genereren",
+    "generatingImage": "Afbeelding genereren…"
   },
   "sharePanel": {
     "title": "Recept delen",

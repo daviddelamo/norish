@@ -84,7 +84,9 @@
     "inferringProvenance": "Определяне на произхода…",
     "linkIngredients": "Свържи съставките със стъпките",
     "linkingIngredients": "Свързване на съставките…",
-    "enrichmentFailed": "Последното изпълнение е неуспешно"
+    "enrichmentFailed": "Последното изпълнение е неуспешно",
+    "generateImage": "Генерирай изображение",
+    "generatingImage": "Генериране на изображение…"
   },
   "sharePanel": {
     "title": "Сподели рецепта",

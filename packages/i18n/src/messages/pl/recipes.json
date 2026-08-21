@@ -84,7 +84,9 @@
     "inferringProvenance": "Ustalanie pochodzenia…",
     "linkIngredients": "Powiąż składniki z krokami",
     "linkingIngredients": "Wiązanie składników…",
-    "enrichmentFailed": "Ostatnia próba nie powiodła się"
+    "enrichmentFailed": "Ostatnia próba nie powiodła się",
+    "generateImage": "Wygeneruj obraz",
+    "generatingImage": "Generowanie obrazu…"
   },
   "sharePanel": {
     "title": "Udostępnij przepis",

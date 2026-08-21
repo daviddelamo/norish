@@ -84,7 +84,9 @@
     "inferringProvenance": "Working out provenance…",
     "linkIngredients": "Link Ingredients to Steps",
     "linkingIngredients": "Linking ingredients…",
-    "enrichmentFailed": "Last run failed"
+    "enrichmentFailed": "Last run failed",
+    "generateImage": "Generate Picture",
+    "generatingImage": "Generating picture…"
   },
   "sharePanel": {
     "title": "Share recipe",

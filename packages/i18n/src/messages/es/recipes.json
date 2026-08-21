@@ -84,7 +84,9 @@
     "inferringProvenance": "Averiguando la procedencia…",
     "linkIngredients": "Vincular ingredientes a los pasos",
     "linkingIngredients": "Vinculando ingredientes…",
-    "enrichmentFailed": "El último intento falló"
+    "enrichmentFailed": "El último intento falló",
+    "generateImage": "Generar imagen",
+    "generatingImage": "Generando imagen…"
   },
   "sharePanel": {
     "title": "Compartir receta",

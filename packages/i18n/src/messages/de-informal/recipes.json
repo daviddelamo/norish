@@ -84,7 +84,9 @@
     "inferringProvenance": "Herkunft wird ermittelt …",
     "linkIngredients": "Zutaten mit Schritten verknüpfen",
     "linkingIngredients": "Zutaten werden verknüpft…",
-    "enrichmentFailed": "Letzter Versuch fehlgeschlagen"
+    "enrichmentFailed": "Letzter Versuch fehlgeschlagen",
+    "generateImage": "Bild generieren",
+    "generatingImage": "Bild wird generiert…"
   },
   "sharePanel": {
     "title": "Rezept teilen",

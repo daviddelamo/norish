@@ -176,6 +176,14 @@ export default function ActionsMenu({ id, buttonClassName }: Props) {
           idleLabel: t("linkIngredients"),
           busyLabel: t("linkingIngredients"),
         },
+        {
+          // Unguarded and destructive by decision (ADR-0025): it runs on a
+          // recipe that already has a photograph and replaces the primary.
+          kind: "image-generation",
+          key: "generate-image",
+          idleLabel: t("generateImage"),
+          busyLabel: t("generatingImage"),
+        },
       ];
 
       for (const action of enrichmentActions) {

@@ -84,7 +84,9 @@
     "inferringProvenance": "Finner opphavet …",
     "linkIngredients": "Koble ingredienser til trinn",
     "linkingIngredients": "Kobler ingredienser…",
-    "enrichmentFailed": "Siste forsøk mislyktes"
+    "enrichmentFailed": "Siste forsøk mislyktes",
+    "generateImage": "Generer bilde",
+    "generatingImage": "Genererer bilde…"
   },
   "sharePanel": {
     "title": "Del oppskrift",

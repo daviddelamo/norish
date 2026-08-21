@@ -84,7 +84,9 @@
     "inferringProvenance": "Определяем происхождение…",
     "linkIngredients": "Связать ингредиенты с шагами",
     "linkingIngredients": "Связывание ингредиентов…",
-    "enrichmentFailed": "Последняя попытка не удалась"
+    "enrichmentFailed": "Последняя попытка не удалась",
+    "generateImage": "Сгенерировать изображение",
+    "generatingImage": "Генерация изображения…"
   },
   "sharePanel": {
     "title": "Поделиться рецептом",

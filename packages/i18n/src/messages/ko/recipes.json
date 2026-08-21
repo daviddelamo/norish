@@ -84,7 +84,9 @@
     "inferringProvenance": "출처를 알아보는 중…",
     "linkIngredients": "재료를 단계에 연결",
     "linkingIngredients": "재료 연결 중…",
-    "enrichmentFailed": "마지막 실행 실패"
+    "enrichmentFailed": "마지막 실행 실패",
+    "generateImage": "이미지 생성",
+    "generatingImage": "이미지 생성 중…"
   },
   "sharePanel": {
     "title": "레시피 공유",
