@@ -169,6 +169,7 @@ describe("norish archive writer", () => {
           id: "88888888-8888-4888-8888-888888888888",
           image: "/recipes/11111111-1111-4111-8111-111111111111/gallery-1.jpg",
           order: 0,
+          generated: true,
           version: 1,
         },
       ],
@@ -259,7 +260,10 @@ describe("norish archive writer", () => {
     const recipeJson = await readJson(zip, `${recipe.id}/recipe.json`);
 
     expect(recipeJson.image).toBe("images/hero.jpg");
-    expect(recipeJson.images).toEqual([{ image: "images/gallery-1.jpg", order: 0 }]);
+    // The marking travels; a supplied image would carry no field at all.
+    expect(recipeJson.images).toEqual([
+      { image: "images/gallery-1.jpg", order: 0, generated: true },
+    ]);
     expect(recipeJson.steps[0].images).toEqual([{ image: "steps/step-1.jpg", order: 0 }]);
     expect(recipeJson.videos).toEqual([
       { video: "videos/video-1.mp4", thumbnail: "videos/thumb-1.jpg", duration: 42, order: 0 },

@@ -393,6 +393,27 @@ describe("parseNorishRecipeToDTO media rehoming", () => {
     ]);
   });
 
+  it("restores the Generated Image marking, and only when the archive carries it", async () => {
+    const { dto } = await parseNorishRecipeToDTO(
+      buildArchiveRecipeJson({
+        images: [
+          { image: "images/gallery-1.jpg", order: 0, generated: true },
+          // A Norish archive written before the marking existed has no field;
+          // its images must arrive unmarked rather than fail.
+          { image: "images/gallery-1.jpg", order: 1 },
+        ],
+      }),
+      RECIPE_ID,
+      cuisineLookup,
+      buildMediaFolder()
+    );
+
+    expect(dto.images).toEqual([
+      { image: `/recipes/${RECIPE_ID}/saved-image.jpg`, order: 0, generated: true },
+      { image: `/recipes/${RECIPE_ID}/saved-image.jpg`, order: 1 },
+    ]);
+  });
+
   it("keeps external media URLs without touching the media pipeline", async () => {
     const { dto } = await parseNorishRecipeToDTO(
       buildArchiveRecipeJson({ image: "https://example.com/hero.jpg" }),

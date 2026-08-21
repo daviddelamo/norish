@@ -173,6 +173,14 @@ describe("norish archive round-trip", () => {
           id: "88888888-8888-4888-8888-888888888888",
           image: "/recipes/11111111-1111-4111-8111-111111111111/gallery-1.jpg",
           order: 0,
+          generated: true,
+          version: 1,
+        },
+        {
+          id: "88888888-8888-4888-8888-888888888889",
+          image: "/recipes/11111111-1111-4111-8111-111111111111/gallery-2.jpg",
+          order: 1,
+          generated: false,
           version: 1,
         },
       ],
@@ -208,6 +216,7 @@ describe("norish archive round-trip", () => {
     const { parsed } = await roundTrip(recipe, {
       "images/hero.jpg": "hero-bytes",
       "images/gallery-1.jpg": "gallery-bytes",
+      "images/gallery-2.jpg": "gallery-2-bytes",
       "steps/step-1.jpg": "step-bytes",
       "videos/video-1.mp4": "video-bytes",
       "videos/thumb-1.jpg": "thumb-bytes",
@@ -226,7 +235,11 @@ describe("norish archive round-trip", () => {
 
     // and the recreated recipe points at the new instance's own paths
     expect(parsed.dto.image).toBe(`/recipes/${MINTED_ID}/saved-image.jpg`);
-    expect(parsed.dto.images).toHaveLength(1);
+    // The Generated Image marking survives the round-trip; the supplied
+    // photograph arrives unmarked, exactly as it left.
+    expect(parsed.dto.images).toHaveLength(2);
+    expect(parsed.dto.images?.[0]?.generated).toBe(true);
+    expect(parsed.dto.images?.[1]?.generated).not.toBe(true);
     expect(parsed.dto.steps[0]?.images).toHaveLength(1);
     expect(parsed.dto.videos).toEqual([
       {

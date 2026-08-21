@@ -29,9 +29,7 @@ const RECIPE_ENTRY_PATTERN = /^([^/]+)\/recipe\.json$/;
  * unreadable, so that judgement stays with each caller.
  */
 type RawManifestRead =
-  | { status: "ok"; raw: unknown }
-  | { status: "missing" }
-  | { status: "unreadable" };
+  { status: "ok"; raw: unknown } | { status: "missing" } | { status: "unreadable" };
 
 async function readRawManifest(zip: JSZip): Promise<RawManifestRead> {
   const manifestFile = zip.file(NORISH_ARCHIVE_MANIFEST_FILE);
@@ -290,14 +288,23 @@ export async function parseNorishRecipeToDTO(
     saveImageBytes(bytes, recipeId)
   );
 
-  const images: Array<{ image: string; order: number }> = [];
+  const images: Array<{ image: string; order: number; generated?: boolean }> = [];
 
   for (const galleryImage of wireImages) {
     const saved = await rehomeMediaReference(recipeFolder, galleryImage.image, (bytes) =>
       saveImageBytes(bytes, recipeId)
     );
 
-    if (saved) images.push({ image: saved, order: galleryImage.order });
+    if (saved) {
+      // Honour the marking exactly when the archive carries it. Foreign
+      // formats and pre-marking Norish archives carry no field, and their
+      // images are Supplied Recipe Data — never defaulted to generated.
+      images.push({
+        image: saved,
+        order: galleryImage.order,
+        ...(galleryImage.generated === true ? { generated: true } : {}),
+      });
+    }
   }
 
   const rehomedSteps: FullRecipeInsertDTO["steps"] = [];

@@ -215,7 +215,18 @@ function buildArchiveRecipe(record: NorishArchiveRecord): NorishArchiveRecipe {
     images: recipe.images.flatMap((galleryImage) => {
       const image = rewriteMedia(galleryImage.image);
 
-      return image ? [{ image, order: galleryImage.order }] : [];
+      if (!image) return [];
+
+      // The Generated Image marking travels so the receiving instance is
+      // told what it accepted; a supplied image carries no field at all,
+      // which is also what every pre-marking archive looks like.
+      return [
+        {
+          image,
+          order: galleryImage.order,
+          ...(galleryImage.generated ? { generated: true } : {}),
+        },
+      ];
     }),
     videos: recipe.videos.flatMap((video) => {
       const rewrittenVideo = rewriteMedia(video.video);

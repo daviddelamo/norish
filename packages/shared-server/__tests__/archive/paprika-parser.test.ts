@@ -139,6 +139,14 @@ describe("Paprika Parser", () => {
       expect(dto.totalMinutes).toBe(45);
     });
 
+    it("imports images as supplied: nothing in a foreign archive is a Generated Image", async () => {
+      const dto = await parsePaprikaRecipeToDTO(mockRecipe, "123e4567-e89b-42d3-a456-426614174000");
+
+      // Foreign formats carry no marking field, and none is ever invented:
+      // whatever a Paprika archive holds arrives as Supplied Recipe Data.
+      expect((dto.images ?? []).some((image) => image.generated === true)).toBe(false);
+    });
+
     it("splits ingredients by newlines", async () => {
       const dto = await parsePaprikaRecipeToDTO(mockRecipe, "123e4567-e89b-42d3-a456-426614174000");
 
