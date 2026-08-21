@@ -1,6 +1,6 @@
 # 08 — Browser E2E for Image Generation
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 06, 07
 
 Spec: `.scratch/image-generation/spec.md`
@@ -26,3 +26,7 @@ If the suite goes quiet-red, suspect stale artifacts before suspecting the featu
 - [ ] A spec drives the bulk sweep and asserts gap-only behaviour by default and every-recipe behaviour with overwrite on.
 - [ ] Both specs run in the existing `ai` project under the existing fixtures, with no new stack.
 - [ ] `pnpm test:e2e` passes.
+
+## Comments
+
+- 2026-08-22: Implemented (commit 817b34c5). The fake provider serves `/images/generations` with its own directive lane (`succeedImageWith`/`failImage…`), wire-tested through the real SDK image client. `image-generation.e2e.ts`: the manual action replaces a seeded photograph and the open page swaps its hero and re-tints from the drawing's hue without a reload; the bulk sweep names 1 image by default and 2 with overwrite, fills only the gap recipe by default, and reaches the photographed one with overwrite — image-route request counts pin the spend. Full `pnpm test:e2e` green after fixing a pre-existing UTC/local date flake in the offline fixture (82d8539a).

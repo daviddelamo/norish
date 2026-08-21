@@ -1,6 +1,6 @@
 # 06 — Manual Image Generation from the actions menu
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 05
 
 Spec: `.scratch/image-generation/spec.md`
@@ -30,3 +30,7 @@ Viewing a recipe never grants permission to change it through AI; the existing e
 - [ ] A duplicate request while one is running is reported as already running, not queued twice.
 - [ ] It runs on a recipe that already has a photograph, and that photograph does not survive.
 - [ ] Both apps' translations are complete and the locale-key check passes.
+
+## Comments
+
+- 2026-08-22: Implemented (commit cebb76b8). Generate Picture in both actions menus behind AI enablement + edit permission, shared busy states, no dialog (ADR-0025 noted inline). `no-image-provider` refusal message in the router map with a test row; menu labels translated in all 14 locales.

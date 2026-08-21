@@ -1,6 +1,6 @@
 # 09 — Docs and release notes
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 06, 07, 08
 
 Spec: `.scratch/image-generation/spec.md`
@@ -26,3 +26,7 @@ Follow `docs/agents/feature-docs.md`.
 - [ ] The target version's release notes describe the feature.
 - [ ] Any new environment variable appears in `.env.example`, the configuration page and the Upgrade notes — or the absence of one is confirmed.
 - [ ] The docs site builds locally and its link check passes.
+
+## Comments
+
+- 2026-08-22: Implemented (commit 06935dfd). Enrichment page names the seventh kind and warns the manual action replaces the primary irrecoverably; the AI provider page gains the Image Generation section (own provider, fallback, two requests, bulk count) with screenshots captured from the E2E ai stack; 0.21.0-beta release notes carry the feature. No new environment variable — the block is database-backed, stated on the config page. Docs build + link check pass locally (`apps/docs` `pnpm build`); the pre-existing `pnpm-lock.yaml` prettier warning there predates the branch.

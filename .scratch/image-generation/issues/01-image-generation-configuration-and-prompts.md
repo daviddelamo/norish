@@ -1,6 +1,6 @@
 # 01 — Image Generation configuration and its two Prompts
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: None — can start immediately
 
 Spec: `.scratch/image-generation/spec.md`
@@ -31,3 +31,7 @@ The glossary now says there are eleven Prompts. If that does not match reality w
 - [ ] Two new Prompts ship with defaults, are editable by an administrator, and are stored as overrides only.
 - [ ] The retired-prompt-defaults set is regenerated and its guard test passes.
 - [ ] Saving the block round-trips through the admin form without discarding an unchanged key.
+
+## Comments
+
+- 2026-08-22: Implemented (commit 5924e271). `image_generation_config` server-config key (sensitive; apiKey rides the shared merge/mask, so an omitted key preserves the stored one), provider enum restricted to openai/google/azure/lm-studio/generic-openai plus `disabled`, `resolveImageGenerationSettings` + `isImageGenerationConfigValid` as pure helpers in the config package. `imageGeneration` joined the automatic switches (default off, transform-backfilled for stored rows). Prompts `image-generation-brief`/`image-generation-style` shipped, registered in the loader/overrides/regeneration script, retired defaults regenerated; the style prompt is typed out of structured generation (no system message — image models take no system turn). Admin form + accordion section + translations in all 14 locales. Config schema tests extended.

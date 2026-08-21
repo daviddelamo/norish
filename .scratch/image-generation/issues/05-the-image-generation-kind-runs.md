@@ -1,6 +1,6 @@
 # 05 — The image-generation kind runs
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 01, 02, 03
 
 Spec: `.scratch/image-generation/spec.md`
@@ -41,3 +41,7 @@ The shared write-mode helper decides nothing for this kind. Every run that reach
 - [ ] A refusal is terminal without burning retry attempts; a timeout retries.
 - [ ] A failed automatic run leaves the recipe untouched and reports nothing to any user.
 - [ ] A successful run publishes the canonical recipe update, so clients converge without refetching.
+
+## Comments
+
+- 2026-08-22: Implemented (commit 10b79963). Seventh kind through every exhaustive map (queue names/concurrency/stalled/hanging/options, registry, worker startup, coordinator setting map, client hook maps, router skip messages, job monitor, translations both apps). Queue at concurrency 1. Eligibility per ADR-0025: `no-image-provider` first (every origin), then any-image-at-all suppresses only ordinary automatic runs (gallery row or non-blank legacy scalar). Worker: brief (`writeVisualBrief`, mocked-runtime-tested) before image, storage through the ticket-02 operation, Dish Colour recomputed before the canonical publish. Coordinator/bulk/status/worker tests extended or added.

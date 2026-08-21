@@ -1,6 +1,6 @@
 # 07 — The bulk sweep names the image count
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 05
 
 Spec: `.scratch/image-generation/spec.md`
@@ -27,3 +27,7 @@ The default sweep must remain incapable of touching a stored image — that is t
 - [ ] The existing replace and cost warnings are retained.
 - [ ] A default sweep queues no image generation for any recipe that already has an image.
 - [ ] Translations are complete and the locale-key check passes.
+
+## Comments
+
+- 2026-08-22: Implemented (commit 949ed105). `getImageGenerationSweepCounts` (real-db tested) mirrors coordinator eligibility in SQL; admin query `imageGenerationSweepCount` returns `enabled: false` when the switch is off (modal unchanged) and honest zeros when no provider is configured. The confirmation renders the ICU-plural count above the retained cost warning, switching live with the overwrite toggle; router and web component tests added.

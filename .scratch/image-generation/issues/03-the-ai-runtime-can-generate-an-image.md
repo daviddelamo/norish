@@ -1,6 +1,6 @@
 # 03 — The AI Runtime can generate an image
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 01
 
 Spec: `.scratch/image-generation/spec.md`
@@ -28,3 +28,7 @@ Errors follow the existing classification rather than a new one: AI disabled and
 - [ ] The request runs on the shared transport under the existing AI timeout.
 - [ ] One log line per request records provider, model and feature.
 - [ ] Covered by a runtime test against the fake AI provider, beside the existing transcription runtime test.
+
+## Comments
+
+- 2026-08-22: Implemented (commit 6d9ba9fa). `generateImage` beside `generateStructured`/`transcribe`, reading the image block with the matching-provider fallback, image-model construction in `providers.ts` on the shared transport under the AI timeout. Landscape per provider: size 1792×1024/1536×1024 for the DALL·E/gpt-image families, aspect ratio 16:9 for Google, exactly 1280×720 for the OpenAI-compatible endpoints (no published size list to lean on — a documented pragmatic reading of "widest supported landscape"). `maxRetries: 0` on the SDK call so the queue's attempts are the one retry budget for per-call-billed APIs; `NoImageGeneratedError` maps to the retryable response error. Runtime test against a local HTTP fake beside the transcription test, including the one-call-per-request assertion.

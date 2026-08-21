@@ -1,6 +1,6 @@
 # 04 — Archive carries the Generated Image marking
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02
 
 Spec: `.scratch/image-generation/spec.md`
@@ -26,3 +26,7 @@ The Dish Colour still does not travel (ADR-0023). A receiving instance takes its
 - [ ] Importing a Norish archive written before this ticket leaves its images unmarked and does not fail.
 - [ ] Images from foreign archive formats arrive unmarked.
 - [ ] Covered by the existing Norish archive round-trip test and a foreign-parser assertion.
+
+## Comments
+
+- 2026-08-22: Implemented (commit 24f69667). The writer emits `generated: true` only when set, so an unmarked image's wire shape is byte-identical to every pre-marking archive; the parser honours the field exactly when present. Foreign parsers untouched (they never produce gallery arrays); a Paprika assertion pins that their images arrive unmarked. Round-trip, writer, and parser tests extended.

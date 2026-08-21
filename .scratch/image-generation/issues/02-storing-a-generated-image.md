@@ -1,6 +1,6 @@
 # 02 — Storing a Generated Image
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: None — can start immediately
 
 Spec: `.scratch/image-generation/spec.md`
@@ -33,3 +33,7 @@ Dish Colour recomputation belongs to the worker in ticket 05, not to this operat
 - [ ] Uploaded images are unaffected: they still fit inside 1280×720 without cropping.
 - [ ] Existing size and format validation still rejects what it rejected before.
 - [ ] Covered by a real-database test beside the existing recipe dish-colour database test.
+
+## Comments
+
+- 2026-08-22: Implemented (commit aedf44c4). Migration `0041_generated_recipe_images` adds the boolean, DTO carries it (output default false; input optional without default, so an absent field can never clear a stored marking). `replaceRecipePrimaryImageWithGenerated` in `packages/db/.../recipe-enrichment.ts`: one transaction, deletes the primary row (lowest order, whatever number) plus any stray marked row, inserts at order 0 marked, returns displaced URLs. File removal composes in `shared-server/media/generated-image.ts` (`storeGeneratedRecipeImage`), guarding against deleting the just-written file — content-hashed storage hands a byte-identical re-run the same path. `saveGeneratedImageBytes` cover-crops to exactly 1280×720 (uploads keep `fit: inside`). Real-database test beside the dish-colour one; crop + composition tests beside the dish-colour media test.
