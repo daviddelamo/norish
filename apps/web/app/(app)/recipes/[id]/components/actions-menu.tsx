@@ -6,8 +6,10 @@ import { MiniCalendar, MiniGroceries } from "@/components/Panel/consumers";
 import { DeleteRecipeModal } from "@/components/shared/delete-recipe-modal";
 import { usePermissionsContext } from "@/context/permissions-context";
 import { useRecipesContext } from "@/context/recipes-context";
+import { useAmountDisplayPreference } from "@/hooks/use-amount-display-preference";
 import { useActiveAllergies } from "@/hooks/user";
 import {
+  ArrowsRightLeftIcon,
   CalendarDaysIcon,
   DevicePhoneMobileIcon,
   EllipsisHorizontalIcon,
@@ -31,10 +33,13 @@ import {
 
 import { useRecipeContextRequired } from "../context";
 import RecipeSharePanel from "./recipe-share-panel";
+import { useSystemConversion } from "./use-system-conversion";
 import { useWakeLockContext } from "./wake-lock-context";
 
 type Props = {
   id: string;
+  /** Lets a caller draw the trigger as chrome floating on the recipe photo. */
+  buttonClassName?: string;
 };
 type MenuItem = {
   key: string;
@@ -49,7 +54,7 @@ type MenuItem = {
   description?: string;
   descriptionClassName?: string;
 };
-export default function ActionsMenu({ id }: Props) {
+export default function ActionsMenu({ id, buttonClassName }: Props) {
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [openCalendar, setOpenCalendar] = React.useState(false);
   const [openGroceries, setOpenGroceries] = React.useState(false);
@@ -68,8 +73,15 @@ export default function ActionsMenu({ id }: Props) {
 
   const { allergies } = useActiveAllergies();
   const { isSupported, isActive, toggle } = useWakeLockContext();
+  // Two controls the phone's Ingredients card no longer has room for: an AI
+  // conversion is a per-recipe action, and fractions-versus-decimals is an
+  // app-wide display preference with no per-recipe meaning at all.
+  const conversion = useSystemConversion();
+  const { mode: amountMode, toggleMode: toggleAmountMode } = useAmountDisplayPreference();
 
   const t = useTranslations("recipes.actions");
+  const tDetail = useTranslations("recipes.detail");
+  const tConvert = useTranslations("recipes.convert");
   const tEnrichment = useTranslations("recipes.enrichment");
   const canEdit = recipe.userId ? canEditRecipe(recipe.userId) : true;
   const canDelete = recipe.userId ? canDeleteRecipe(recipe.userId) : true;
@@ -112,6 +124,38 @@ export default function ActionsMenu({ id }: Props) {
         icon: <PencilSquareIcon className="size-4" />,
         onPress: () => router.push(`/recipes/edit/${id}`),
       });
+    }
+    items.push({
+      key: "amount-display",
+      label: amountMode === "fraction" ? tDetail("switchToDecimal") : tDetail("switchToFraction"),
+      icon: (
+        <span aria-hidden className="flex size-4 items-center justify-center text-xs font-medium">
+          {amountMode === "fraction" ? "\u00bd" : "0.5"}
+        </span>
+      ),
+      onPress: toggleAmountMode,
+    });
+    // The system the recipe is already in is not somewhere to convert to, so
+    // only the reachable ones are drawn as actions.
+    if (conversion.isAvailable) {
+      for (const option of conversion.options) {
+        if (option.key === conversion.currentSystem) continue;
+
+        items.push({
+          key: `convert-${option.key}`,
+          label: option.label,
+          icon: option.requiresAI ? (
+            <SparklesIcon className="size-4" />
+          ) : (
+            <ArrowsRightLeftIcon className="size-4" />
+          ),
+          onPress: () => conversion.convertTo(option.key),
+          labelClassName: option.requiresAI ? cssAIGradientText : "",
+          iconClassName: option.requiresAI ? cssAIIconColor : "text-muted",
+          description: conversion.isConverting ? tConvert("converting") : undefined,
+          isDisabled: conversion.isConverting,
+        });
+      }
     }
     if (isSupported) {
       items.push({
@@ -210,15 +254,20 @@ export default function ActionsMenu({ id }: Props) {
     }
     return items;
   }, [
+    amountMode,
     canEdit,
     canDelete,
+    conversion,
     handleDeleteClick,
     id,
     router,
     isSupported,
     isActive,
     toggle,
+    toggleAmountMode,
     t,
+    tConvert,
+    tDetail,
     tEnrichment,
     isAIEnabled,
     allergies,
@@ -230,7 +279,7 @@ export default function ActionsMenu({ id }: Props) {
         <Button
           isIconOnly
           aria-label={t("actionsLabel")}
-          className="transition active:scale-95"
+          className={twMerge("transition active:scale-95", buttonClassName)}
           size="sm"
           variant="tertiary"
         >
