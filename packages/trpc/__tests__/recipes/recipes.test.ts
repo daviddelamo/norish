@@ -66,9 +66,7 @@ vi.mock("@norish/shared-server/media/dish-color", () => ({
     dishColor: "#a1b2c3",
   })),
   withDishColorForUpdate: vi.fn(async (data: Record<string, unknown>) =>
-    data.image !== undefined || data.images !== undefined
-      ? { ...data, dishColor: "#a1b2c3" }
-      : data
+    data.image !== undefined || data.images !== undefined ? { ...data, dishColor: "#a1b2c3" } : data
   ),
 }));
 
@@ -812,4 +810,3 @@ describe("recipes procedures", () => {
     });
   });
 });
-

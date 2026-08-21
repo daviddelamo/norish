@@ -2070,7 +2070,11 @@ export async function listRecipesMissingDishColor(): Promise<
       .from(recipes)
       .where(isNull(recipes.dishColor)),
     db
-      .select({ recipeId: recipeImages.recipeId, image: recipeImages.image, order: recipeImages.order })
+      .select({
+        recipeId: recipeImages.recipeId,
+        image: recipeImages.image,
+        order: recipeImages.order,
+      })
       .from(recipeImages),
   ]);
 

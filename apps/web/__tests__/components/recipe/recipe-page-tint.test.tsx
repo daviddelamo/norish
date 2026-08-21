@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import "@testing-library/jest-dom";
 
 import type { RecipePageColorMode } from "@/lib/recipe-page-color";
-import { RecipePageColorProvider } from "@/context/recipe-page-color-context";
 import RecipePageTint from "@/components/recipes/recipe-page-tint";
+import { RecipePageColorProvider } from "@/context/recipe-page-color-context";
 
 function renderTint(dishColor: string | null | undefined, colorMode?: RecipePageColorMode) {
   return render(

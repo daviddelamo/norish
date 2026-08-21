@@ -99,7 +99,11 @@ async function processImportJob(job: Job<RecipeImportJobData>): Promise<void> {
 
   await reportStep(job, "saving");
   // The Dish Colour is taken from the image the import just stored.
-  const created = await createRecipeWithRefs(recipeId, userId, await withDishColor(parseResult.recipe));
+  const created = await createRecipeWithRefs(
+    recipeId,
+    userId,
+    await withDishColor(parseResult.recipe)
+  );
   const createdId = created?.recipeId;
 
   if (!createdId) {

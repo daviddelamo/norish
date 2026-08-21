@@ -14,8 +14,8 @@ import { request } from "@playwright/test";
 import { Client } from "pg";
 
 import type { AIE2EStack } from "./fixture";
-import { expect, test } from "./fixture";
 import { databaseUrl } from "./database";
+import { expect, test } from "./fixture";
 import { setAutomaticEnrichment } from "./recipe-enrichment-support";
 
 test.describe.configure({ mode: "serial" });
@@ -90,9 +90,7 @@ function boxesOverlap(
   a: { x: number; y: number; width: number; height: number },
   b: { x: number; y: number; width: number; height: number }
 ): boolean {
-  return (
-    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
-  );
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
 test.beforeAll(async ({ aiStack, browser }) => {
@@ -142,9 +140,7 @@ test.beforeAll(async ({ aiStack, browser }) => {
     await expect
       .poll(
         async () => {
-          const rows = await database.query("select 1 from steps where recipe_id = $1", [
-            recipeId,
-          ]);
+          const rows = await database.query("select 1 from steps where recipe_id = $1", [recipeId]);
 
           return rows.rowCount;
         },
@@ -204,10 +200,7 @@ test("the cook pill stays reachable at full scroll and covers neither nav nor ti
   await expect(cookPill).toBeVisible();
 
   const cookBox = await cookPill.boundingBox();
-  const navBox = await page
-    .locator("div.z-\\[60\\] ul >> visible=true")
-    .last()
-    .boundingBox();
+  const navBox = await page.locator("div.z-\\[60\\] ul >> visible=true").last().boundingBox();
 
   expect(cookBox).not.toBeNull();
   expect(navBox).not.toBeNull();
@@ -215,7 +208,10 @@ test("the cook pill stays reachable at full scroll and covers neither nav nor ti
 
   // The timer dock floats in the opposite corner; the pill must not sit on
   // it. The collapsed dock is the button carrying the mono countdown.
-  const dock = page.locator("button").filter({ has: page.locator("span.font-mono") }).last();
+  const dock = page
+    .locator("button")
+    .filter({ has: page.locator("span.font-mono") })
+    .last();
 
   await expect(dock).toBeVisible();
 
@@ -233,9 +229,7 @@ test("cooking mode pages its steps, keeps both swipes, and projects Ready At onl
 
   // Step one fills the page; the next step peeks, faded, at the bottom edge.
   await expect(dialog.getByText(RECIPE.steps[0]!.step).first()).toBeVisible();
-  await expect(dialog.locator('[data-cooking-step-peek="bottom"]')).toContainText(
-    "Rest the dough"
-  );
+  await expect(dialog.locator('[data-cooking-step-peek="bottom"]')).toContainText("Rest the dough");
   await expect(dialog.getByText(/Ready around/)).toBeVisible();
   await expect(dialog.getByText("1 / 3")).toBeVisible();
 
@@ -271,7 +265,5 @@ test("hiding Nutrition Information takes the card and the Glance Bar's calories 
   await expect(glanceBar).toBeVisible();
   await expect(glanceBar).toContainText("45m");
   await expect(glanceBar).not.toContainText("640");
-  await expect(
-    page.locator("h2:visible").filter({ hasText: "Nutrition" })
-  ).toHaveCount(0);
+  await expect(page.locator("h2:visible").filter({ hasText: "Nutrition" })).toHaveCount(0);
 });

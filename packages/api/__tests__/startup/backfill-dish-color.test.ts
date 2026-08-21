@@ -8,6 +8,8 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { backfillDishColors } from "@norish/api/startup/backfill-dish-color";
+
 const { listRecipesMissingDishColor, updateRecipeDishColor, dishColorForImageUrl } = vi.hoisted(
   () => ({
     listRecipesMissingDishColor: vi.fn(),
@@ -29,8 +31,6 @@ vi.mock("@norish/shared-server/media/dish-color", async (importOriginal) => ({
 vi.mock("@norish/shared-server/logger", () => ({
   dbLogger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
-
-import { backfillDishColors } from "@norish/api/startup/backfill-dish-color";
 
 describe("backfillDishColors", () => {
   beforeEach(() => {

@@ -3,9 +3,8 @@
  * saturation clamped, lightness never present — the CSS keeps lightness on
  * the theme's side, which dish-tint-css.test.ts pins at the source level.
  */
-import { describe, expect, it } from "vitest";
-
 import { dishTintStyle, MAX_DISH_TINT_CHROMA } from "@/lib/dish-tint";
+import { describe, expect, it } from "vitest";
 
 function hue(style: ReturnType<typeof dishTintStyle>): number {
   return Number(style!["--dish-h"]);

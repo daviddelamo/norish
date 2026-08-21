@@ -41,10 +41,7 @@ import {
   isVideoParsingEnabled,
 } from "@norish/shared-server/config/server-config-loader";
 import { trpcLogger as log } from "@norish/shared-server/logger";
-import {
-  withDishColor,
-  withDishColorForUpdate,
-} from "@norish/shared-server/media/dish-color";
+import { withDishColor, withDishColorForUpdate } from "@norish/shared-server/media/dish-color";
 import { deleteRecipeImagesDir } from "@norish/shared-server/media/storage";
 import { selectWeightedRandomRecipe } from "@norish/shared-server/recipes/randomizer";
 import { FilterMode, RecipeCategory, SortOrder } from "@norish/shared/contracts";

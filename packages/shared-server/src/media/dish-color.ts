@@ -40,7 +40,11 @@ function linearChannelToSrgb(channel: number): number {
 }
 
 /** sRGB (0–255) → OKLab, per Ottosson. */
-function oklabFromSrgb(red: number, green: number, blue: number): { L: number; a: number; b: number } {
+function oklabFromSrgb(
+  red: number,
+  green: number,
+  blue: number
+): { L: number; a: number; b: number } {
   const r = srgbChannelToLinear(red / 255);
   const g = srgbChannelToLinear(green / 255);
   const b = srgbChannelToLinear(blue / 255);

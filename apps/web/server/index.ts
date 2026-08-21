@@ -1,8 +1,8 @@
 import { initCaldavSync } from "@norish/api/caldav/event-listener";
 import { initRecipeEnrichmentListener } from "@norish/api/recipes/enrichment-listener";
+import { backfillDishColors } from "@norish/api/startup/backfill-dish-color";
 import { createServer } from "@norish/api/startup/http-server";
 import { runStartupMaintenanceCleanup } from "@norish/api/startup/maintenance-cleanup";
-import { backfillDishColors } from "@norish/api/startup/backfill-dish-color";
 import { migrateGalleryImages } from "@norish/api/startup/migrate-gallery-images";
 import { runMigrations } from "@norish/api/startup/migrations";
 import { registerApiHandlersForQueue } from "@norish/api/startup/register-queue-api-handlers";

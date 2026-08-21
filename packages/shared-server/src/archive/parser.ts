@@ -14,10 +14,7 @@ import { listCuisines } from "@norish/db/repositories/cuisines";
 import { addFavorite } from "@norish/db/repositories/favorites";
 import { rateRecipe } from "@norish/db/repositories/ratings";
 import { serverLogger as log } from "@norish/shared-server/logger";
-import {
-  withDishColor,
-  withDishColorForUpdate,
-} from "@norish/shared-server/media/dish-color";
+import { withDishColor, withDishColorForUpdate } from "@norish/shared-server/media/dish-color";
 import { FullRecipeInsertDTO, RecipeDashboardDTO } from "@norish/shared/contracts";
 
 import {

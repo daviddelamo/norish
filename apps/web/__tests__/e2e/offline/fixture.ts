@@ -66,7 +66,13 @@ async function seed(stack: ProductionStack): Promise<void> {
     await database.query(
       `insert into recipes (id, user_id, name, description, image, dish_color, servings)
        values ($1, $2, $3, 'Seeded for the Offline browser project.', $4, $5, 4)`,
-      [SEEDED_RECIPE_ID, userA.id, SEEDED_RECIPE_NAME, SEEDED_RECIPE_IMAGE, SEEDED_RECIPE_DISH_COLOR]
+      [
+        SEEDED_RECIPE_ID,
+        userA.id,
+        SEEDED_RECIPE_NAME,
+        SEEDED_RECIPE_IMAGE,
+        SEEDED_RECIPE_DISH_COLOR,
+      ]
     );
     await database.query(
       `insert into groceries (user_id, name, unit, amount, is_done) values ($1, $2, null, 2, false)`,
