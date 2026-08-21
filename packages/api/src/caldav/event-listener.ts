@@ -336,27 +336,3 @@ async function startRecipeSubscriptions(signal: AbortSignal): Promise<void> {
     }
   }
 }
-
-export async function syncAllFutureItems(userId: string): Promise<{
-  totalSynced: number;
-  totalFailed: number;
-}> {
-  log.info({ userId }, "syncAllFutureItems temporarily disabled during planned_items migration");
-
-  // TODO: Re-enable after planned-items repository is implemented
-  return { totalSynced: 0, totalFailed: 0 };
-}
-
-/**
- * Retry pending/failed syncs for a user.
- * Used by the tRPC procedures for manual retry.
- */
-export async function retryFailedSyncs(userId: string): Promise<{
-  totalRetried: number;
-  totalFailed: number;
-}> {
-  log.info({ userId }, "retryFailedSyncs temporarily disabled during planned_items migration");
-
-  // TODO: Re-enable after planned-items repository is implemented
-  return { totalRetried: 0, totalFailed: 0 };
-}
