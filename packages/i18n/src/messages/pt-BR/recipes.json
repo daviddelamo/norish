@@ -51,7 +51,11 @@
     "instructions": "Instruções",
     "cook": "Cozinhar",
     "switchToDecimal": "Mostrar decimais",
-    "switchToFraction": "Mostrar frações"
+    "switchToFraction": "Mostrar frações",
+    "servingsCount": "{count, plural, one {# porção} other {# porções}}",
+    "source": "Fonte",
+    "decreaseServings": "Menos porções",
+    "increaseServings": "Mais porções"
   },
   "actions": {
     "plan": "Planejar",
@@ -125,7 +129,8 @@
   "convert": {
     "ariaLabel": "Converter sistema de medidas",
     "toMetric": "Converter para métrico",
-    "toUS": "Converter para unidades dos EUA"
+    "toUS": "Converter para unidades dos EUA",
+    "converting": "Convertendo…"
   },
   "deleteModal": {
     "title": "Excluir receita",
@@ -296,7 +301,10 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Deslize para navegar pelas etapas",
     "swipeIngredients": "Deslize para a esquerda para ver os ingredientes",
-    "swipeBackToSteps": "Deslize para a direita para ver as etapas"
+    "swipeBackToSteps": "Deslize para a direita para ver as etapas",
+    "readyAt": "Pronto por volta das {time}",
+    "timers": "Temporizadores",
+    "nextStep": "Próximo passo"
   },
   "enrichment": {
     "failed": "Falha no enriquecimento",
@@ -326,5 +334,16 @@
   "import": {
     "alreadyExists": "Você já tem esta receita",
     "openExisting": "Abrir"
+  },
+  "glanceBar": {
+    "totalTime": "Tempo total",
+    "servings": "{count, plural, one {porção} other {porções}}"
+  },
+  "cookingTime": {
+    "title": "Tempo de cozinha",
+    "prep": "Preparo",
+    "cook": "Cozimento",
+    "other": "Outro tempo",
+    "total": "Total"
   }
 }

@@ -51,7 +51,11 @@
     "instructions": "Fremgangsmåde",
     "cook": "Tilbered",
     "switchToDecimal": "Vis decimaler",
-    "switchToFraction": "Vis brøker"
+    "switchToFraction": "Vis brøker",
+    "servingsCount": "{count, plural, one {# portion} other {# portioner}}",
+    "source": "Kilde",
+    "decreaseServings": "Færre portioner",
+    "increaseServings": "Flere portioner"
   },
   "actions": {
     "plan": "Planlæg",
@@ -125,7 +129,8 @@
   "convert": {
     "ariaLabel": "Konverter målesystem",
     "toMetric": "Konverter til metrisk",
-    "toUS": "Konverter til amerikansk"
+    "toUS": "Konverter til amerikansk",
+    "converting": "Konverterer…"
   },
   "deleteModal": {
     "title": "Slet opskrift",
@@ -296,7 +301,10 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Swipe for at navigere mellem trin",
     "swipeIngredients": "Swipe til venstre for ingredienser",
-    "swipeBackToSteps": "Swipe til højre for trin"
+    "swipeBackToSteps": "Swipe til højre for trin",
+    "readyAt": "Klar omkring {time}",
+    "timers": "Timere",
+    "nextStep": "Næste trin"
   },
   "enrichment": {
     "failed": "Berigelse mislykkedes",
@@ -326,5 +334,16 @@
   "import": {
     "alreadyExists": "Du har allerede denne opskrift",
     "openExisting": "Åbn"
+  },
+  "glanceBar": {
+    "totalTime": "Samlet tid",
+    "servings": "{count, plural, one {portion} other {portioner}}"
+  },
+  "cookingTime": {
+    "title": "Tilberedningstid",
+    "prep": "Forberedelse",
+    "cook": "Tilberedning",
+    "other": "Anden tid",
+    "total": "I alt"
   }
 }

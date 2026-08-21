@@ -51,7 +51,11 @@
     "instructions": "Инструкции",
     "cook": "Готви",
     "switchToDecimal": "Покажи десетични числа",
-    "switchToFraction": "Покажи дроби"
+    "switchToFraction": "Покажи дроби",
+    "servingsCount": "{count, plural, one {# порция} other {# порции}}",
+    "source": "Източник",
+    "decreaseServings": "По-малко порции",
+    "increaseServings": "Повече порции"
   },
   "actions": {
     "plan": "Планирай",
@@ -125,7 +129,8 @@
   "convert": {
     "ariaLabel": "Преобразуване на мерна система",
     "toMetric": "Преобразувай в метрична",
-    "toUS": "Преобразувай в американска"
+    "toUS": "Преобразувай в американска",
+    "converting": "Преобразуване…"
   },
   "deleteModal": {
     "title": "Изтриване на рецепта",
@@ -296,7 +301,10 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Плъзни, за да преминеш между стъпките",
     "swipeIngredients": "Плъзни наляво за съставките",
-    "swipeBackToSteps": "Плъзни надясно за стъпките"
+    "swipeBackToSteps": "Плъзни надясно за стъпките",
+    "readyAt": "Готово около {time}",
+    "timers": "Таймери",
+    "nextStep": "Следваща стъпка"
   },
   "enrichment": {
     "failed": "Обогатяването е неуспешно",
@@ -326,5 +334,16 @@
   "import": {
     "alreadyExists": "Вече имаш тази рецепта",
     "openExisting": "Отвори"
+  },
+  "glanceBar": {
+    "totalTime": "Общо време",
+    "servings": "{count, plural, one {порция} other {порции}}"
+  },
+  "cookingTime": {
+    "title": "Време за приготвяне",
+    "prep": "Подготовка",
+    "cook": "Готвене",
+    "other": "Друго време",
+    "total": "Общо"
   }
 }

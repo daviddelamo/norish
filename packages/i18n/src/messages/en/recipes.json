@@ -51,7 +51,11 @@
     "instructions": "Instructions",
     "cook": "Cook",
     "switchToDecimal": "Show decimals",
-    "switchToFraction": "Show fractions"
+    "switchToFraction": "Show fractions",
+    "servingsCount": "{count, plural, one {# serving} other {# servings}}",
+    "source": "Source",
+    "decreaseServings": "Fewer servings",
+    "increaseServings": "More servings"
   },
   "actions": {
     "plan": "Plan",
@@ -125,7 +129,8 @@
   "convert": {
     "ariaLabel": "Convert measurement system",
     "toMetric": "Convert to Metric",
-    "toUS": "Convert to US"
+    "toUS": "Convert to US",
+    "converting": "Converting…"
   },
   "deleteModal": {
     "title": "Delete Recipe",
@@ -296,7 +301,10 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Swipe to navigate steps",
     "swipeIngredients": "Swipe left for ingredients",
-    "swipeBackToSteps": "Swipe right for steps"
+    "swipeBackToSteps": "Swipe right for steps",
+    "readyAt": "Ready around {time}",
+    "timers": "Timers",
+    "nextStep": "Next step"
   },
   "enrichment": {
     "failed": "Enrichment failed",
@@ -326,5 +334,16 @@
   "import": {
     "alreadyExists": "You already have this recipe",
     "openExisting": "Open"
+  },
+  "glanceBar": {
+    "totalTime": "Total time",
+    "servings": "{count, plural, one {serving} other {servings}}"
+  },
+  "cookingTime": {
+    "title": "Cooking time",
+    "prep": "Prep",
+    "cook": "Cook",
+    "other": "Other time",
+    "total": "Total"
   }
 }

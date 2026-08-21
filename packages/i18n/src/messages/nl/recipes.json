@@ -51,7 +51,11 @@
     "instructions": "Instructies",
     "cook": "Koken",
     "switchToDecimal": "Toon decimalen",
-    "switchToFraction": "Toon breuken"
+    "switchToFraction": "Toon breuken",
+    "servingsCount": "{count, plural, one {# portie} other {# porties}}",
+    "source": "Bron",
+    "decreaseServings": "Minder porties",
+    "increaseServings": "Meer porties"
   },
   "actions": {
     "plan": "Plan",
@@ -125,7 +129,8 @@
   "convert": {
     "ariaLabel": "Converteer meetsysteem",
     "toMetric": "Converteer naar metrisch",
-    "toUS": "Converteer naar US"
+    "toUS": "Converteer naar US",
+    "converting": "Bezig met omrekenen…"
   },
   "deleteModal": {
     "title": "Recept verwijderen",
@@ -296,7 +301,10 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Veeg om door stappen te navigeren",
     "swipeIngredients": "Veeg links voor ingrediënten",
-    "swipeBackToSteps": "Veeg rechts voor stappen"
+    "swipeBackToSteps": "Veeg rechts voor stappen",
+    "readyAt": "Rond {time} klaar",
+    "timers": "Timers",
+    "nextStep": "Volgende stap"
   },
   "enrichment": {
     "failed": "Verrijking mislukt",
@@ -326,5 +334,16 @@
   "import": {
     "alreadyExists": "Je hebt dit recept al",
     "openExisting": "Openen"
+  },
+  "glanceBar": {
+    "totalTime": "Totale tijd",
+    "servings": "{count, plural, one {portie} other {porties}}"
+  },
+  "cookingTime": {
+    "title": "Kooktijd",
+    "prep": "Voorbereiden",
+    "cook": "Koken",
+    "other": "Overige tijd",
+    "total": "Totaal"
   }
 }

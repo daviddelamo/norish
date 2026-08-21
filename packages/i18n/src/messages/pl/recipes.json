@@ -51,7 +51,11 @@
     "instructions": "Instrukcje",
     "cook": "Gotuj",
     "switchToDecimal": "Pokaż dziesiętne",
-    "switchToFraction": "Pokaż ułamki"
+    "switchToFraction": "Pokaż ułamki",
+    "servingsCount": "{count, plural, one {# porcja} few {# porcje} many {# porcji} other {# porcji}}",
+    "source": "Źródło",
+    "decreaseServings": "Mniej porcji",
+    "increaseServings": "Więcej porcji"
   },
   "actions": {
     "plan": "Zaplanuj",
@@ -125,7 +129,8 @@
   "convert": {
     "ariaLabel": "Przelicz system miar",
     "toMetric": "Przelicz na metryczny",
-    "toUS": "Przelicz na amerykański"
+    "toUS": "Przelicz na amerykański",
+    "converting": "Przeliczanie…"
   },
   "deleteModal": {
     "title": "Usuń przepis",
@@ -296,7 +301,10 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Przesuń, aby nawigować kroki",
     "swipeIngredients": "Przesuń w lewo, aby zobaczyć składniki",
-    "swipeBackToSteps": "Przesuń w prawo, aby wrócić do kroków"
+    "swipeBackToSteps": "Przesuń w prawo, aby wrócić do kroków",
+    "readyAt": "Gotowe około {time}",
+    "timers": "Minutniki",
+    "nextStep": "Następny krok"
   },
   "enrichment": {
     "failed": "Wzbogacanie nie powiodło się",
@@ -326,5 +334,16 @@
   "import": {
     "alreadyExists": "Masz już ten przepis",
     "openExisting": "Otwórz"
+  },
+  "glanceBar": {
+    "totalTime": "Łączny czas",
+    "servings": "{count, plural, one {porcja} few {porcje} many {porcji} other {porcji}}"
+  },
+  "cookingTime": {
+    "title": "Czas przygotowania",
+    "prep": "Przygotowanie",
+    "cook": "Gotowanie",
+    "other": "Pozostały czas",
+    "total": "Łącznie"
   }
 }
