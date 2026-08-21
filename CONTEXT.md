@@ -58,6 +58,26 @@ The Recipe Enrichment kind that infers Step Ingredients. It is a gap-filler in e
 Something a reader has chosen not to be shown: Recipe Provenance, Nutrition Information, a recipe's notes, its rating, favourites, the measurement conversion control, or recipe timers. Hiding belongs to that reader alone and is kept per device, like every visibility preference — a cramped phone can hide what a desktop keeps. It suppresses the item everywhere it would appear for them, so hiding the rating takes the recipe page's stars, the library chip and the rating filter together, while the items that exist only on the recipe page simply make it slimmer. It settles nothing about the recipe: what is stored, what may be edited and what Recipe Enrichment produces are all unchanged, and a recipe read by someone signed out shows everything. An origin flag beside a recipe's title is chrome rather than Recipe Provenance, so it stays when Recipe Provenance is hidden.
 _Avoid_: Disabled (suggests the thing stops working), Hidden Section (not every hidden item is a section), Display Preference (names where it is stored, not what it is)
 
+**Glance Bar**:
+The short row of facts a recipe leads with on a phone — its total time, its servings, and its calories — placed between the description and the first section so the whole answer to "can I cook this tonight?" arrives before any scrolling. It restates facts the sections below own rather than holding any of its own, so a Hidden Item takes its entry with it and a recipe that stores none of them has no bar at all.
+_Avoid_: Meta row (names the position, not the purpose), Quick facts
+
+**Other Time**:
+The part of a recipe's total time that is neither preparation nor cooking — resting, chilling, proving, marinating. It is never stored and never entered: it is what remains when a recipe's prep and cook times fall short of its total, and Norish shows it rather than quietly redrawing the total to fit. Its nature is unknown by definition, so it is named for what it is not.
+_Avoid_: Resting Time (claims to know which kind it is), Idle time
+
+**Cooking Session**:
+One stretch of cooking a recipe with cooking mode open. It begins when the reader opens cooking mode and ends when they close it — nothing about it is written down, so a session is never resumed, never shared with the household, and never outlives the screen it runs on. Reopening cooking mode begins a new session at the first step.
+_Avoid_: Cooking Progress (implies something is kept)
+
+**Ready At**:
+The clock time a recipe is projected to be done: the moment its Cooking Session began plus the recipe's total time. It is a projection and never a promise — nothing checks whether the cook actually started, paused, or wandered off — so it is only ever shown inside cooking mode, where the session that anchors it exists. A recipe with no total time has none.
+_Avoid_: Finish time, ETA (both read as a commitment Norish is not making)
+
+**Dish Colour**:
+One colour taken from a recipe's primary image when that image is stored, and kept with the recipe so a page can be tinted before the photo has even arrived. Only its hue and a clamped amount of its saturation are ever used: lightness always comes from the reader's theme, so a recipe colours its page without ever deciding how readable that page is. A recipe with no image, or one stored before the colour existed, simply has none and renders on the plain theme background. A reader may also decline the tint outright and read every recipe on that plain background, which is a preference about their own device and never a change to the recipe. It is derived from the image rather than supplied with the recipe, so it is never Supplied Recipe Data and never travels in a Recipe Archive — a receiving instance takes its own from the image it received.
+_Avoid_: Dominant colour (names the algorithm), Theme colour (collides with the reader's light and dark themes), Accent (that is the app's own, and it never shifts)
+
 ### Imports & AI
 
 **Recipe Archive**:

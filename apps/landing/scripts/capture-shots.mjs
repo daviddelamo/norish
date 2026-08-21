@@ -15,6 +15,10 @@
  * the store groups fit the frame, the mobile dashboard is captured in list
  * view, and the recipe page alone uses a wider web viewport so the page
  * reads less cramped.
+ *
+ * `NORISH_FORMS=mobile` (or `web`) takes half the set. The README's one
+ * session rule still holds — a half run is for retaking a form whose layout
+ * changed, not for topping up a set from a different day.
  */
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,16 +42,50 @@ const hideDevUi = `
   [data-next-badge-root], [data-nextjs-dev-tools-button] { display: none !important; }
 `;
 
-const FORMS = {
+const ALL_FORMS = {
   web: { width: 900, height: 675 },
   mobile: { width: 390, height: 773 },
 };
+
+const wanted = process.env.NORISH_FORMS?.split(",").map((form) => form.trim());
+const FORMS = wanted
+  ? Object.fromEntries(Object.entries(ALL_FORMS).filter(([form]) => wanted.includes(form)))
+  : ALL_FORMS;
+
+if (!Object.keys(FORMS).length) {
+  console.error(`NORISH_FORMS must name one of: ${Object.keys(ALL_FORMS).join(", ")}`);
+  process.exit(1);
+}
 
 /* The recipe page alone is captured at a physically wider viewport — same
    4:3, so the optimizer crops nothing, but the page gets room to breathe. */
 const RECIPE_WEB = { width: 1200, height: 900 };
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/*
+ * A screen is only worth capturing once it has stopped being a skeleton. The
+ * library, the recipe photos and the planned week all arrive well after the
+ * navigation itself settles, and a fixed sleep either wastes time or catches
+ * a half-drawn frame. Falls through with a warning rather than throwing, so
+ * one slow screen cannot strand a run that is otherwise fine — but a warning
+ * means that capture wants checking before it is committed.
+ */
+async function settle(page, label) {
+  await page
+    .waitForFunction(
+      () =>
+        !document.querySelector(".skeleton") &&
+        [...document.images].every((image) => image.complete),
+      undefined,
+      { timeout: 45_000, polling: 250 }
+    )
+    .catch(() => console.warn(`  ! ${label} was still loading when the wait ran out`));
+
+  // Reveal animations and image decode land just after the data does.
+  await sleep(1200);
+}
+
 const browser = await chromium.launch();
 
 for (const [form, viewport] of Object.entries(FORMS)) {
@@ -70,16 +108,18 @@ for (const [form, viewport] of Object.entries(FORMS)) {
     }
     if (!signedIn) throw new Error("sign-in kept failing; check credentials or rate limit");
 
+    // The mobile dashboard ships in list view. The choice is a device
+    // preference cookie the server reads while it renders the library, so it
+    // has to be in place before the first navigation, not set after hydration.
+    if (form === "mobile") {
+      await context.addCookies([
+        { name: "norish_recipe_view_mode", value: "list", url: BASE, sameSite: "Lax" },
+      ]);
+    }
+
     const page = await context.newPage();
 
     await page.addInitScript((value) => window.localStorage.setItem("theme", value), theme);
-
-    // The mobile dashboard ships in list view; the stored value is JSON-encoded.
-    if (form === "mobile") {
-      await page.addInitScript(() =>
-        window.localStorage.setItem("norish:recipe-dashboard-view-mode", '"list"')
-      );
-    }
 
     const shoot = async (name) => {
       await page.addStyleTag({ content: hideDevUi }).catch(() => {});
@@ -92,12 +132,12 @@ for (const [form, viewport] of Object.entries(FORMS)) {
     };
 
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" }).catch(() => {});
-    await page.waitForTimeout(3500);
+    await settle(page, `dashboard-${form}-${theme}`);
     await shoot("dashboard");
 
     if (form === "web") await page.setViewportSize(RECIPE_WEB);
     await page.goto(`${BASE}/recipes/${RECIPE_ID}`, { waitUntil: "networkidle" }).catch(() => {});
-    await page.waitForTimeout(2500);
+    await settle(page, `recipe-${form}-${theme}`);
     await shoot("recipe");
 
     if (form === "web") {
@@ -112,11 +152,11 @@ for (const [form, viewport] of Object.entries(FORMS)) {
     await shoot("cooking");
 
     await page.goto(`${BASE}/calendar`, { waitUntil: "networkidle" }).catch(() => {});
-    await page.waitForTimeout(3000);
+    await settle(page, `calendar-${form}-${theme}`);
     await shoot("calendar");
 
     await page.goto(`${BASE}/groceries`, { waitUntil: "networkidle" }).catch(() => {});
-    await page.waitForTimeout(2500);
+    await settle(page, `groceries-${form}-${theme}`);
     await page
       .getByRole("button", { name: /^Unsorted/ })
       .first()

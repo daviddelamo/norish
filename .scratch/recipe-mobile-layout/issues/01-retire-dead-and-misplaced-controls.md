@@ -1,0 +1,14 @@
+# 01 — Retire the orphaned calendar button and move two controls into the actions menu
+
+**What to build:** the preparatory tidy the new Ingredients card depends on. `apps/web/app/(app)/recipes/[id]/components/add-to-calendar-button.tsx` has no importers anywhere in the repo — delete it. Then move `SystemConvertMenu` and `AmountDisplayToggle` out of the mobile Ingredients heading row and into the recipe `⋯` actions menu: convert-measurements is a permission-gated action that starts an AI conversion (and is already a Hidden Item via `showConversion`), so it belongs with the other per-recipe actions; fractions-versus-decimals is an app-wide display preference with no per-recipe meaning. Desktop keeps both controls where they are — its Ingredients card has the room.
+
+**Blocked by:** None — can start immediately.
+
+**Status:** ready-for-agent
+
+- [ ] `add-to-calendar-button.tsx` is deleted and nothing references it
+- [ ] `SystemConvertMenu` appears in the recipe actions menu, retaining its permission gate and its `showConversion` Hidden Item behaviour
+- [ ] `AmountDisplayToggle` appears in the recipe actions menu and still drives the app-wide amount display preference
+- [ ] Neither control renders in the mobile Ingredients heading row any more
+- [ ] `recipe-page-desktop.tsx` is unchanged
+- [ ] New menu strings are added across every supported locale and `pnpm i18n:check` passes
