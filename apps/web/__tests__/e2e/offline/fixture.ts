@@ -78,10 +78,15 @@ async function seed(stack: ProductionStack): Promise<void> {
       `insert into groceries (user_id, name, unit, amount, is_done) values ($1, $2, null, 2, false)`,
       [userA.id, SEEDED_GROCERY_NAME]
     );
+    // The browser's date, not the container's: the Postgres container runs
+    // UTC, so `current_date` is yesterday for any run between local midnight
+    // and UTC midnight — and the dashboard's Today shows nothing seeded.
+    const localToday = new Date().toLocaleDateString("en-CA");
+
     await database.query(
       `insert into planned_items (user_id, date, slot, item_type, title)
-       values ($1, current_date, 'Dinner', 'note', $2)`,
-      [userA.id, SEEDED_NOTE_TITLE]
+       values ($1, $2::date, 'Dinner', 'note', $3)`,
+      [userA.id, localToday, SEEDED_NOTE_TITLE]
     );
   } finally {
     await database.end();
