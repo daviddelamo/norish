@@ -7,6 +7,8 @@ import {
   cssFloatingDockBottomDesktop,
   cssFloatingDockBottomWithNav,
   cssFloatingDockBottomWithShrunkenNav,
+  cssFloatingDockStackedBottomWithNav,
+  cssFloatingDockStackedBottomWithShrunkenNav,
   MOBILE_NAV_SHRUNKEN_SCALE,
 } from "@norish/web/config/css-tokens";
 
@@ -24,6 +26,13 @@ type FloatingDockOptions = {
    * something to say while it is scrolled past, and a cook button does not.
    */
   hideWithNav?: boolean;
+  /**
+   * How high over the nav to keep station. `"row"` is the pill row the cook
+   * pill, the add pill and the timer dock stand in; `"stacked"` is the notch
+   * just over the bar, where a round control sits on the nav's end cap
+   * instead of floating in the row above it.
+   */
+  station?: "row" | "stacked";
 };
 
 /**
@@ -40,12 +49,20 @@ export function useFloatingDock({
   align,
   disabled = false,
   hideWithNav = false,
+  station = "row",
 }: FloatingDockOptions) {
   const isMobile = useIsMobile();
   const { isVisible } = useAutoHide({ disabled });
 
   const isShrunken = isMobile && !isVisible;
   const isHidden = isShrunken && hideWithNav;
+  const isStacked = station === "stacked";
+  const bottomWithNav = isStacked
+    ? cssFloatingDockStackedBottomWithNav
+    : cssFloatingDockBottomWithNav;
+  const bottomWithShrunkenNav = isStacked
+    ? cssFloatingDockStackedBottomWithShrunkenNav
+    : cssFloatingDockBottomWithShrunkenNav;
 
   return {
     isNavVisible: isVisible,
@@ -60,12 +77,12 @@ export function useFloatingDock({
     /** Applied to the pill itself, so a hidden dock cannot swallow a tap. */
     pillClassName: isHidden ? "pointer-events-none" : "pointer-events-auto",
     style: {
-      bottom: isMobile ? cssFloatingDockBottomWithNav : cssFloatingDockBottomDesktop,
+      bottom: isMobile ? bottomWithNav : cssFloatingDockBottomDesktop,
       originY: 1,
     },
     animate: isMobile
       ? {
-          bottom: isShrunken ? cssFloatingDockBottomWithShrunkenNav : cssFloatingDockBottomWithNav,
+          bottom: isShrunken ? bottomWithShrunkenNav : bottomWithNav,
           scale: isShrunken ? MOBILE_NAV_SHRUNKEN_SCALE : 1,
           opacity: isHidden ? 0 : 1,
           y: isHidden ? 24 : 0,

@@ -68,8 +68,27 @@ export const MOBILE_NAV_SHRUNKEN_SCALE = 0.8;
 // pair scale about the same point and stay aligned.
 const FLOATING_DOCK_ABOVE_NAV_REM = 3.75;
 
-export const cssFloatingDockBottomWithNav = `calc(max(env(safe-area-inset-bottom), 1rem) + ${FLOATING_DOCK_ABOVE_NAV_REM}rem)`;
-export const cssFloatingDockBottomWithShrunkenNav = `calc(max(env(safe-area-inset-bottom), 1rem) + ${FLOATING_DOCK_ABOVE_NAV_REM * MOBILE_NAV_SHRUNKEN_SCALE}rem)`;
+/**
+ * The other station: a round control the size of the nav's own end cap — the
+ * calendar's back-to-today button — stacks on the end of the bar rather than
+ * standing in the pill row, so it sits closer than a pill does and reads as
+ * part of the nav instead of as something hovering over it.
+ */
+const FLOATING_DOCK_STACKED_ABOVE_NAV_REM = 3.5;
+
+const floatingDockBottom = (aboveNavRem: number) =>
+  `calc(max(env(safe-area-inset-bottom), 1rem) + ${aboveNavRem}rem)`;
+
+export const cssFloatingDockBottomWithNav = floatingDockBottom(FLOATING_DOCK_ABOVE_NAV_REM);
+export const cssFloatingDockBottomWithShrunkenNav = floatingDockBottom(
+  FLOATING_DOCK_ABOVE_NAV_REM * MOBILE_NAV_SHRUNKEN_SCALE
+);
+export const cssFloatingDockStackedBottomWithNav = floatingDockBottom(
+  FLOATING_DOCK_STACKED_ABOVE_NAV_REM
+);
+export const cssFloatingDockStackedBottomWithShrunkenNav = floatingDockBottom(
+  FLOATING_DOCK_STACKED_ABOVE_NAV_REM * MOBILE_NAV_SHRUNKEN_SCALE
+);
 export const cssFloatingDockBottomDesktop = "1rem";
 
 // The cook pill, the add pill and the collapsed timer dock are the same object
@@ -79,6 +98,14 @@ export const cssFloatingDockBottomDesktop = "1rem";
 const FLOATING_DOCK_PILL_HEIGHT_REM = 2.5;
 
 export const cssFloatingDockPill = "h-10 min-h-10 rounded-full px-4";
+
+/**
+ * The nav's end cap, and anything that stacks on it: the user-menu circle and
+ * the calendar's back-to-today button are the same disc at two heights, so a
+ * column of them lines up on one centre without either side measuring the
+ * other.
+ */
+export const cssFloatingDockEndCap = "h-12 w-12 rounded-full";
 
 /**
  * What a page owes the dock row on top of the clearance the shell already

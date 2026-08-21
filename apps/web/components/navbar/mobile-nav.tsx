@@ -14,7 +14,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 
-import { MOBILE_NAV_SHRUNKEN_SCALE } from "@norish/web/config/css-tokens";
+import { cssFloatingDockEndCap, MOBILE_NAV_SHRUNKEN_SCALE } from "@norish/web/config/css-tokens";
 import { siteConfig } from "@norish/web/config/site";
 
 // Map hrefs to translation keys (same as navbar.tsx)
@@ -142,9 +142,10 @@ export const MobileNav = () => {
             </ul>
           </div>
 
-          {/* User menu - its own circle beside the bar */}
+          {/* User menu - its own circle beside the bar, and the disc the
+              calendar's back-to-today button stacks on. */}
           <div
-            className={`flex h-12 w-12 shrink-0 items-center justify-center ${barSurfaceClassName}`}
+            className={`flex shrink-0 items-center justify-center ${cssFloatingDockEndCap} ${barSurfaceClassName}`}
           >
             <NavbarUserMenu isOpen={userMenuOpen} size="sm" onOpenChange={setUserMenuOpen} />
           </div>
