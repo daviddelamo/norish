@@ -532,6 +532,10 @@
         "title": "Videoverarbeitung",
         "subtitle": "Social-Media-Video-Extraktion & Transkription"
       },
+      "imageGeneration": {
+        "title": "Bildgenerierung",
+        "subtitle": "Zeichnet ein Bild des Gerichts für Rezepte ohne Foto"
+      },
       "prompts": {
         "title": "Prompts",
         "subtitle": "Passe KI-Anweisungen für Rezept-Verarbeitung an"
@@ -608,7 +612,9 @@
         "recipeProvenance": "Rezept-Herkunft",
         "recipeProvenanceDescription": "Land, Region, Küchen und eine kurze Notiz für neue Rezepte ermitteln, nur fehlende Angaben werden ergänzt, Ihre eigenen bleiben erhalten",
         "ingredientLinking": "Zutatenverknüpfung",
-        "ingredientLinkingDescription": "Verknüpft jeden Schritt mit den Zutatenzeilen, die er verwendet, nur für Schritte ohne Verknüpfungen"
+        "ingredientLinkingDescription": "Verknüpft jeden Schritt mit den Zutatenzeilen, die er verwendet, nur für Schritte ohne Verknüpfungen",
+        "imageGeneration": "Bildgenerierung",
+        "imageGenerationDescription": "Zeichnet ein Bild des Gerichts für neue Rezepte, die gar kein Bild haben"
       },
       "tagStrategy": "Tag-Strategie",
       "tagStrategyDescription": "Welche Tags die automatische Verschlagwortung verwenden darf, ob automatisch oder manuell",
@@ -669,6 +675,26 @@
       "transcriptionApiKeyOptionalDescription": "Die meisten lokalen Whisper-Server benötigen keinen API-Schlüssel",
       "transcriptionApiKeyOptionalPlaceholder": "Leer lassen für lokale Server"
     },
+    "imageGenerationConfig": {
+      "description": "Die Bildgenerierung nutzt einen eigenen Anbieter, da die meisten KI-Anbieter nicht zeichnen können. Bilder werden mit diesem Anbieter erzeugt; der KI-Anbieter oben übernimmt alles andere.",
+      "provider": "Bild-Anbieter",
+      "providers": {
+        "disabled": "Deaktiviert",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "Generisch OpenAI-kompatibel"
+      },
+      "endpoint": "Endpoint-URL",
+      "endpointOptional": "Optional: eigene Azure-Ressourcen-URL",
+      "apiKey": "API-Schlüssel",
+      "apiKeyPlaceholder": "API-Schlüssel eingeben...",
+      "model": "Bildmodell",
+      "modelPlaceholder": "z. B. gpt-image-1",
+      "modelDescription": "Das Modell, das das Bild zeichnet. Es muss ein Bildmodell sein, kein Textmodell.",
+      "fallbackHint": "Gleicher Anbieter wie Ihre KI-Konfiguration: Endpoint und API-Schlüssel werden von dort übernommen, sofern Sie sie hier nicht setzen."
+    },
     "promptsConfig": {
       "recipeExtraction": "Rezept-Extraktions-Prompt",
       "recipeExtractionDescription": "Dieser Prompt wird verwendet, wenn Rezeptdaten von Webseiten oder Video-Transkripten extrahiert werden.",
@@ -696,7 +722,13 @@
       "recipeProvenancePlaceholder": "Prompt für die Rezept-Herkunft eingeben ...",
       "ingredientLinking": "Prompt für Zutatenverknüpfung",
       "ingredientLinkingDescription": "Wird verwendet, um jeden Schritt mit den verwendeten Zutatenzeilen zu verknüpfen",
-      "ingredientLinkingPlaceholder": "Prompt zum Verknüpfen von Zutaten mit Schritten..."
+      "ingredientLinkingPlaceholder": "Prompt zum Verknüpfen von Zutaten mit Schritten...",
+      "imageGenerationBrief": "Bildbeschreibungs-Prompt",
+      "imageGenerationBriefDescription": "Wird verwendet, um ein Rezept vor der Bildgenerierung in eine kurze visuelle Beschreibung zu verwandeln. Das Rezept wird an den Prompt angehängt.",
+      "imageGenerationBriefPlaceholder": "Prompt für die visuelle Beschreibung...",
+      "imageGenerationStyle": "Bildstil-Prompt",
+      "imageGenerationStyleDescription": "Wird mit der angehängten visuellen Beschreibung an das Bildmodell gesendet. Bestimmt den Stil aller generierten Bilder.",
+      "imageGenerationStylePlaceholder": "Prompt für den Bildstil..."
     },
     "unsavedChanges": "Ungespeicherte Änderungen",
     "jsonEditor": {

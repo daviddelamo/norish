@@ -532,6 +532,10 @@
         "title": "Video Processing",
         "subtitle": "Social media video extraction & transcription"
       },
+      "imageGeneration": {
+        "title": "Image Generation",
+        "subtitle": "Draw a picture of the dish for recipes without one"
+      },
       "prompts": {
         "title": "Prompts",
         "subtitle": "Customize AI instructions for recipe processing"
@@ -608,7 +612,9 @@
         "recipeProvenance": "Recipe Provenance",
         "recipeProvenanceDescription": "Work out the country, region, Cuisines, and a short note for new recipes, filling in only what is still missing",
         "ingredientLinking": "Ingredient Linking",
-        "ingredientLinkingDescription": "Link each step to the ingredient lines it uses, for steps that have none"
+        "ingredientLinkingDescription": "Link each step to the ingredient lines it uses, for steps that have none",
+        "imageGeneration": "Image Generation",
+        "imageGenerationDescription": "Draw a picture of the dish for new recipes that have no image at all"
       },
       "tagStrategy": "Tag Strategy",
       "tagStrategyDescription": "Which tags auto-tagging may use, whether it runs automatically or manually",
@@ -669,6 +675,26 @@
       "transcriptionApiKeyOptionalDescription": "Most local Whisper servers don't require an API key",
       "transcriptionApiKeyOptionalPlaceholder": "Leave empty for local servers"
     },
+    "imageGenerationConfig": {
+      "description": "Image Generation uses its own provider, because most AI providers cannot draw. Pictures are generated with this provider; the AI provider above handles everything else.",
+      "provider": "Image Provider",
+      "providers": {
+        "disabled": "Disabled",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "Generic OpenAI-compatible"
+      },
+      "endpoint": "Endpoint URL",
+      "endpointOptional": "Optional: custom Azure resource URL",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "Enter API key...",
+      "model": "Image Model",
+      "modelPlaceholder": "e.g. gpt-image-1",
+      "modelDescription": "The model that draws the picture. It must be an image model, not a text model.",
+      "fallbackHint": "Same provider as your AI configuration: the endpoint and API key fall back to it unless you set them here."
+    },
     "promptsConfig": {
       "recipeExtraction": "Recipe Extraction Prompt",
       "recipeExtractionDescription": "This prompt is used when extracting recipe data from web pages or video transcripts.",
@@ -696,7 +722,13 @@
       "recipeProvenancePlaceholder": "Enter the Recipe Provenance prompt...",
       "ingredientLinking": "Ingredient Linking Prompt",
       "ingredientLinkingDescription": "Used when linking each step to the ingredient lines it uses",
-      "ingredientLinkingPlaceholder": "Prompt for linking ingredients to steps..."
+      "ingredientLinkingPlaceholder": "Prompt for linking ingredients to steps...",
+      "imageGenerationBrief": "Image Brief Prompt",
+      "imageGenerationBriefDescription": "Used to turn a recipe into a short visual brief before its picture is generated. The recipe is appended after the prompt.",
+      "imageGenerationBriefPlaceholder": "Prompt for writing the visual brief...",
+      "imageGenerationStyle": "Image Style Prompt",
+      "imageGenerationStyleDescription": "Sent to the image model, with the visual brief appended after it. Sets the look every generated picture shares.",
+      "imageGenerationStylePlaceholder": "Prompt for the image style..."
     },
     "unsavedChanges": "Unsaved changes",
     "jsonEditor": {

@@ -39,6 +39,8 @@ const DEFAULTS: PromptValues = {
   allergyDetection: "Default allergy detection prompt",
   recipeProvenance: "Default recipe provenance prompt",
   ingredientLinking: "Default ingredient linking prompt",
+  imageGenerationBrief: "Default image generation brief prompt",
+  imageGenerationStyle: "Default image generation style prompt",
 };
 
 const t = initTRPC.context<ReturnType<typeof createMockAuthedContext>>().create({

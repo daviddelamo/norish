@@ -16,6 +16,7 @@ import type {
   ContentIndicatorsConfig,
   CuisineStrategy,
   I18nLocaleConfig,
+  ImageGenerationConfig,
   PromptsConfig,
   RecipePermissionPolicy,
   RecurrenceConfig,
@@ -34,6 +35,7 @@ import {
   DEFAULT_CUISINE_STRATEGY,
   DEFAULT_RECIPE_PERMISSION_POLICY,
   DEFAULT_TAG_STRATEGY,
+  isImageGenerationConfigured as isImageGenerationConfigValid,
   ServerConfigKeys,
   UnitsConfigSchema,
   UnitsMapSchema,
@@ -51,6 +53,7 @@ const ALL_AUTOMATIC_ENRICHMENT_OFF: AutomaticEnrichmentConfig = {
   nutritionEstimation: false,
   recipeProvenance: false,
   ingredientLinking: false,
+  imageGeneration: false,
 };
 
 // ============================================================================
@@ -173,6 +176,36 @@ export async function getAIConfig(includeSecrets = false): Promise<AIConfig | nu
  */
 export async function getVideoConfig(includeSecrets = false): Promise<VideoConfig | null> {
   return await getConfig<VideoConfig>(ServerConfigKeys.VIDEO_CONFIG, includeSecrets);
+}
+
+/**
+ * Get the Image Generation configuration block. Ships unconfigured: a
+ * deployment that never saved it has no row and gets null.
+ * @param includeSecrets - If true, includes the decrypted API key
+ */
+export async function getImageGenerationConfig(
+  includeSecrets = false
+): Promise<ImageGenerationConfig | null> {
+  return await getConfig<ImageGenerationConfig>(
+    ServerConfigKeys.IMAGE_GENERATION_CONFIG,
+    includeSecrets
+  );
+}
+
+/**
+ * Whether an image request could be served at all: a provider is selected, a
+ * model is named, and the credentials the provider needs are present — the
+ * block's own, or the AI configuration's when the provider matches. The
+ * coordinator's skip, the manual request's refusal, and the runtime's
+ * configuration error all ask this one question.
+ */
+export async function isImageGenerationConfigured(): Promise<boolean> {
+  const [imageConfig, aiConfig] = await Promise.all([
+    getImageGenerationConfig(true),
+    getAIConfig(true),
+  ]);
+
+  return isImageGenerationConfigValid(imageConfig, aiConfig);
 }
 
 /**

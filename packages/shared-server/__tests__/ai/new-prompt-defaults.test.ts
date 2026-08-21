@@ -44,7 +44,7 @@ describe("the shipped allergy-detection prompt", () => {
 });
 
 describe("loadDefaultPrompts", () => {
-  it("ships a default for all nine administrator-editable prompts", () => {
+  it("ships a default for all eleven administrator-editable prompts", () => {
     const defaults = loadDefaultPrompts();
 
     expect(Object.keys(defaults).sort()).toEqual(
@@ -53,6 +53,8 @@ describe("loadDefaultPrompts", () => {
         "autoCategorization",
         "autoTagging",
         "imageExtraction",
+        "imageGenerationBrief",
+        "imageGenerationStyle",
         "ingredientLinking",
         "nutritionEstimation",
         "recipeExtraction",

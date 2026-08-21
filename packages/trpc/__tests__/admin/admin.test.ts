@@ -165,6 +165,7 @@ describe("admin procedures", () => {
           nutritionEstimation: false,
           recipeProvenance: false,
           ingredientLinking: false,
+          imageGeneration: false,
         },
       };
 

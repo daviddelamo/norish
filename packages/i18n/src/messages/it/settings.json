@@ -532,6 +532,10 @@
         "title": "Elaborazione video",
         "subtitle": "Estrazione video social media e trascrizione"
       },
+      "imageGeneration": {
+        "title": "Generazione Immagini",
+        "subtitle": "Disegna una foto del piatto per le ricette senza immagine"
+      },
       "prompts": {
         "title": "Prompt",
         "subtitle": "Personalizza le istruzioni IA per l'elaborazione delle ricette"
@@ -608,7 +612,9 @@
         "recipeProvenance": "Provenienza della ricetta",
         "recipeProvenanceDescription": "Dedurre paese, regione, cucine e una breve nota per le nuove ricette, viene compilato solo ciò che manca, ciò che hai indicato resta invariato",
         "ingredientLinking": "Collegamento degli ingredienti",
-        "ingredientLinkingDescription": "Collega ogni passaggio alle righe di ingredienti che usa, per i passaggi senza collegamenti"
+        "ingredientLinkingDescription": "Collega ogni passaggio alle righe di ingredienti che usa, per i passaggi senza collegamenti",
+        "imageGeneration": "Generazione Immagini",
+        "imageGenerationDescription": "Disegna una foto del piatto per le nuove ricette che non hanno alcuna immagine"
       },
       "tagStrategy": "Strategia dei tag",
       "tagStrategyDescription": "Quali tag può usare il tagging automatico, sia che venga eseguito automaticamente o manualmente",
@@ -669,6 +675,26 @@
       "transcriptionApiKeyOptionalDescription": "La maggior parte dei server Whisper locali non richiede una chiave API",
       "transcriptionApiKeyOptionalPlaceholder": "Lascia vuoto per i server locali"
     },
+    "imageGenerationConfig": {
+      "description": "La generazione di immagini usa un proprio provider, perché la maggior parte dei provider IA non sa disegnare. Le immagini vengono generate con questo provider; il provider IA sopra gestisce tutto il resto.",
+      "provider": "Provider immagini",
+      "providers": {
+        "disabled": "Disattivato",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "Compatibile OpenAI generico"
+      },
+      "endpoint": "URL endpoint",
+      "endpointOptional": "Facoltativo: URL personalizzato della risorsa Azure",
+      "apiKey": "Chiave API",
+      "apiKeyPlaceholder": "Inserisci la chiave API...",
+      "model": "Modello immagine",
+      "modelPlaceholder": "es. gpt-image-1",
+      "modelDescription": "Il modello che disegna l'immagine. Deve essere un modello di immagini, non di testo.",
+      "fallbackHint": "Stesso provider della configurazione IA: endpoint e chiave API vengono ripresi da lì se non li imposti qui."
+    },
     "promptsConfig": {
       "recipeExtraction": "Prompt estrazione ricette",
       "recipeExtractionDescription": "Questo prompt viene utilizzato durante l'estrazione dei dati delle ricette da pagine web o trascrizioni video.",
@@ -696,7 +722,13 @@
       "recipeProvenancePlaceholder": "Inserisci il prompt per la provenienza della ricetta...",
       "ingredientLinking": "Prompt di collegamento degli ingredienti",
       "ingredientLinkingDescription": "Usato per collegare ogni passaggio alle righe di ingredienti che utilizza",
-      "ingredientLinkingPlaceholder": "Prompt per collegare gli ingredienti ai passaggi..."
+      "ingredientLinkingPlaceholder": "Prompt per collegare gli ingredienti ai passaggi...",
+      "imageGenerationBrief": "Prompt descrizione visiva",
+      "imageGenerationBriefDescription": "Usato per trasformare una ricetta in una breve descrizione visiva prima di generare l'immagine. La ricetta viene aggiunta dopo il prompt.",
+      "imageGenerationBriefPlaceholder": "Prompt per la descrizione visiva...",
+      "imageGenerationStyle": "Prompt stile immagine",
+      "imageGenerationStyleDescription": "Inviato al modello di immagini, con la descrizione visiva aggiunta dopo. Definisce l'aspetto condiviso da tutte le immagini generate.",
+      "imageGenerationStylePlaceholder": "Prompt per lo stile immagine..."
     },
     "unsavedChanges": "Modifiche non salvate",
     "jsonEditor": {

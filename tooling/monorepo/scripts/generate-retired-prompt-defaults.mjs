@@ -32,6 +32,8 @@ const PROMPT_FILES = {
   "allergy-detection": "allergyDetection",
   "recipe-provenance": "recipeProvenance",
   "ingredient-linking": "ingredientLinking",
+  "image-generation-brief": "imageGenerationBrief",
+  "image-generation-style": "imageGenerationStyle",
 };
 
 function git(...args) {

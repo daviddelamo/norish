@@ -532,6 +532,10 @@
         "title": "비디오 처리",
         "subtitle": "소셜 미디어 비디오 추출 및 음성 변환"
       },
+      "imageGeneration": {
+        "title": "이미지 생성",
+        "subtitle": "이미지가 없는 레시피에 요리 사진을 그려줍니다"
+      },
       "prompts": {
         "title": "프롬프트",
         "subtitle": "레시피 처리를 위한 AI 지침 사용자 정의"
@@ -608,7 +612,9 @@
         "recipeProvenance": "레시피 출처",
         "recipeProvenanceDescription": "새 레시피의 국가, 지역, 요리와 짧은 설명을 추론하며, 비어 있는 항목만 채웁니다",
         "ingredientLinking": "재료 연결",
-        "ingredientLinkingDescription": "연결이 없는 단계에 한해, 각 단계를 사용하는 재료 줄에 연결합니다"
+        "ingredientLinkingDescription": "연결이 없는 단계에 한해, 각 단계를 사용하는 재료 줄에 연결합니다",
+        "imageGeneration": "이미지 생성",
+        "imageGenerationDescription": "이미지가 전혀 없는 새 레시피에 요리 사진을 그려줍니다"
       },
       "tagStrategy": "태그 전략",
       "tagStrategyDescription": "자동 또는 수동 실행 여부와 관계없이 자동 태그 지정이 사용할 수 있는 태그",
@@ -669,6 +675,26 @@
       "transcriptionApiKeyOptionalDescription": "대부분의 로컬 Whisper 서버에는 API 키가 필요하지 않습니다.",
       "transcriptionApiKeyOptionalPlaceholder": "로컬 서버의 경우 비워 두세요."
     },
+    "imageGenerationConfig": {
+      "description": "대부분의 AI 제공자는 그림을 그릴 수 없기 때문에 이미지 생성은 자체 제공자를 사용합니다. 이미지는 이 제공자로 생성되며, 위의 AI 제공자가 나머지 모든 작업을 처리합니다.",
+      "provider": "이미지 제공자",
+      "providers": {
+        "disabled": "사용 안 함",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "일반 OpenAI 호환"
+      },
+      "endpoint": "엔드포인트 URL",
+      "endpointOptional": "선택 사항: 사용자 지정 Azure 리소스 URL",
+      "apiKey": "API 키",
+      "apiKeyPlaceholder": "API 키 입력...",
+      "model": "이미지 모델",
+      "modelPlaceholder": "예: gpt-image-1",
+      "modelDescription": "이미지를 그리는 모델입니다. 텍스트 모델이 아닌 이미지 모델이어야 합니다.",
+      "fallbackHint": "AI 설정과 동일한 제공자입니다. 여기서 설정하지 않으면 엔드포인트와 API 키를 AI 설정에서 가져옵니다."
+    },
     "promptsConfig": {
       "recipeExtraction": "레시피 추출 프롬프트",
       "recipeExtractionDescription": "이 프롬프트는 웹페이지나 비디오 대본에서 레시피 데이터를 추출할 때 사용됩니다.",
@@ -696,7 +722,13 @@
       "recipeProvenancePlaceholder": "레시피 출처 프롬프트를 입력하세요...",
       "ingredientLinking": "재료 연결 프롬프트",
       "ingredientLinkingDescription": "각 단계를 사용하는 재료 줄에 연결할 때 사용됩니다",
-      "ingredientLinkingPlaceholder": "재료를 단계에 연결하기 위한 프롬프트..."
+      "ingredientLinkingPlaceholder": "재료를 단계에 연결하기 위한 프롬프트...",
+      "imageGenerationBrief": "이미지 설명 프롬프트",
+      "imageGenerationBriefDescription": "이미지를 생성하기 전에 레시피를 짧은 시각적 설명으로 바꾸는 데 사용됩니다. 레시피는 프롬프트 뒤에 추가됩니다.",
+      "imageGenerationBriefPlaceholder": "시각적 설명을 위한 프롬프트...",
+      "imageGenerationStyle": "이미지 스타일 프롬프트",
+      "imageGenerationStyleDescription": "시각적 설명과 함께 이미지 모델로 전송됩니다. 생성되는 모든 이미지가 공유하는 스타일을 정합니다.",
+      "imageGenerationStylePlaceholder": "이미지 스타일을 위한 프롬프트..."
     },
     "unsavedChanges": "저장되지 않은 변경사항",
     "jsonEditor": {

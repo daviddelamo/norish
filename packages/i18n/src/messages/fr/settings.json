@@ -532,6 +532,10 @@
         "title": "Traitement vidéo",
         "subtitle": "Extraction &amp; transcription des vidéos sociales"
       },
+      "imageGeneration": {
+        "title": "Génération d'images",
+        "subtitle": "Dessine une photo du plat pour les recettes sans image"
+      },
       "prompts": {
         "title": "Prompts",
         "subtitle": "Personnalisez les instructions IA pour le traitement des recettes"
@@ -608,7 +612,9 @@
         "recipeProvenance": "Provenance des recettes",
         "recipeProvenanceDescription": "Déduire le pays, la région, les cuisines et une courte note pour les nouvelles recettes, seuls les champs manquants sont complétés, ce que vous avez indiqué est conservé",
         "ingredientLinking": "Liaison des ingrédients",
-        "ingredientLinkingDescription": "Lie chaque étape aux lignes d'ingrédients qu'elle utilise, pour les étapes qui n'en ont pas"
+        "ingredientLinkingDescription": "Lie chaque étape aux lignes d'ingrédients qu'elle utilise, pour les étapes qui n'en ont pas",
+        "imageGeneration": "Génération d'images",
+        "imageGenerationDescription": "Dessine une photo du plat pour les nouvelles recettes qui n'ont aucune image"
       },
       "tagStrategy": "Stratégie d'étiquetage",
       "tagStrategyDescription": "Quelles étiquettes l'étiquetage automatique peut utiliser, qu'il soit automatique ou manuel",
@@ -669,6 +675,26 @@
       "transcriptionApiKeyOptionalDescription": "La plupart des serveurs Whisper locaux ne nécessitent pas de clé API",
       "transcriptionApiKeyOptionalPlaceholder": "Laisser vide pour les serveurs locaux"
     },
+    "imageGenerationConfig": {
+      "description": "La génération d'images utilise son propre fournisseur, car la plupart des fournisseurs d'IA ne savent pas dessiner. Les images sont générées avec ce fournisseur ; le fournisseur d'IA ci-dessus gère tout le reste.",
+      "provider": "Fournisseur d'images",
+      "providers": {
+        "disabled": "Désactivé",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "Compatible OpenAI générique"
+      },
+      "endpoint": "URL du endpoint",
+      "endpointOptional": "Facultatif : URL personnalisée de la ressource Azure",
+      "apiKey": "Clé API",
+      "apiKeyPlaceholder": "Saisir la clé API...",
+      "model": "Modèle d'image",
+      "modelPlaceholder": "p. ex. gpt-image-1",
+      "modelDescription": "Le modèle qui dessine l'image. Ce doit être un modèle d'image, pas un modèle de texte.",
+      "fallbackHint": "Même fournisseur que votre configuration IA : le endpoint et la clé API en sont repris sauf si vous les définissez ici."
+    },
     "promptsConfig": {
       "recipeExtraction": "Prompt d'extraction de recette",
       "recipeExtractionDescription": "Utilisé pour extraire les recettes depuis pages web ou transcriptions vidéo.",
@@ -696,7 +722,13 @@
       "recipeProvenancePlaceholder": "Saisissez l'invite de provenance des recettes...",
       "ingredientLinking": "Prompt de liaison des ingrédients",
       "ingredientLinkingDescription": "Utilisé pour lier chaque étape aux lignes d'ingrédients qu'elle utilise",
-      "ingredientLinkingPlaceholder": "Prompt pour lier les ingrédients aux étapes..."
+      "ingredientLinkingPlaceholder": "Prompt pour lier les ingrédients aux étapes...",
+      "imageGenerationBrief": "Prompt de description visuelle",
+      "imageGenerationBriefDescription": "Sert à transformer une recette en une courte description visuelle avant de générer son image. La recette est ajoutée après le prompt.",
+      "imageGenerationBriefPlaceholder": "Prompt pour la description visuelle...",
+      "imageGenerationStyle": "Prompt de style d'image",
+      "imageGenerationStyleDescription": "Envoyé au modèle d'image, avec la description visuelle ajoutée après. Définit le rendu partagé par toutes les images générées.",
+      "imageGenerationStylePlaceholder": "Prompt pour le style d'image..."
     },
     "unsavedChanges": "Modifications non enregistrées",
     "jsonEditor": {

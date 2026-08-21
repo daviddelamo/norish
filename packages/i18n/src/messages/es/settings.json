@@ -532,6 +532,10 @@
         "title": "Procesamiento de vídeo",
         "subtitle": "Extracción y transcripción de vídeos de redes sociales"
       },
+      "imageGeneration": {
+        "title": "Generación de Imágenes",
+        "subtitle": "Dibuja una foto del plato para recetas sin imagen"
+      },
       "prompts": {
         "title": "Prompts",
         "subtitle": "Personaliza las instrucciones de IA para el procesamiento de recetas"
@@ -608,7 +612,9 @@
         "recipeProvenance": "Procedencia de la receta",
         "recipeProvenanceDescription": "Deducir el país, la región, las cocinas y una nota breve para recetas nuevas, solo se completa lo que falta, lo que ya indicaste se conserva",
         "ingredientLinking": "Vinculación de ingredientes",
-        "ingredientLinkingDescription": "Vincula cada paso a las líneas de ingredientes que usa, para pasos sin vínculos"
+        "ingredientLinkingDescription": "Vincula cada paso a las líneas de ingredientes que usa, para pasos sin vínculos",
+        "imageGeneration": "Generación de Imágenes",
+        "imageGenerationDescription": "Dibuja una foto del plato para recetas nuevas que no tienen ninguna imagen"
       },
       "tagStrategy": "Estrategia de etiquetas",
       "tagStrategyDescription": "Qué etiquetas puede usar el etiquetado automático, se ejecute automática o manualmente",
@@ -669,6 +675,26 @@
       "transcriptionApiKeyOptionalDescription": "La mayoría de servidores Whisper locales no requieren clave API",
       "transcriptionApiKeyOptionalPlaceholder": "Déjalo vacío para servidores locales"
     },
+    "imageGenerationConfig": {
+      "description": "La generación de imágenes usa su propio proveedor, porque la mayoría de los proveedores de IA no pueden dibujar. Las imágenes se generan con este proveedor; el proveedor de IA de arriba se encarga de todo lo demás.",
+      "provider": "Proveedor de imágenes",
+      "providers": {
+        "disabled": "Desactivado",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "Compatible con OpenAI genérico"
+      },
+      "endpoint": "URL del endpoint",
+      "endpointOptional": "Opcional: URL personalizada del recurso de Azure",
+      "apiKey": "Clave API",
+      "apiKeyPlaceholder": "Introduce la clave API...",
+      "model": "Modelo de imagen",
+      "modelPlaceholder": "p. ej. gpt-image-1",
+      "modelDescription": "El modelo que dibuja la imagen. Debe ser un modelo de imagen, no de texto.",
+      "fallbackHint": "Mismo proveedor que tu configuración de IA: el endpoint y la clave API se toman de ella salvo que los definas aquí."
+    },
     "promptsConfig": {
       "recipeExtraction": "Prompt de extracción de recetas",
       "recipeExtractionDescription": "Este prompt se usa al extraer datos de recetas desde páginas web o transcripciones de vídeo.",
@@ -696,7 +722,13 @@
       "recipeProvenancePlaceholder": "Introduce el prompt de procedencia de la receta...",
       "ingredientLinking": "Prompt de vinculación de ingredientes",
       "ingredientLinkingDescription": "Se usa al vincular cada paso a las líneas de ingredientes que utiliza",
-      "ingredientLinkingPlaceholder": "Prompt para vincular ingredientes a los pasos..."
+      "ingredientLinkingPlaceholder": "Prompt para vincular ingredientes a los pasos...",
+      "imageGenerationBrief": "Prompt de descripción visual",
+      "imageGenerationBriefDescription": "Se usa para convertir una receta en una breve descripción visual antes de generar su imagen. La receta se añade después del prompt.",
+      "imageGenerationBriefPlaceholder": "Prompt para la descripción visual...",
+      "imageGenerationStyle": "Prompt de estilo de imagen",
+      "imageGenerationStyleDescription": "Se envía al modelo de imagen, con la descripción visual añadida después. Define el aspecto que comparten todas las imágenes generadas.",
+      "imageGenerationStylePlaceholder": "Prompt para el estilo de imagen..."
     },
     "unsavedChanges": "Cambios sin guardar",
     "jsonEditor": {

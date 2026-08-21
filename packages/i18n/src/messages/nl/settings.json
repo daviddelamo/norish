@@ -532,6 +532,10 @@
         "title": "Video Verwerking",
         "subtitle": "Social media video-extractie & transcriptie"
       },
+      "imageGeneration": {
+        "title": "Afbeeldingen Genereren",
+        "subtitle": "Teken een foto van het gerecht voor recepten zonder afbeelding"
+      },
       "prompts": {
         "title": "Prompts",
         "subtitle": "Pas AI-instructies aan voor receptverwerking"
@@ -608,7 +612,9 @@
         "recipeProvenance": "Receptherkomst",
         "recipeProvenanceDescription": "Bepaal land, streek, keukens en een korte toelichting voor nieuwe recepten, alleen wat nog ontbreekt wordt ingevuld, wat je zelf invulde blijft staan",
         "ingredientLinking": "Ingrediëntkoppeling",
-        "ingredientLinkingDescription": "Koppel elke stap aan de ingrediëntregels die hij gebruikt, voor stappen zonder koppelingen"
+        "ingredientLinkingDescription": "Koppel elke stap aan de ingrediëntregels die hij gebruikt, voor stappen zonder koppelingen",
+        "imageGeneration": "Afbeeldingen Genereren",
+        "imageGenerationDescription": "Teken een foto van het gerecht voor nieuwe recepten die helemaal geen afbeelding hebben"
       },
       "tagStrategy": "Tagstrategie",
       "tagStrategyDescription": "Welke tags automatisch taggen mag gebruiken, of het nu automatisch of handmatig draait",
@@ -669,6 +675,26 @@
       "transcriptionApiKeyOptionalDescription": "De meeste lokale Whisper-servers vereisen geen API-sleutel",
       "transcriptionApiKeyOptionalPlaceholder": "Laat leeg voor lokale servers"
     },
+    "imageGenerationConfig": {
+      "description": "Afbeeldingen genereren gebruikt een eigen provider, omdat de meeste AI-providers niet kunnen tekenen. Afbeeldingen worden met deze provider gemaakt; de AI-provider hierboven doet al het andere.",
+      "provider": "Afbeeldingsprovider",
+      "providers": {
+        "disabled": "Uitgeschakeld",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "Generieke OpenAI-compatibel"
+      },
+      "endpoint": "Endpoint URL",
+      "endpointOptional": "Optioneel: eigen Azure resource-URL",
+      "apiKey": "API-sleutel",
+      "apiKeyPlaceholder": "Voer API-sleutel in...",
+      "model": "Afbeeldingsmodel",
+      "modelPlaceholder": "bijv. gpt-image-1",
+      "modelDescription": "Het model dat de afbeelding tekent. Het moet een afbeeldingsmodel zijn, geen tekstmodel.",
+      "fallbackHint": "Zelfde provider als je AI-configuratie: endpoint en API-sleutel vallen daarop terug tenzij je ze hier instelt."
+    },
     "promptsConfig": {
       "recipeExtraction": "Receptextractie Prompt",
       "recipeExtractionDescription": "Deze prompt wordt gebruikt bij het extraheren van receptgegevens van webpagina's of videotranscripties.",
@@ -696,7 +722,13 @@
       "recipeProvenancePlaceholder": "Voer de prompt voor receptherkomst in...",
       "ingredientLinking": "Prompt voor ingrediëntkoppeling",
       "ingredientLinkingDescription": "Gebruikt bij het koppelen van elke stap aan de ingrediëntregels die hij gebruikt",
-      "ingredientLinkingPlaceholder": "Prompt voor het koppelen van ingrediënten aan stappen..."
+      "ingredientLinkingPlaceholder": "Prompt voor het koppelen van ingrediënten aan stappen...",
+      "imageGenerationBrief": "Afbeeldingsomschrijving Prompt",
+      "imageGenerationBriefDescription": "Gebruikt om een recept om te zetten in een korte visuele omschrijving voordat de afbeelding wordt gegenereerd. Het recept wordt na de prompt toegevoegd.",
+      "imageGenerationBriefPlaceholder": "Prompt voor de visuele omschrijving...",
+      "imageGenerationStyle": "Afbeeldingsstijl Prompt",
+      "imageGenerationStyleDescription": "Wordt naar het afbeeldingsmodel gestuurd, met de visuele omschrijving erachter. Bepaalt de stijl die elke gegenereerde afbeelding deelt.",
+      "imageGenerationStylePlaceholder": "Prompt voor de afbeeldingsstijl..."
     },
     "unsavedChanges": "Niet-opgeslagen wijzigingen",
     "jsonEditor": {

@@ -6,6 +6,7 @@ import { testAIEndpoint as testAIEndpointFn } from "@norish/auth/connection-test
 import {
   AIConfigInputSchema,
   AIConfigSchema,
+  ImageGenerationConfigSchema,
   ServerConfigKeys,
   TranscriptionProviderSchema,
   VideoConfigSchema,
@@ -116,6 +117,21 @@ const updateVideoConfig = adminProcedure
 
     // VideoConfig contains transcription API key, so mark as sensitive
     await setConfig(ServerConfigKeys.VIDEO_CONFIG, input, ctx.user.id, true);
+
+    return { success: true };
+  });
+
+/**
+ * Update the Image Generation configuration block (ADR-0024): its own
+ * provider, model, endpoint and key. Sensitive because of the key; an omitted
+ * key preserves the stored one, exactly as the AI and video blocks do.
+ */
+const updateImageGenerationConfig = adminProcedure
+  .input(ImageGenerationConfigSchema)
+  .mutation(async ({ input, ctx }) => {
+    log.info({ userId: ctx.user.id, provider: input.provider }, "Updating image generation config");
+
+    await setConfig(ServerConfigKeys.IMAGE_GENERATION_CONFIG, input, ctx.user.id, true);
 
     return { success: true };
   });
@@ -265,6 +281,7 @@ const enrichAllRecipes = adminProcedure
 export const aiConfigProcedures = router({
   updateAIConfig,
   updateVideoConfig,
+  updateImageGenerationConfig,
   testAIEndpoint,
   listAvailableModels,
   listAvailableTranscriptionModels,

@@ -41,13 +41,21 @@ import {
 // ============================================================================
 
 /**
+ * Prompts that start a structured-generation request. The image style prompt
+ * is the one exception: it is sent to an image model, which takes a single
+ * prompt and no system turn, so it can never be the base of a structured
+ * request and needs no system message.
+ */
+export type StructuredPromptName = Exclude<PromptName, "image-generation-style">;
+
+/**
  * System messages are not configuration. They encode invariants the code
  * depends on: schema-parseable output, and Recipe Provenance's deliberate
  * silence about language — a system message naming a language would override
  * the prompt's inference from the recipe. An administrator's intent is
  * already expressible in the prompt, which follows the system message.
  */
-const SYSTEM_MESSAGES: Record<PromptName, string> = {
+const SYSTEM_MESSAGES: Record<StructuredPromptName, string> = {
   "recipe-extraction": "You extract recipe data as JSON-LD with both metric and US measurements.",
   "image-extraction":
     "You extract recipe data from images as JSON-LD with both metric and US measurements.",
@@ -66,6 +74,11 @@ const SYSTEM_MESSAGES: Record<PromptName, string> = {
     "You are a culinary historian who places dishes in their country and region of origin.",
   "ingredient-linking":
     "You are a careful recipe reader who says which ingredient lines each step uses, and only what the text supports.",
+  // English by instruction, not by system message alone: the brief is a model
+  // instruction rather than recipe content, so ADR-0018's language care does
+  // not apply to it.
+  "image-generation-brief":
+    "You write short visual briefs that tell an image model what a finished dish looks like.",
 };
 
 // ============================================================================
@@ -83,7 +96,7 @@ export interface GenerateOptions<T> {
    * The feature's identity: names the administrator-editable prompt the
    * request starts from, and labels its log line.
    */
-  prompt: PromptName;
+  prompt: StructuredPromptName;
   /**
    * The output schema, as a value: Recipe Provenance builds its schema per
    * request from the administrator's current Cuisine vocabulary.

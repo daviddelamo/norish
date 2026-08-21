@@ -532,6 +532,10 @@
         "title": "Videobehandling",
         "subtitle": "Udtrækning og transskription fra sociale medier"
       },
+      "imageGeneration": {
+        "title": "Billedgenerering",
+        "subtitle": "Tegn et billede af retten til opskrifter uden billede"
+      },
       "prompts": {
         "title": "Prompt-tekster",
         "subtitle": "Tilpas AI-instruktioner til opskriftbehandling"
@@ -608,7 +612,9 @@
         "recipeProvenance": "Opskriftens oprindelse",
         "recipeProvenanceDescription": "Udled land, region, køkkener og en kort note for nye opskrifter, kun det der mangler udfyldes, det du selv har angivet bevares",
         "ingredientLinking": "Ingredienstilknytning",
-        "ingredientLinkingDescription": "Tilknytter hvert trin de ingredienslinjer, det bruger, kun for trin uden tilknytninger"
+        "ingredientLinkingDescription": "Tilknytter hvert trin de ingredienslinjer, det bruger, kun for trin uden tilknytninger",
+        "imageGeneration": "Billedgenerering",
+        "imageGenerationDescription": "Tegn et billede af retten til nye opskrifter helt uden billede"
       },
       "tagStrategy": "Tagstrategi",
       "tagStrategyDescription": "Hvilke tags automatisk tagging må bruge, uanset om den kører automatisk eller manuelt",
@@ -669,6 +675,26 @@
       "transcriptionApiKeyOptionalDescription": "De fleste lokale Whisper-servere kræver ikke en API-nøgle",
       "transcriptionApiKeyOptionalPlaceholder": "Lad stå tomt for lokale servere"
     },
+    "imageGenerationConfig": {
+      "description": "Billedgenerering bruger sin egen udbyder, fordi de fleste AI-udbydere ikke kan tegne. Billeder genereres med denne udbyder; AI-udbyderen ovenfor klarer alt andet.",
+      "provider": "Billedudbyder",
+      "providers": {
+        "disabled": "Deaktiveret",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "Generisk OpenAI-kompatibel"
+      },
+      "endpoint": "Endpoint-URL",
+      "endpointOptional": "Valgfrit: brugerdefineret Azure-ressource-URL",
+      "apiKey": "API-nøgle",
+      "apiKeyPlaceholder": "Indtast API-nøgle...",
+      "model": "Billedmodel",
+      "modelPlaceholder": "f.eks. gpt-image-1",
+      "modelDescription": "Modellen der tegner billedet. Det skal være en billedmodel, ikke en tekstmodel.",
+      "fallbackHint": "Samme udbyder som din AI-konfiguration: endpoint og API-nøgle falder tilbage til den, medmindre du angiver dem her."
+    },
     "promptsConfig": {
       "recipeExtraction": "Prompt til opskriftudtrækning",
       "recipeExtractionDescription": "Denne prompt bruges ved udtrækning af opskriftdata fra websider eller videotransskriptioner.",
@@ -696,7 +722,13 @@
       "recipeProvenancePlaceholder": "Indtast prompten til opskriftens oprindelse ...",
       "ingredientLinking": "Prompt til ingredienstilknytning",
       "ingredientLinkingDescription": "Bruges når hvert trin tilknyttes de ingredienslinjer, det bruger",
-      "ingredientLinkingPlaceholder": "Prompt til at tilknytte ingredienser til trin..."
+      "ingredientLinkingPlaceholder": "Prompt til at tilknytte ingredienser til trin...",
+      "imageGenerationBrief": "Billedbeskrivelses-prompt",
+      "imageGenerationBriefDescription": "Bruges til at omdanne en opskrift til en kort visuel beskrivelse, før billedet genereres. Opskriften tilføjes efter prompten.",
+      "imageGenerationBriefPlaceholder": "Prompt til den visuelle beskrivelse...",
+      "imageGenerationStyle": "Billedstil-prompt",
+      "imageGenerationStyleDescription": "Sendes til billedmodellen med den visuelle beskrivelse tilføjet efter. Bestemmer det udtryk, alle genererede billeder deler.",
+      "imageGenerationStylePlaceholder": "Prompt til billedstilen..."
     },
     "unsavedChanges": "Ugemte ændringer",
     "jsonEditor": {

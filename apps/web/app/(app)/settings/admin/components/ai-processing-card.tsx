@@ -8,13 +8,19 @@ import { useTranslations } from "next-intl";
 import AIConfigForm from "./ai-config-form";
 import BulkEnrichmentForm from "./bulk-enrichment-form";
 import CuisineVocabularyForm from "./cuisine-vocabulary-form";
+import ImageGenerationForm from "./image-generation-form";
 import PromptsForm from "./prompts-form";
 import { UnsavedChangesChip } from "./unsaved-changes-chip";
 import VideoProcessingForm from "./video-processing-form";
 
 export default function AIProcessingCard() {
   const t = useTranslations("settings.admin.aiProcessing");
-  const [dirtySections, setDirtySections] = useState({ ai: false, video: false, prompts: false });
+  const [dirtySections, setDirtySections] = useState({
+    ai: false,
+    video: false,
+    imageGeneration: false,
+    prompts: false,
+  });
 
   const updateDirtySection = useCallback(
     (section: keyof typeof dirtySections) => (isDirty: boolean) => {
@@ -72,6 +78,26 @@ export default function AIProcessingCard() {
             <Accordion.Panel>
               <Accordion.Body>
                 <VideoProcessingForm onDirtyChange={updateDirtySection("video")} />
+              </Accordion.Body>
+            </Accordion.Panel>
+          </Accordion.Item>
+
+          <Accordion.Item id="imageGeneration">
+            <Accordion.Heading>
+              <Accordion.Trigger>
+                <div className="flex flex-col items-start gap-1">
+                  <div className="flex items-center gap-2">
+                    {t("imageGeneration.title")}
+                    {dirtySections.imageGeneration && <UnsavedChangesChip />}
+                  </div>
+                  <span className="text-muted text-sm">{t("imageGeneration.subtitle")}</span>
+                </div>
+                <Accordion.Indicator />
+              </Accordion.Trigger>
+            </Accordion.Heading>
+            <Accordion.Panel>
+              <Accordion.Body>
+                <ImageGenerationForm onDirtyChange={updateDirtySection("imageGeneration")} />
               </Accordion.Body>
             </Accordion.Panel>
           </Accordion.Item>
