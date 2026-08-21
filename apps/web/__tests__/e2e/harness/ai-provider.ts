@@ -11,7 +11,10 @@
  * The server speaks the OpenAI Chat Completions wire format that
  * `@ai-sdk/openai-compatible` expects (`POST {baseURL}/chat/completions`,
  * reading `choices[0].message.content` as the structured-output JSON), so a
- * controlled response is a real HTTP round-trip, not an in-process stub.
+ * controlled response is a real HTTP round-trip, not an in-process stub. It
+ * also serves the OpenAI-compatible image route (`POST
+ * {baseURL}/images/generations`, answering `data[0].b64_json`), which the
+ * Image Generation block reaches through the same `generic-openai` provider.
  *
  * Responses are selected at runtime through {@link AIProviderControl}: a
  * persistent default plus an optional FIFO queue of one-shot responses. Tests
@@ -71,7 +74,17 @@ export interface AIProviderControl {
   failRetryably(message?: string): void;
   /** Persistent HTTP 200 whose body cannot satisfy a structured-output schema. */
   respondInvalid(raw?: string): void;
-  /** Clear the queue, the default, and captured requests. */
+  /** Image route: response when its one-shot queue is empty (null = fail loudly). */
+  setImageDefault(directive: Directive | null): void;
+  /** Image route: queue one-shot responses, consumed FIFO before its default. */
+  enqueueImage(...directives: Directive[]): void;
+  /** Image route: persistent success returning `imageBase64` as `data[0].b64_json`. */
+  succeedImageWith(imageBase64: string): void;
+  /** Image route: persistent permanent failure (HTTP 400, non-retryable). */
+  failImagePermanently(message?: string): void;
+  /** Image route: persistent retryable failure (HTTP 503). */
+  failImageRetryably(message?: string): void;
+  /** Clear both queues, both defaults, and captured requests. */
   reset(): void;
   /**
    * Hold responses: requests are still recorded (so `requestCount` advances and
@@ -81,9 +94,11 @@ export interface AIProviderControl {
   hold(): void;
   /** Release any held responses and stop holding. */
   release(): void;
-  /** Number of chat-completion requests received since the last reset. */
+  /** Number of requests received on either route since the last reset. */
   readonly requestCount: number;
-  /** Captured chat-completion requests, in arrival order. */
+  /** Number of image-generation requests received since the last reset. */
+  readonly imageRequestCount: number;
+  /** Captured requests on either route, in arrival order. */
   readonly requests: readonly CapturedRequest[];
 }
 
@@ -98,6 +113,11 @@ export interface FakeAIProvider {
 
 function errorBody(message: string, type: string): unknown {
   return { error: { message, type, code: null } };
+}
+
+/** Build an OpenAI-compatible image response carrying `imageBase64` verbatim. */
+export function buildImageGenerationBody(imageBase64: string): unknown {
+  return { created: 0, data: [{ b64_json: imageBase64 }] };
 }
 
 /** Build an OpenAI Chat Completions body carrying `content` verbatim. */
@@ -118,6 +138,8 @@ export function buildChatCompletionBody(
 class Controller implements AIProviderControl {
   private queue: Directive[] = [];
   private defaultDirective: Directive | null = null;
+  private imageQueue: Directive[] = [];
+  private imageDefaultDirective: Directive | null = null;
   private captured: CapturedRequest[] = [];
   private gate: Promise<void> | null = null;
   private openGate: (() => void) | null = null;
@@ -150,9 +172,35 @@ class Controller implements AIProviderControl {
     this.setDefault({ kind: "success", content: raw });
   }
 
+  setImageDefault(directive: Directive | null): void {
+    this.imageDefaultDirective = directive;
+  }
+
+  enqueueImage(...directives: Directive[]): void {
+    this.imageQueue.push(...directives);
+  }
+
+  succeedImageWith(imageBase64: string): void {
+    this.setImageDefault({ kind: "success", content: imageBase64 });
+  }
+
+  failImagePermanently(message = "image refused"): void {
+    this.setImageDefault({
+      kind: "error",
+      status: 400,
+      body: errorBody(message, "invalid_request_error"),
+    });
+  }
+
+  failImageRetryably(message = "image provider overloaded"): void {
+    this.setImageDefault({ kind: "error", status: 503, body: errorBody(message, "server_error") });
+  }
+
   reset(): void {
     this.queue = [];
     this.defaultDirective = null;
+    this.imageQueue = [];
+    this.imageDefaultDirective = null;
     this.captured = [];
     this.release();
   }
@@ -180,17 +228,26 @@ class Controller implements AIProviderControl {
     return this.captured.length;
   }
 
+  get imageRequestCount(): number {
+    return this.captured.filter((request) => request.path.endsWith("/images/generations")).length;
+  }
+
   get requests(): readonly CapturedRequest[] {
     return this.captured;
   }
 
-  /** Record a request and resolve the response for it. */
-  resolve(request: CapturedRequest): Directive {
+  /** Record a request and resolve the response for it from its route's lane. */
+  resolve(request: CapturedRequest, lane: "chat" | "image" = "chat"): Directive {
     this.captured.push(request);
 
+    const [queue, fallback] =
+      lane === "image"
+        ? [this.imageQueue, this.imageDefaultDirective]
+        : [this.queue, this.defaultDirective];
+
     return (
-      this.queue.shift() ??
-      this.defaultDirective ?? {
+      queue.shift() ??
+      fallback ?? {
         kind: "error",
         status: 500,
         body: errorBody("no AI directive configured for the harness", "server_error"),
@@ -234,8 +291,13 @@ async function handleRequest(
   res: ServerResponse
 ): Promise<void> {
   const path = req.url ?? "";
+  const lane = path.endsWith("/chat/completions")
+    ? ("chat" as const)
+    : path.endsWith("/images/generations")
+      ? ("image" as const)
+      : null;
 
-  if (req.method !== "POST" || !path.endsWith("/chat/completions")) {
+  if (req.method !== "POST" || !lane) {
     sendJson(res, 404, errorBody("unsupported endpoint", "invalid_request_error"));
 
     return;
@@ -250,14 +312,20 @@ async function handleRequest(
     parsed = raw;
   }
 
-  const directive = controller.resolve({ path, body: parsed });
+  const directive = controller.resolve({ path, body: parsed }, lane);
 
   // The request is recorded above; withhold the response while holding so a
   // scenario can observe the queued worker's job as active/pending.
   await controller.waitForGate();
 
   if (directive.kind === "success") {
-    sendJson(res, 200, buildChatCompletionBody(directive.content, extractModel(parsed)));
+    sendJson(
+      res,
+      200,
+      lane === "image"
+        ? buildImageGenerationBody(directive.content)
+        : buildChatCompletionBody(directive.content, extractModel(parsed))
+    );
 
     return;
   }

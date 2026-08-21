@@ -9,7 +9,7 @@
  * and retryable-failure responses without contacting an external AI provider.
  */
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { APICallError, generateText, Output } from "ai";
+import { APICallError, generateImage, generateText, Output } from "ai";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -202,5 +202,84 @@ describe("cleanup", () => {
       await stopping;
       await response.catch(() => undefined);
     }
+  });
+});
+
+describe("the image-generation route", () => {
+  // The exact client the production image factory builds for generic-openai.
+  function harnessImageModel() {
+    const compatible = createOpenAICompatible({
+      name: "generic-openai",
+      baseURL: `${provider.url}/v1`,
+    });
+
+    return compatible.imageModel("test-image-model");
+  }
+
+  function drawImage() {
+    return generateImage({
+      model: harnessImageModel(),
+      prompt: "A rust-red stew in a wide bowl.",
+      size: "1280x720",
+      maxRetries: 0,
+    });
+  }
+
+  const IMAGE_BASE64 = Buffer.from("fake-jpeg-bytes").toString("base64");
+
+  it("returns the directed image bytes through the real SDK client", async () => {
+    provider.control.succeedImageWith(IMAGE_BASE64);
+
+    const result = await drawImage();
+
+    expect(Buffer.from(result.image.uint8Array).toString()).toBe("fake-jpeg-bytes");
+    expect(provider.control.imageRequestCount).toBe(1);
+    expect(provider.control.requests.at(-1)?.path).toBe("/v1/images/generations");
+  });
+
+  it("keeps the two routes' directives independent", async () => {
+    provider.control.succeedWith({ note: "text answer" });
+    provider.control.succeedImageWith(IMAGE_BASE64);
+
+    const result = await drawImage();
+
+    expect(Buffer.from(result.image.uint8Array).toString()).toBe("fake-jpeg-bytes");
+  });
+
+  it("can be directed to fail permanently like the chat route", async () => {
+    provider.control.failImagePermanently("content policy refusal");
+
+    const failure = await drawImage().then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(APICallError.isInstance(failure)).toBe(true);
+    expect((failure as InstanceType<typeof APICallError>).statusCode).toBe(400);
+    expect((failure as InstanceType<typeof APICallError>).isRetryable).toBe(false);
+  });
+
+  it("can be directed to fail retryably", async () => {
+    provider.control.failImageRetryably();
+
+    const failure = await drawImage().then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(APICallError.isInstance(failure)).toBe(true);
+    expect((failure as InstanceType<typeof APICallError>).isRetryable).toBe(true);
+  });
+
+  it("fails loudly when no image directive is configured", async () => {
+    provider.control.succeedWith({ note: "text answer" });
+
+    const failure = await drawImage().then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(APICallError.isInstance(failure)).toBe(true);
+    expect((failure as InstanceType<typeof APICallError>).statusCode).toBe(500);
   });
 });
