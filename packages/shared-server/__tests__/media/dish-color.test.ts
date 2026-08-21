@@ -63,6 +63,45 @@ describe("extractDishColor", () => {
   it("returns null rather than throwing for bytes that are not an image", async () => {
     await expect(extractDishColor(Buffer.from("not an image"))).resolves.toBeNull();
   });
+
+  it("lets the food outvote a white plate — the colour is the dish's, not the background's", async () => {
+    // Three quarters white worktop, one quarter tomato: a histogram
+    // dominant would answer "white"; the dish answers red.
+    const plated = await sharp({
+      create: { width: 32, height: 32, channels: 3, background: { r: 250, g: 250, b: 250 } },
+    })
+      .composite([
+        {
+          input: await sharp({
+            create: { width: 16, height: 16, channels: 3, background: { r: 190, g: 45, b: 35 } },
+          })
+            .png()
+            .toBuffer(),
+          top: 8,
+          left: 8,
+        },
+      ])
+      .jpeg()
+      .toBuffer();
+
+    const color = await extractDishColor(plated);
+    const r = parseInt(color!.slice(1, 3), 16);
+    const g = parseInt(color!.slice(3, 5), 16);
+    const b = parseInt(color!.slice(5, 7), 16);
+
+    expect(r).toBeGreaterThan(g + 40);
+    expect(r).toBeGreaterThan(b + 40);
+  });
+
+  it("answers neutral for a genuinely neutral photo instead of inventing a hue", async () => {
+    const grey = await solidJpeg(128, 128, 128);
+    const color = await extractDishColor(grey);
+    const r = parseInt(color!.slice(1, 3), 16);
+    const g = parseInt(color!.slice(3, 5), 16);
+    const b = parseInt(color!.slice(5, 7), 16);
+
+    expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeLessThan(12);
+  });
 });
 
 describe("dishColorForImageUrl", () => {

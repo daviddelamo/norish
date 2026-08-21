@@ -873,6 +873,7 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
       notes: true,
       url: true,
       image: true,
+      dishColor: true,
       servings: true,
       prepMinutes: true,
       cookMinutes: true,

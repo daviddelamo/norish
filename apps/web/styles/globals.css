@@ -185,3 +185,57 @@
     border-radius: var(--radius-2xl);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Recipe pages take their hue from the dish (ADR-0023).
+
+   A recipe page container carries `data-dish-tint` plus two OKLCH channel
+   variables (--dish-h, --dish-c) derived in lib/dish-tint.ts from the stored
+   Dish Colour. Inside that scope the page background and the card surfaces
+   are rebuilt from the dish's hue and clamped chroma at the THEME's own
+   lightness — captured below into --untinted-* before the scope overrides
+   anything — so contrast between text and every tinted surface is unchanged
+   from the untinted tokens by construction, in both themes. Borders, text,
+   the accent and every other token do not move.
+
+   These are real opaque surfaces whose token hue changed; nothing here
+   composites or blurs (ADR-0020). */
+@layer components {
+  :root,
+  .light,
+  [data-theme="light"],
+  .dark,
+  [data-theme="dark"] {
+    --untinted-background: var(--background);
+    --untinted-surface: var(--surface);
+    --untinted-surface-secondary: var(--surface-secondary);
+    --untinted-surface-tertiary: var(--surface-tertiary);
+  }
+
+  [data-dish-tint] {
+    --background: oklch(from var(--untinted-background) l var(--dish-c, 0) var(--dish-h, 0));
+    /* The light theme's card is pure white, and at lightness 1 no chroma
+       survives gamut mapping — the card could never take any hue at all.
+       The 0.98 ceiling is the theme's own, dish-independent allowance for a
+       tinted card; every other lightness passes through untouched. */
+    --surface: oklch(
+      from var(--untinted-surface) calc(min(l, 0.98)) var(--dish-c, 0) var(--dish-h, 0)
+    );
+    --surface-secondary: oklch(
+      from var(--untinted-surface-secondary) l var(--dish-c, 0) var(--dish-h, 0)
+    );
+    --surface-tertiary: oklch(
+      from var(--untinted-surface-tertiary) l var(--dish-c, 0) var(--dish-h, 0)
+    );
+  }
+
+  /* The Glance Bar and the Cooking Time card sit out of the tint: both draw
+     quantitative colour (the time bar's two hues, the bar's figures) and
+     read them against the plain theme surface. */
+  .dish-tint-exempt {
+    --background: var(--untinted-background);
+    --surface: var(--untinted-surface);
+    --surface-secondary: var(--untinted-surface-secondary);
+    --surface-tertiary: var(--untinted-surface-tertiary);
+  }
+}

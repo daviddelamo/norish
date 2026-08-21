@@ -22,22 +22,142 @@ const RECIPES_BASE_DIR = path.join(SERVER_CONFIG.UPLOADS_DIR, "recipes");
 /** The stored primary-image URL shape, as written by media/storage.ts. */
 const RECIPE_IMAGE_URL_PATTERN = /^\/recipes\/([a-f0-9-]{36})\/([a-zA-Z0-9_-]+\.[a-zA-Z0-9]+)$/i;
 
-function toHex(value: number): string {
+/** Enough pixels to speak for the photo, few enough to cost nothing. */
+const SAMPLE_SIZE = 64;
+
+function toHexChannel(value: number): string {
   return Math.max(0, Math.min(255, Math.round(value)))
     .toString(16)
     .padStart(2, "0");
 }
 
+function srgbChannelToLinear(channel: number): number {
+  return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+}
+
+function linearChannelToSrgb(channel: number): number {
+  return channel <= 0.0031308 ? channel * 12.92 : 1.055 * Math.pow(channel, 1 / 2.4) - 0.055;
+}
+
+/** sRGB (0–255) → OKLab, per Ottosson. */
+function oklabFromSrgb(red: number, green: number, blue: number): { L: number; a: number; b: number } {
+  const r = srgbChannelToLinear(red / 255);
+  const g = srgbChannelToLinear(green / 255);
+  const b = srgbChannelToLinear(blue / 255);
+
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+
+  return {
+    L: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    a: 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    b: 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  };
+}
+
+/** OKLab → sRGB channels in [0, 1]; out-of-gamut values fall outside it. */
+function srgbFromOklab(L: number, a: number, b: number): { r: number; g: number; b: number } {
+  const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3);
+  const m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3);
+  const s = Math.pow(L - 0.0894841775 * a - 1.291485548 * b, 3);
+
+  return {
+    r: linearChannelToSrgb(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+    g: linearChannelToSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    b: linearChannelToSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
+  };
+}
+
+function hexFromOklch(L: number, c: number, h: number): string {
+  // Reduce chroma until the colour fits sRGB — the standard oklch gamut
+  // mapping, so the stored hex keeps its hue rather than clipping to a
+  // different one channel by channel.
+  let chroma = c;
+
+  for (let step = 0; step < 12; step++) {
+    const { r, g, b } = srgbFromOklab(L, chroma * Math.cos(h), chroma * Math.sin(h));
+
+    if (r >= 0 && r <= 1 && g >= 0 && g <= 1 && b >= 0 && b <= 1) {
+      return `#${toHexChannel(r * 255)}${toHexChannel(g * 255)}${toHexChannel(b * 255)}`;
+    }
+
+    chroma *= 0.75;
+  }
+
+  const { r, g, b } = srgbFromOklab(L, 0, 0);
+
+  return `#${toHexChannel(r * 255)}${toHexChannel(g * 255)}${toHexChannel(b * 255)}`;
+}
+
 /**
- * The dominant colour of an image, as `#rrggbb` — sharp's histogram
- * dominant, which is what "one colour for the whole dish" means here.
+ * One colour for the dish, as `#rrggbb`. Deliberately not the histogram
+ * dominant — on a food photo the dominant bin is usually the white plate or
+ * the worktop, which yields a colour that tints nothing (the glossary's
+ * _Avoid_ list already refuses "dominant colour" as a name). Instead every
+ * sampled pixel votes for its OKLCH hue with the square of its chroma, so
+ * the saturated food outvotes the neutral background regardless of area;
+ * the stored lightness and chroma are the same vote's averages, so the hex
+ * itself looks like the dish. A genuinely neutral photo has no meaningful
+ * votes and falls back to its plain average — a grey that tints as grey.
+ *
  * Returns null for anything sharp cannot read.
  */
 export async function extractDishColor(bytes: Buffer): Promise<string | null> {
   try {
-    const { dominant } = await sharp(bytes).stats();
+    const { data, info } = await sharp(bytes)
+      .resize(SAMPLE_SIZE, SAMPLE_SIZE, { fit: "cover" })
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
 
-    return `#${toHex(dominant.r)}${toHex(dominant.g)}${toHex(dominant.b)}`;
+    let weightTotal = 0;
+    let sumSin = 0;
+    let sumCos = 0;
+    let sumChroma = 0;
+    let sumLightness = 0;
+    let plainR = 0;
+    let plainG = 0;
+    let plainB = 0;
+
+    const pixels = info.width * info.height;
+
+    for (let index = 0; index < pixels; index++) {
+      const offset = index * info.channels;
+      const red = data[offset]!;
+      const green = data[offset + 1]!;
+      const blue = data[offset + 2]!;
+
+      plainR += red;
+      plainG += green;
+      plainB += blue;
+
+      const { L, a, b } = oklabFromSrgb(red, green, blue);
+      const chroma = Math.hypot(a, b);
+      const weight = chroma * chroma;
+
+      if (weight === 0) continue;
+
+      const hue = Math.atan2(b, a);
+
+      sumSin += weight * Math.sin(hue);
+      sumCos += weight * Math.cos(hue);
+      sumChroma += weight * chroma;
+      sumLightness += weight * L;
+      weightTotal += weight;
+    }
+
+    // A photo with essentially no saturated pixel anywhere: greyscale, or
+    // near enough. Its colour is its average, and it will tint as neutral.
+    if (weightTotal < 1e-4) {
+      return `#${toHexChannel(plainR / pixels)}${toHexChannel(plainG / pixels)}${toHexChannel(plainB / pixels)}`;
+    }
+
+    return hexFromOklch(
+      sumLightness / weightTotal,
+      sumChroma / weightTotal,
+      Math.atan2(sumSin, sumCos)
+    );
   } catch (err) {
     log.warn({ err }, "Dish Colour extraction failed; recipe keeps no colour");
 
