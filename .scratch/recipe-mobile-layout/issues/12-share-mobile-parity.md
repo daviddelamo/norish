@@ -6,9 +6,9 @@
 
 **Blocked by:** 02, 03, 04, 05, 06
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Share-mobile renders the new header, Glance Bar and card body
-- [ ] No favourite, rating, provenance, actions menu or cook button appears
-- [ ] The language selector keeps its place on the photo
-- [ ] `shared-recipe-page-desktop.tsx` is unchanged
+- [x] Share-mobile renders the new header, Glance Bar and card body
+- [x] No favourite, rating, provenance, actions menu or cook button appears
+- [x] The language selector keeps its place on the photo
+- [x] `shared-recipe-page-desktop.tsx` is unchanged
