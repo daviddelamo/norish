@@ -30,9 +30,10 @@ function sourceLabel(url: string): string {
  * five-pixel icon that used to sit beside the title.
  *
  * The site it was imported from and the person who imported it are the same
- * question asked twice, so they answer it together here rather than the second
- * one competing with the title for the top of the page. A recipe with neither
- * has no card.
+ * question asked twice, so they answer it together as two rows of one list: a
+ * leading mark, the name, and — where the row goes somewhere — a hint that it
+ * does. Left as free-floating lines they read as two unrelated scraps in a
+ * mostly empty card. A recipe with neither has no card.
  */
 export default function SourceCard({ recipe, inCard = true }: SourceCardProps) {
   const t = useTranslations("recipes.detail");
@@ -47,29 +48,34 @@ export default function SourceCard({ recipe, inCard = true }: SourceCardProps) {
     <div className="space-y-3">
       <h2 className="text-lg font-semibold">{t("source")}</h2>
 
-      {recipe.url && (
-        <a
-          className="text-accent flex items-center gap-2 text-base break-all no-underline"
-          href={recipe.url}
-          rel="noopener noreferrer"
-          target="_blank"
-          title={t("viewOriginal")}
-        >
-          <GlobeAltIcon aria-hidden className="size-4 shrink-0" />
-          {sourceLabel(recipe.url)}
-          <ArrowTopRightOnSquareIcon aria-hidden className="size-4 shrink-0" />
-        </a>
-      )}
+      {/* The same divided list the Nutrition legend uses, so two rows of
+          reference material read as a list rather than as leftovers. */}
+      <div className="divide-border divide-y">
+        {recipe.url && (
+          <a
+            className="text-foreground flex items-center gap-3 py-2.5 no-underline"
+            href={recipe.url}
+            rel="noopener noreferrer"
+            target="_blank"
+            title={t("viewOriginal")}
+          >
+            <span className="bg-accent-soft text-accent flex size-8 shrink-0 items-center justify-center rounded-xl">
+              <GlobeAltIcon aria-hidden className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-base">{sourceLabel(recipe.url)}</span>
+            <ArrowTopRightOnSquareIcon aria-hidden className="text-muted size-4 shrink-0" />
+          </a>
+        )}
 
-      {author && (
-        // A row in the same shape as the source link above it, not a bordered
-        // pill: the card is already the object here, and a chip inside it is a
-        // second edge saying nothing the row does not.
-        <div className="flex items-center gap-2 text-base">
-          <UserAvatar image={author.image} name={author.name} size="xs" userId={author.id} />
-          <span className="text-muted truncate">{t("addedBy", { name: author.name })}</span>
-        </div>
-      )}
+        {author && (
+          <div className="flex items-center gap-3 py-2.5">
+            <UserAvatar image={author.image} name={author.name} size="xs" userId={author.id} />
+            <span className="text-muted min-w-0 flex-1 truncate text-base">
+              {t("addedBy", { name: author.name })}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 

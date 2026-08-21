@@ -14,3 +14,14 @@ The three columns are independent in the schema and nothing derives or validates
 - [x] The card is absent when the recipe stores no times
 - [x] Nothing on this card projects a finish time
 - [x] New strings are added across every supported locale and `pnpm i18n:check` passes
+
+**Amended after review:** preparation and cooking take two hues rather than the
+accent at two opacities — one bar in two strengths of the same colour reads as
+more and less of one thing, not as two different jobs. They are their own theme
+tokens (`--cooking-prep`, `--cooking-cook`) rather than borrowed nutrition ones,
+so the two charts can move independently. Other Time stays neutral, because
+nothing knows which of the two it is.
+
+- [x] Prep and cook draw in separate hues, in both themes
+- [x] Other Time is still neutral
+- [x] The colours are their own tokens, not the accent and not the nutrition palette

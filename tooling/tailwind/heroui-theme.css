@@ -29,6 +29,12 @@
     --chrome-foreground: oklch(99.11% 0.0015 150.36);
     --chrome-hover: oklch(26.4% 0.008 80);
     --chrome-muted: oklch(71.5% 0.011 80);
+    /* The cooking-time bar reads as two different jobs, not one job at two
+       strengths: preparation and cooking take separate hues rather than the
+       accent at two opacities. Other Time stays neutral, because nothing knows
+       which of the two it is. */
+    --cooking-cook: oklch(73.29% 0.1941 138.39);
+    --cooking-prep: oklch(78.19% 0.159 59.91);
     --danger: oklch(65.32% 0.2335 13.32);
     --danger-foreground: oklch(99.11% 0 0);
     --default: oklch(93% 0.014 86);
@@ -82,6 +88,9 @@
     --chrome-foreground: oklch(21.03% 0.0015 150.36);
     --chrome-hover: oklch(91.2% 0.013 86);
     --chrome-muted: oklch(52.5% 0.012 80);
+    /* See the light block: two jobs, two hues. */
+    --cooking-cook: oklch(73.29% 0.1941 138.39);
+    --cooking-prep: oklch(82.03% 0.1392 63.92);
     --danger: oklch(59.4% 0.1973 12.21);
     --danger-foreground: oklch(99.11% 0 0);
     --default: oklch(27.4% 0.008 80);
@@ -128,6 +137,8 @@
   --color-chrome-foreground: var(--chrome-foreground);
   --color-chrome-hover: var(--chrome-hover);
   --color-chrome-muted: var(--chrome-muted);
+  --color-cooking-cook: var(--cooking-cook);
+  --color-cooking-prep: var(--cooking-prep);
   --color-nutrition-calories: var(--nutrition-calories);
   --color-nutrition-calories-soft: var(--nutrition-calories-soft);
   --color-nutrition-carbs: var(--nutrition-carbs);

@@ -20,12 +20,17 @@ type CookingTimeCardProps = {
 };
 
 /**
- * Other Time is neutral on purpose: it is the part of the total that is
- * neither preparation nor cooking, and nothing knows which kind it is.
+ * Preparation and cooking are two different jobs, so they take two hues rather
+ * than the accent at two opacities: one bar in two strengths of the same colour
+ * reads as more and less of one thing.
+ *
+ * Other Time is neutral on purpose — it is the part of the total that is
+ * neither of them, and nothing knows which kind it is. A recipe with no split
+ * at all has one segment and nothing to tell apart, so it takes the accent.
  */
 const segmentFill: Record<CookingTimeSegmentKind, string> = {
-  prep: "bg-accent/45",
-  cook: "bg-accent",
+  prep: "bg-cooking-prep",
+  cook: "bg-cooking-cook",
   other: "bg-surface-tertiary",
   total: "bg-accent",
 };

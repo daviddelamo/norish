@@ -23,3 +23,11 @@ question, so they answer it together. The card renders for either on its own.
 **Amended after review:** the importer is a row in the same shape as the source
 link above it, not a bordered chip. The card is already the object here, and a
 chip inside it is a second edge saying nothing the row does not.
+
+**Amended again:** the two facts are one divided list rather than two floating
+lines — a leading mark, the name, and, where the row goes somewhere, a hint
+that it does. Left free-floating they read as two unrelated scraps in a mostly
+empty card. Same divided-row treatment the Nutrition legend uses.
+
+- [x] Source and importer render as one list with aligned leading marks
+- [x] The source row carries an external-link hint at its end
