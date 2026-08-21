@@ -16,7 +16,7 @@ import {
 } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
-import type { AIConfig, ImageGenerationProvider } from "@norish/config/zod/server-config";
+import type { ImageGenerationProvider } from "@norish/config/zod/server-config";
 import {
   imageGenerationProviderNeedsEndpoint,
   isCloudImageGenerationProvider,
@@ -87,7 +87,9 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
     refusal: modelRefusal,
     isLoading: isLoadingModels,
   } = useAvailableModelsQuery({
-    provider: (enabled ? provider : "openai") as AIConfig["provider"],
+    // Every drawing provider is also an AI provider, so this assignment
+    // type-checks without a cast — and fails the build if the enums diverge.
+    provider: provider === "disabled" ? "openai" : provider,
     endpoint: endpoint || (aiProviderMatches ? aiConfig?.endpoint : undefined),
     apiKey: apiKey || undefined,
     enabled: !!canFetchModels,

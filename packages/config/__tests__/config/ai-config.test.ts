@@ -5,7 +5,7 @@ import {
   AIConfigSchema,
   DEFAULT_AUTOMATIC_ENRICHMENT,
   ImageGenerationConfigSchema,
-  isImageGenerationConfigured,
+  isImageGenerationConfigValid,
   resolveImageGenerationSettings,
 } from "@norish/config/zod/server-config";
 
@@ -203,35 +203,35 @@ describe("ImageGenerationConfigSchema", () => {
     });
   });
 
-  describe("isImageGenerationConfigured", () => {
+  describe("isImageGenerationConfigValid", () => {
     it("ships unconfigured: no stored block means no image provider", () => {
-      expect(isImageGenerationConfigured(null, null)).toBe(false);
+      expect(isImageGenerationConfigValid(null, null)).toBe(false);
     });
 
     it("is unconfigured when the provider is disabled or the model is blank", () => {
-      expect(isImageGenerationConfigured(imageConfig({ provider: "disabled" }), null)).toBe(false);
-      expect(isImageGenerationConfigured(imageConfig({ model: "  " }), null)).toBe(false);
-      expect(isImageGenerationConfigured(imageConfig({ model: undefined }), null)).toBe(false);
+      expect(isImageGenerationConfigValid(imageConfig({ provider: "disabled" }), null)).toBe(false);
+      expect(isImageGenerationConfigValid(imageConfig({ model: "  " }), null)).toBe(false);
+      expect(isImageGenerationConfigValid(imageConfig({ model: undefined }), null)).toBe(false);
     });
 
     it("requires a key for cloud providers, honouring the matching-provider fallback", () => {
       const keyless = imageConfig({ apiKey: undefined });
 
-      expect(isImageGenerationConfigured(keyless, null)).toBe(false);
-      expect(isImageGenerationConfigured(keyless, { provider: "openai", apiKey: "ai-key" })).toBe(
+      expect(isImageGenerationConfigValid(keyless, null)).toBe(false);
+      expect(isImageGenerationConfigValid(keyless, { provider: "openai", apiKey: "ai-key" })).toBe(
         true
       );
       expect(
-        isImageGenerationConfigured(keyless, { provider: "anthropic", apiKey: "ai-key" })
+        isImageGenerationConfigValid(keyless, { provider: "anthropic", apiKey: "ai-key" })
       ).toBe(false);
     });
 
     it("requires an endpoint for the local providers", () => {
       const local = imageConfig({ provider: "lm-studio", apiKey: undefined, endpoint: undefined });
 
-      expect(isImageGenerationConfigured(local, null)).toBe(false);
+      expect(isImageGenerationConfigValid(local, null)).toBe(false);
       expect(
-        isImageGenerationConfigured(
+        isImageGenerationConfigValid(
           imageConfig({ ...local, endpoint: "http://localhost:1234" }),
           null
         )

@@ -35,7 +35,7 @@ import {
   DEFAULT_CUISINE_STRATEGY,
   DEFAULT_RECIPE_PERMISSION_POLICY,
   DEFAULT_TAG_STRATEGY,
-  isImageGenerationConfigured as isImageGenerationConfigValid,
+  isImageGenerationConfigValid,
   ServerConfigKeys,
   UnitsConfigSchema,
   UnitsMapSchema,

@@ -584,7 +584,7 @@ export function resolveImageGenerationSettings(
  * refusal, and the runtime's configuration error — so "no image provider
  * configured" means the same thing everywhere.
  */
-export function isImageGenerationConfigured(
+export function isImageGenerationConfigValid(
   imageConfig: ImageGenerationConfig | null | undefined,
   aiConfig: { provider: string; endpoint?: string; apiKey?: string } | null | undefined
 ): boolean {

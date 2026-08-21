@@ -30,7 +30,7 @@ import {
 import type { TranscriptionProvider } from "@norish/config/zod/server-config";
 import {
   isCloudTranscriptionProvider,
-  isImageGenerationConfigured,
+  isImageGenerationConfigValid,
   resolveImageGenerationSettings,
 } from "@norish/config/zod/server-config";
 import {
@@ -427,7 +427,7 @@ export async function generateImage(options: GenerateImageOptions): Promise<Gene
     !imageConfig ||
     imageConfig.provider === "disabled" ||
     !imageConfig.model?.trim() ||
-    !isImageGenerationConfigured(imageConfig, aiConfig)
+    !isImageGenerationConfigValid(imageConfig, aiConfig)
   ) {
     throw new AIConfigurationError(
       "No image provider is configured. Set one in the admin settings."
@@ -473,7 +473,7 @@ export async function generateImage(options: GenerateImageOptions): Promise<Gene
 
     aiLogger.info(
       {
-        feature: "image-generation",
+        feature: promptName,
         provider: imageModel.providerName,
         model,
         imageBytes: bytes.length,
@@ -486,7 +486,7 @@ export async function generateImage(options: GenerateImageOptions): Promise<Gene
     const aiError = toAIError(error);
 
     aiLogger.error(
-      { err: error, feature: promptName, retryable: aiError.retryable },
+      { err: error, feature: promptName, provider, model, retryable: aiError.retryable },
       "Image generation failed"
     );
 
