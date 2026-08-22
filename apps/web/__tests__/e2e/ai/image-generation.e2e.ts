@@ -136,6 +136,14 @@ test("the manual action replaces the primary image and the page re-tints", async
     dishColor: SUPPLIED_PHOTO_DISH_COLOR,
   });
 
+  // The library reads the gallery, not the deprecated legacy scalar: the
+  // seeded photograph exists only as a gallery row, and the card shows it.
+  await page.goto("/");
+  await expect(page.locator(`img[alt="${name}"]`).first()).toHaveAttribute(
+    "src",
+    new RegExp(photoUrl.replaceAll("/", "\\/"))
+  );
+
   await openRecipe(name);
 
   // The reader's starting point: the supplied photograph leads the page and

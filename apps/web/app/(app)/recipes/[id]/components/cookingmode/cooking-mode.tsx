@@ -12,6 +12,7 @@ import { Button, Modal } from "@heroui/react";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 
+import { primaryRecipeImage } from "@norish/shared/lib/recipe-media";
 import { cssFloatingDockPill } from "@norish/web/config/css-tokens";
 
 import type { CookingModeView } from "./types";
@@ -216,7 +217,7 @@ export default function CookingMode({
     recipe: {
       id: recipe.id,
       name: recipe.name,
-      image: recipe.images?.[0]?.image ?? recipe.image ?? null,
+      image: primaryRecipeImage(recipe),
       categories: recipe.categories ?? [],
       totalMinutes: recipe.totalMinutes,
       servings: recipe.servings,

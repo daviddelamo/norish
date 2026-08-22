@@ -5,6 +5,7 @@ import sharp from "sharp";
 import { SERVER_CONFIG } from "@norish/config/env-config-server";
 import { serverLogger as log } from "@norish/shared-server/logger";
 import { oklabFromSrgb, srgbFromOklab } from "@norish/shared/lib/oklab";
+import { primaryRecipeImage } from "@norish/shared/lib/recipe-media";
 
 /**
  * The Dish Colour (ADR-0023): one colour taken from a recipe's primary image
@@ -156,34 +157,16 @@ export async function dishColorForImageUrl(
   }
 }
 
-/**
- * `order` stays loose because the zod contracts coerce it: an insert DTO
- * carries whatever the form or an import sent, and this module meets the
- * payloads where they are rather than demanding a parse first.
- */
-type GalleryImageLike = { image: string; order?: unknown };
-
-type PrimaryImageCarrier = {
-  image?: string | null;
-  images?: readonly GalleryImageLike[] | null;
-};
-
-function galleryOrder(galleryImage: GalleryImageLike): number {
-  const order = Number(galleryImage.order ?? 0);
-
-  return Number.isFinite(order) ? order : 0;
-}
+type PrimaryImageCarrier = Parameters<typeof primaryRecipeImage>[0];
 
 /**
- * The image a recipe page actually leads with: the first gallery image by
- * order, falling back to the legacy single-image column — the same
- * resolution the media carousel renders, so the tint and the hero can never
- * come from two different photos.
+ * The image a recipe page actually leads with: `primaryRecipeImage`, the one
+ * shared definition — the same resolution the media carousel, the dashboard
+ * projections, and the realtime echo patch use, so the tint and the hero can
+ * never come from two different photos.
  */
 export function primaryImageForDishColor(carrier: PrimaryImageCarrier): string | null {
-  const gallery = [...(carrier.images ?? [])].sort((a, b) => galleryOrder(a) - galleryOrder(b));
-
-  return gallery[0]?.image ?? carrier.image ?? null;
+  return primaryRecipeImage(carrier);
 }
 
 /**

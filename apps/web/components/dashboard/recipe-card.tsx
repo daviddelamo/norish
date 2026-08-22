@@ -186,7 +186,8 @@ function RecipeCardComponent({
   const allTags = useMemo(() => tagNames.map((name) => ({ name })), [tagNames]);
   const description = recipe.description?.trim() || "";
 
-  // Get thumbnail from the legacy image field
+  // The resolved primary image: the list projection serves the first gallery
+  // image, with the deprecated legacy scalar only as a fallback.
   const thumbnailImage = recipe.image;
   const showImage = thumbnailImage && failedImage !== thumbnailImage;
 

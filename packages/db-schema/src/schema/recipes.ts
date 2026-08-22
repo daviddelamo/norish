@@ -25,6 +25,12 @@ export const recipes = pgTable(
     }),
     name: text("name").notNull(),
     description: text("description"),
+    /**
+     * @deprecated for reading — the primary image lives in `recipe_images`
+     * and every reader resolves it gallery-first (`primaryRecipeImage` /
+     * the repository's PRIMARY_IMAGE_SQL). Kept written in sync as a legacy
+     * fallback until the column can be dropped.
+     */
     image: text("image"),
     url: text("url"),
     servings: integer("servings").notNull().default(1),

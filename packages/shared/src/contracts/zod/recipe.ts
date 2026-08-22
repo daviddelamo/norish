@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { measurementSystemEnum, recipes } from "@norish/db-schema/schema";
 
+import { primaryRecipeImage } from "../../lib/recipe-media";
 import { CuisineSummarySchema } from "./cuisine";
 import { RecipeImagesArraySchema, RecipeImageSchema } from "./recipe-images";
 import {
@@ -75,6 +76,10 @@ export const RECIPE_DASHBOARD_KEYS = Object.keys(RecipeDashboardSchema.shape) as
  * the echo actually carries are copied: the full recipe does not compute the
  * dashboard-only aggregates (averageRating, ratingCount), and overwriting
  * them with undefined would wipe live values off the cards.
+ *
+ * The dashboard's `image` is the resolved primary (gallery first, legacy
+ * scalar as fallback), so it is derived rather than copied — a raw scalar
+ * copy would blank a gallery-only recipe's thumbnail on every echo.
  */
 export function patchDashboardRecipeFromFull(
   dashboardRecipe: z.output<typeof RecipeDashboardSchema>,
@@ -87,6 +92,10 @@ export function patchDashboardRecipeFromFull(
     if (key in echo) {
       patched[key] = echo[key];
     }
+  }
+
+  if ("image" in echo || "images" in echo) {
+    patched.image = primaryRecipeImage(fullRecipe);
   }
 
   return patched as z.output<typeof RecipeDashboardSchema>;

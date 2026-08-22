@@ -293,6 +293,26 @@ export async function listVisibleRecipeIds(ctx: RecipeListContext): Promise<stri
   return rows.map((row) => row.id);
 }
 
+/**
+ * SQL twin of `primaryRecipeImage` (@norish/shared/lib/recipe-media): the
+ * first gallery image by order, falling back to the legacy `recipes.image`
+ * scalar. Every list-shaped projection serves its `image` through this, so
+ * nothing reads the deprecated scalar directly; a change here must move
+ * with the shared helper.
+ *
+ * The outer references are spelled `"recipes"."id"`/`"recipes"."image"` by
+ * hand: interpolating the drizzle columns renders them unqualified in plain
+ * selects, and inside the subquery an unqualified `"id"` resolves to the
+ * gallery's own column — silently matching nothing.
+ */
+const PRIMARY_IMAGE_SQL = sql<string | null>`COALESCE(
+  (SELECT gallery.image FROM ${recipeImages} AS gallery
+    WHERE gallery.recipe_id = "recipes"."id"
+    ORDER BY COALESCE(gallery."order", 0) ASC, gallery.created_at ASC
+    LIMIT 1),
+  "recipes"."image"
+)`;
+
 export async function listRecipes(
   ctx: RecipeListContext,
   limit: number,
@@ -480,7 +500,6 @@ export async function listRecipes(
         description: true,
         notes: true,
         url: true,
-        image: true,
         servings: true,
         prepMinutes: true,
         cookMinutes: true,
@@ -493,6 +512,10 @@ export async function listRecipes(
         createdAt: true,
         updatedAt: true,
         version: true,
+      },
+      extras: {
+        // The resolved primary, not the deprecated scalar.
+        image: PRIMARY_IMAGE_SQL.as("image"),
       },
       with: {
         recipeTags: {
@@ -579,7 +602,6 @@ export async function dashboardRecipe(id: string): Promise<RecipeDashboardDTO | 
       description: true,
       notes: true,
       url: true,
-      image: true,
       servings: true,
       prepMinutes: true,
       cookMinutes: true,
@@ -592,6 +614,10 @@ export async function dashboardRecipe(id: string): Promise<RecipeDashboardDTO | 
       createdAt: true,
       updatedAt: true,
       version: true,
+    },
+    extras: {
+      // The resolved primary, not the deprecated scalar.
+      image: PRIMARY_IMAGE_SQL.as("image"),
     },
     with: {
       recipeTags: {
@@ -1580,7 +1606,7 @@ export async function getRandomRecipeCandidates(
     .select({
       id: recipes.id,
       name: recipes.name,
-      image: recipes.image,
+      image: PRIMARY_IMAGE_SQL,
       categories: recipes.categories,
     })
     .from(recipes)
@@ -1652,7 +1678,7 @@ export async function searchRecipesByName(
   whereConditions.push(ilike(recipes.name, `%${query}%`));
   const whereClause = whereConditions.length ? and(...whereConditions) : undefined;
   const rows = await db
-    .select({ id: recipes.id, name: recipes.name, image: recipes.image })
+    .select({ id: recipes.id, name: recipes.name, image: PRIMARY_IMAGE_SQL })
     .from(recipes)
     .where(whereClause)
     .orderBy(asc(recipes.name))
