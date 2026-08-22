@@ -41,6 +41,7 @@
     "Turn the recipe below into one short visual brief for an image model: a\nsingle paragraph of at most 60 words describing what a finished serving of\nthis dish looks like.\n\n- Describe only the plated dish: its colours, textures, the ingredients that\n  remain visible once it is cooked, and the plate or bowl it is served in.\n- Leave out amounts, ingredients that dissolve or disappear during cooking,\n  and every preparation step.\n- Do not name the recipe, mention cameras, lenses, styles or text, or give\n  instructions. Describe the food only.\n\nWrite the brief in English, whatever language the recipe is written in."
   ],
   "imageGenerationStyle": [
+    "A photograph of the dish described below, shot for a recipe page.\n\nThree-quarter view of a single serving on a neutral surface in soft natural\ndaylight, realistic colours and textures, the dish filling most of the\nframe but leave some breathing room. Ensure it is an image like the recipe would be served.\nNo people, no hands, no text, no watermarks, no brand packaging.\n\nThe dish:",
     "A photograph of the dish described below, shot for a recipe page.\n\nThree-quarter view of a single serving on a neutral surface in soft natural\ndaylight, realistic colours and textures, the dish filling most of the\nframe. No people, no hands, no text, no watermarks, no brand packaging.\n\nThe dish:"
   ]
 }
