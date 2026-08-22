@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockExtractRecipeWithAI = vi.fn();
 const mockIsVideoUrl = vi.fn(() => false);
-const mockFetchViaPlaywright = vi.fn();
+const mockFetchRenderedPage = vi.fn();
 const mockCallRecipeScrapersParser = vi.fn();
 const mockAdaptRecipeScrapersResponse = vi.fn();
 const mockProcessVideoRecipe = vi.fn();
@@ -29,7 +29,7 @@ vi.mock("@norish/shared/lib/helpers", async (importOriginal) => ({
 }));
 
 vi.mock("@norish/api/parser/fetch", () => ({
-  fetchViaPlaywright: mockFetchViaPlaywright,
+  fetchRenderedPage: mockFetchRenderedPage,
 }));
 
 vi.mock("@norish/api/parser/python/client", () => ({
@@ -113,7 +113,7 @@ describe("parseRecipeFromUrl import flow", () => {
     vi.clearAllMocks();
 
     mockIsVideoUrl.mockReturnValue(false);
-    mockFetchViaPlaywright.mockResolvedValue("<html><body>recipe html</body></html>");
+    mockFetchRenderedPage.mockResolvedValue("<html><body>recipe html</body></html>");
     mockIsAIEnabled.mockResolvedValue(true);
     mockShouldAlwaysUseAI.mockResolvedValue(false);
     mockIsVideoParsingEnabled.mockResolvedValue(false);
@@ -152,7 +152,7 @@ describe("parseRecipeFromUrl import flow", () => {
       "recipe-1",
       undefined
     );
-    expect(mockFetchViaPlaywright).not.toHaveBeenCalled();
+    expect(mockFetchRenderedPage).not.toHaveBeenCalled();
     expect(mockCallRecipeScrapersParser).not.toHaveBeenCalled();
     expect(mockExtractRecipeWithAI).not.toHaveBeenCalled();
   });
@@ -168,7 +168,7 @@ describe("parseRecipeFromUrl import flow", () => {
       /AI features are not enabled/
     );
     expect(mockProcessVideoRecipe).not.toHaveBeenCalled();
-    expect(mockFetchViaPlaywright).not.toHaveBeenCalled();
+    expect(mockFetchRenderedPage).not.toHaveBeenCalled();
     expect(mockExtractRecipeWithAI).not.toHaveBeenCalled();
   });
 
@@ -246,7 +246,7 @@ describe("parseRecipeFromUrl import flow", () => {
       message: "no schema",
       parser: { mode: "wild", scraper: "unknown", version: "15.10.0" },
     });
-    mockFetchViaPlaywright.mockResolvedValue("<html><body>plain text</body></html>");
+    mockFetchRenderedPage.mockResolvedValue("<html><body>plain text</body></html>");
 
     const { parseRecipeFromUrl } = await import("@norish/api/parser");
 

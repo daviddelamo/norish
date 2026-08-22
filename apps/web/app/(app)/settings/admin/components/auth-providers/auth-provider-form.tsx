@@ -111,6 +111,17 @@ export function AuthProviderForm({
           saveValues as Parameters<typeof updateAuthProviderGoogle>[0]
         );
       }
+      // Saved secrets live on the server, not in the form: a secret left in
+      // state reads as an unsaved change on every later render.
+      setValues((prev) => {
+        const cleared = { ...prev };
+
+        for (const field of fields) {
+          if (field.secret) cleared[field.key] = "";
+        }
+
+        return cleared;
+      });
     } finally {
       setSaving(false);
     }

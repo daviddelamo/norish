@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ENRICHMENT_KINDS,
+  enrichmentWriteMode,
   fillProvenanceGaps,
   hasCompleteProvenance,
   hasSubstantiveCategories,
@@ -16,7 +17,7 @@ import {
 } from "@norish/shared/lib/recipe-enrichment";
 
 describe("ENRICHMENT_KINDS", () => {
-  it("names the six independent enrichment kinds", () => {
+  it("names the seven independent enrichment kinds", () => {
     expect([...ENRICHMENT_KINDS]).toEqual([
       "auto-tagging",
       "allergy-detection",
@@ -24,7 +25,41 @@ describe("ENRICHMENT_KINDS", () => {
       "nutrition-estimation",
       "recipe-provenance",
       "ingredient-linking",
+      "image-generation",
     ]);
+  });
+});
+
+describe("enrichmentWriteMode", () => {
+  it("fills gaps for an ordinary automatic run", () => {
+    expect(enrichmentWriteMode("auto-categorization", { origin: "automatic" })).toBe("gap-fill");
+    expect(
+      enrichmentWriteMode("auto-categorization", { origin: "automatic", replaceExisting: false })
+    ).toBe("gap-fill");
+  });
+
+  it("replaces for a manual run, which has always been a deliberate refresh", () => {
+    for (const kind of [
+      "auto-categorization",
+      "nutrition-estimation",
+      "recipe-provenance",
+    ] as const) {
+      expect(enrichmentWriteMode(kind, { origin: "manual" })).toBe("replace");
+    }
+  });
+
+  it("keeps a manual Ingredient Linking rerun gap-filling", () => {
+    // Its manual action fills in the steps a person did not link themselves;
+    // replacing there would delete the work the rerun was invoked to finish.
+    expect(enrichmentWriteMode("ingredient-linking", { origin: "manual" })).toBe("gap-fill");
+  });
+
+  it("replaces for automatic work an administrator asked to overwrite", () => {
+    for (const kind of ENRICHMENT_KINDS) {
+      expect(enrichmentWriteMode(kind, { origin: "automatic", replaceExisting: true })).toBe(
+        "replace"
+      );
+    }
   });
 });
 

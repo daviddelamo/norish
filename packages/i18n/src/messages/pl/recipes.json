@@ -38,6 +38,9 @@
     "backToRecipes": "Powrót do przepisów",
     "viewOriginal": "Zobacz oryginalny przepis",
     "ingredients": "Składniki",
+    "ingredientOptions": "Opcje składników",
+    "showMore": "Pokaż więcej",
+    "showLess": "Pokaż mniej",
     "steps": "Kroki",
     "notes": "Notatki",
     "addToGroceries": "Dodaj do zakupów",
@@ -51,7 +54,12 @@
     "instructions": "Instrukcje",
     "cook": "Gotuj",
     "switchToDecimal": "Pokaż dziesiętne",
-    "switchToFraction": "Pokaż ułamki"
+    "switchToFraction": "Pokaż ułamki",
+    "servingsCount": "{count, plural, one {# porcja} few {# porcje} many {# porcji} other {# porcji}}",
+    "source": "Źródło",
+    "addedBy": "Dodane przez {name}",
+    "decreaseServings": "Mniej porcji",
+    "increaseServings": "Więcej porcji"
   },
   "actions": {
     "plan": "Zaplanuj",
@@ -76,7 +84,9 @@
     "inferringProvenance": "Ustalanie pochodzenia…",
     "linkIngredients": "Powiąż składniki z krokami",
     "linkingIngredients": "Wiązanie składników…",
-    "enrichmentFailed": "Ostatnia próba nie powiodła się"
+    "enrichmentFailed": "Ostatnia próba nie powiodła się",
+    "generateImage": "Wygeneruj obraz",
+    "generatingImage": "Generowanie obrazu…"
   },
   "sharePanel": {
     "title": "Udostępnij przepis",
@@ -125,7 +135,8 @@
   "convert": {
     "ariaLabel": "Przelicz system miar",
     "toMetric": "Przelicz na metryczny",
-    "toUS": "Przelicz na amerykański"
+    "toUS": "Przelicz na amerykański",
+    "converting": "Przeliczanie…"
   },
   "deleteModal": {
     "title": "Usuń przepis",
@@ -296,7 +307,10 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Przesuń, aby nawigować kroki",
     "swipeIngredients": "Przesuń w lewo, aby zobaczyć składniki",
-    "swipeBackToSteps": "Przesuń w prawo, aby wrócić do kroków"
+    "swipeBackToSteps": "Przesuń w prawo, aby wrócić do kroków",
+    "readyAt": "Gotowe około {time}",
+    "timers": "Minutniki",
+    "nextStep": "Następny krok"
   },
   "enrichment": {
     "failed": "Wzbogacanie nie powiodło się",
@@ -312,7 +326,8 @@
       "auto-categorization": "Automatyczna kategoryzacja",
       "nutrition-estimation": "Szacowanie wartości odżywczych",
       "recipe-provenance": "Pochodzenie przepisu",
-      "ingredient-linking": "Wiązanie składników"
+      "ingredient-linking": "Wiązanie składników",
+      "image-generation": "Generowanie obrazów"
     }
   },
   "provenance": {
@@ -326,5 +341,16 @@
   "import": {
     "alreadyExists": "Masz już ten przepis",
     "openExisting": "Otwórz"
+  },
+  "glanceBar": {
+    "totalTime": "Łączny czas",
+    "servings": "{count, plural, one {porcja} few {porcje} many {porcji} other {porcji}}"
+  },
+  "cookingTime": {
+    "title": "Czas przygotowania",
+    "prep": "Przygotowanie",
+    "cook": "Gotowanie",
+    "other": "Pozostały czas",
+    "total": "Łącznie"
   }
 }

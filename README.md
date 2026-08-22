@@ -42,7 +42,7 @@ services:
       AUTH_URL: http://localhost:3000
       DATABASE_URL: postgres://postgres:norish@db:5432/norish
       MASTER_KEY: <32-byte-base64-key> # openssl rand -base64 32
-      CHROME_WS_ENDPOINT: ws://chrome-headless:3000
+      OBSCURA_ENDPOINT: ws://obscura:9222
       REDIS_URL: redis://redis:6379
       UPLOADS_DIR: /app/uploads
       
@@ -71,17 +71,11 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
-  chrome-headless:
-    image: zenika/alpine-chrome:latest
-    container_name: chrome-headless
+  # Renders recipe pages for URL imports
+  obscura:
+    image: norishapp/obscura:0.2.0-norish.1
+    container_name: norish-obscura
     restart: unless-stopped
-    command:
-      - "--no-sandbox"
-      - "--disable-gpu"
-      - "--disable-dev-shm-usage"
-      - "--remote-debugging-address=0.0.0.0"
-      - "--remote-debugging-port=3000"
-      - "--headless"
 
   redis:
     image: redis:8.4.0

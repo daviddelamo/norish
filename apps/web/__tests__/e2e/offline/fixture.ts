@@ -23,6 +23,7 @@ export const USER_B = {
 export const SEEDED_RECIPE_ID = "7e300351-13a4-4bfb-8b40-7a1a5a5f8d01";
 export const SEEDED_RECIPE_NAME = "Warm Set Focaccia";
 export const SEEDED_RECIPE_IMAGE = `/recipes/${SEEDED_RECIPE_ID}/primary.png`;
+export const SEEDED_RECIPE_DISH_COLOR = "#b05a2a";
 export const SEEDED_GROCERY_NAME = "Warm Set Oat Milk";
 export const SEEDED_NOTE_TITLE = "Warm Set Leftovers";
 export const UNWARMED_RECIPE_ID = "44444444-4444-4444-8444-444444444444";
@@ -63,18 +64,29 @@ async function seed(stack: ProductionStack): Promise<void> {
     await database.query(`delete from groceries where user_id = $1`, [userA.id]);
     await database.query(`delete from recipes where user_id = $1`, [userA.id]);
     await database.query(
-      `insert into recipes (id, user_id, name, description, image, servings)
-       values ($1, $2, $3, 'Seeded for the Offline browser project.', $4, 4)`,
-      [SEEDED_RECIPE_ID, userA.id, SEEDED_RECIPE_NAME, SEEDED_RECIPE_IMAGE]
+      `insert into recipes (id, user_id, name, description, image, dish_color, servings)
+       values ($1, $2, $3, 'Seeded for the Offline browser project.', $4, $5, 4)`,
+      [
+        SEEDED_RECIPE_ID,
+        userA.id,
+        SEEDED_RECIPE_NAME,
+        SEEDED_RECIPE_IMAGE,
+        SEEDED_RECIPE_DISH_COLOR,
+      ]
     );
     await database.query(
       `insert into groceries (user_id, name, unit, amount, is_done) values ($1, $2, null, 2, false)`,
       [userA.id, SEEDED_GROCERY_NAME]
     );
+    // The browser's date, not the container's: the Postgres container runs
+    // UTC, so `current_date` is yesterday for any run between local midnight
+    // and UTC midnight — and the dashboard's Today shows nothing seeded.
+    const localToday = new Date().toLocaleDateString("en-CA");
+
     await database.query(
       `insert into planned_items (user_id, date, slot, item_type, title)
-       values ($1, current_date, 'Dinner', 'note', $2)`,
-      [userA.id, SEEDED_NOTE_TITLE]
+       values ($1, $2::date, 'Dinner', 'note', $3)`,
+      [userA.id, localToday, SEEDED_NOTE_TITLE]
     );
   } finally {
     await database.end();

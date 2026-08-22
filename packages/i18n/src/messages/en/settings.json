@@ -1,7 +1,6 @@
 {
   "page": {
     "title": "Settings",
-    "loading": "Loading...",
     "ariaLabel": "Settings tabs"
   },
   "tabs": {
@@ -62,7 +61,12 @@
     },
     "archiveImport": {
       "title": "Import Recipe Archive",
-      "description": "Import recipes from Mela (.melarecipes), Paprika (.paprikarecipes), or Mealie/Tandoor (.zip) exports"
+      "description": "Import recipes from Norish (.norishrecipes), Mela (.melarecipes), Paprika (.paprikarecipes), or Mealie/Tandoor (.zip) exports"
+    },
+    "archiveExport": {
+      "title": "Export Recipe Archive",
+      "description": "Download every recipe you can see.",
+      "button": "Export"
     },
     "siteAuthTokens": {
       "title": "Site Authentication Tokens",
@@ -111,21 +115,19 @@
         "title": "Language",
         "description": "Choose your preferred language"
       },
-      "timers": {
-        "title": "Enable Recipe Timers",
-        "description": "Show interactive timers in recipe instructions"
-      },
-      "conversion": {
-        "title": "Show Ingredient Conversion Button",
-        "description": "Display a button on recipe pages to convert between measurement systems"
-      },
-      "ratings": {
-        "title": "Show Ratings",
-        "description": "Display star ratings on recipe cards and detail pages"
-      },
-      "favorites": {
-        "title": "Show Favorites",
-        "description": "Display favorite/heart icons on recipe cards and detail pages"
+      "hidden": {
+        "title": "Hidden Items",
+        "description": "Choose what you would rather not be shown. Everything is shown by default, and this changes only your own view.",
+        "placeholder": "Nothing hidden",
+        "options": {
+          "provenance": "Provenance",
+          "nutrition": "Nutrition",
+          "notes": "Notes",
+          "rating": "Ratings",
+          "favorites": "Favorites",
+          "conversion": "Ingredient conversion",
+          "timers": "Recipe timers"
+        }
       },
       "todaySection": {
         "title": "Today Section",
@@ -134,6 +136,14 @@
           "always": "Always visible",
           "planned": "Only planned meals",
           "hidden": "Hidden"
+        }
+      },
+      "recipePageColor": {
+        "title": "Recipe page color",
+        "description": "Tint each recipe page with its own photo's color, or keep the plain theme colors on this device",
+        "options": {
+          "dish": "From the dish photo",
+          "theme": "Plain theme colors"
         }
       },
       "applyError": "Failed to apply preference"
@@ -354,7 +364,12 @@
       "saveLocales": "Save Language Settings",
       "localesSaved": "Language settings saved",
       "localesError": "Failed to save language settings",
-      "atLeastOneLocale": "At least one language must be enabled"
+      "atLeastOneLocale": "At least one language must be enabled",
+      "export": {
+        "title": "Recipe Archive",
+        "description": "Download every recipe on this server.",
+        "button": "Export Recipe Archive"
+      }
     },
     "registration": {
       "title": "Registration",
@@ -517,6 +532,10 @@
         "title": "Video Processing",
         "subtitle": "Social media video extraction & transcription"
       },
+      "imageGeneration": {
+        "title": "Image Generation",
+        "subtitle": "Draw a picture of the dish for recipes without one"
+      },
       "prompts": {
         "title": "Prompts",
         "subtitle": "Customize AI instructions for recipe processing"
@@ -528,15 +547,20 @@
       "bulkEnrichment": {
         "title": "Bulk Enrichment",
         "subtitle": "Run enabled enrichment on every recipe",
-        "description": "Queue every enrichment kind whose automatic switch is enabled, for all recipes on this server. Recipes keep the data they already have, only gaps are filled.",
+        "description": "Queue every enrichment kind whose automatic switch is enabled, for all recipes on this server. Gaps are filled by default; the confirmation offers to overwrite what is already there.",
         "button": "Enrich All Recipes",
         "confirmTitle": "Run enrichment on all recipes?",
         "confirmMessage": "This queues AI work for every recipe on this server. Every enrichment kind whose automatic switch is enabled runs wherever data is missing.",
+        "replaceExisting": "Overwrite existing data",
+        "replaceExistingDescription": "Redo categories, nutrition, provenance and step ingredients even where a recipe already has them. Tags and allergy indications are only ever added to.",
+        "replaceWarning": "This cannot be undone. Data you entered yourself is replaced too, including step ingredients you linked by hand: nothing records which values came from AI.",
         "costWarning": "This can be an expensive operation: with many recipes it may take a long time and, on a paid AI provider, use a significant amount of credits.",
         "confirmButton": "Run on All Recipes",
+        "confirmButtonReplace": "Overwrite All Recipes",
         "queued": "{queued, plural, =0 {No runs queued} one {# run queued} other {# runs queued}} across {recipes, plural, one {# recipe} other {# recipes}}",
         "aiDisabled": "AI is disabled on this server. Enable AI first.",
-        "error": "Failed to start bulk enrichment"
+        "error": "Failed to start bulk enrichment",
+        "imageCount": "{count, plural, =0 {The sweep will generate no images.} one {The sweep will generate # image.} other {The sweep will generate # images.}}"
       }
     },
     "aiConfig": {
@@ -576,6 +600,7 @@
       "vision": "vision",
       "automaticEnrichment": "Automatic Recipe Enrichment",
       "automaticEnrichmentDescription": "Choose which AI enrichment runs automatically for newly created recipes. Members can still run each one manually while AI is enabled.",
+      "automaticEnrichmentPlaceholder": "Nothing runs automatically",
       "automaticEnrichmentKinds": {
         "autoTagging": "Auto-Tagging",
         "autoTaggingDescription": "Add AI-suggested tags to new recipes without removing existing tags",
@@ -588,7 +613,9 @@
         "recipeProvenance": "Recipe Provenance",
         "recipeProvenanceDescription": "Work out the country, region, Cuisines, and a short note for new recipes, filling in only what is still missing",
         "ingredientLinking": "Ingredient Linking",
-        "ingredientLinkingDescription": "Link each step to the ingredient lines it uses, for steps that have none"
+        "ingredientLinkingDescription": "Link each step to the ingredient lines it uses, for steps that have none",
+        "imageGeneration": "Image Generation",
+        "imageGenerationDescription": "Draw a picture of the dish for new recipes that have no image at all"
       },
       "tagStrategy": "Tag Strategy",
       "tagStrategyDescription": "Which tags auto-tagging may use, whether it runs automatically or manually",
@@ -603,6 +630,11 @@
         "existing": "Only Existing Cuisines",
         "extend": "AI Can Add New Cuisines"
       }
+    },
+    "modelListing": {
+      "empty": "No models came back. Check the API key or endpoint, or type a model name.",
+      "refused": "{provider} refused the request ({status}). Check the API key.",
+      "unreachable": "Could not reach {provider}. Check the endpoint."
     },
     "videoConfig": {
       "enableVideo": "Enable Video Parsing",
@@ -644,6 +676,27 @@
       "transcriptionApiKeyOptionalDescription": "Most local Whisper servers don't require an API key",
       "transcriptionApiKeyOptionalPlaceholder": "Leave empty for local servers"
     },
+    "imageGenerationConfig": {
+      "description": "Image Generation uses its own provider, because most AI providers cannot draw. Pictures are generated with this provider; the AI provider above handles everything else.",
+      "provider": "Image Provider",
+      "providers": {
+        "disabled": "Disabled",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "Generic OpenAI-compatible"
+      },
+      "endpoint": "Endpoint URL",
+      "endpointOptional": "Optional: custom Azure resource URL",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "Enter API key...",
+      "apiKeyInherited": "Using the API key from your AI configuration.",
+      "model": "Image Model",
+      "modelPlaceholder": "e.g. gpt-image-1",
+      "modelDescription": "The model that draws the picture. It must be an image model, not a text model.",
+      "fallbackHint": "Same provider as your AI configuration: the endpoint and API key fall back to it unless you set them here."
+    },
     "promptsConfig": {
       "recipeExtraction": "Recipe Extraction Prompt",
       "recipeExtractionDescription": "This prompt is used when extracting recipe data from web pages or video transcripts.",
@@ -671,7 +724,13 @@
       "recipeProvenancePlaceholder": "Enter the Recipe Provenance prompt...",
       "ingredientLinking": "Ingredient Linking Prompt",
       "ingredientLinkingDescription": "Used when linking each step to the ingredient lines it uses",
-      "ingredientLinkingPlaceholder": "Prompt for linking ingredients to steps..."
+      "ingredientLinkingPlaceholder": "Prompt for linking ingredients to steps...",
+      "imageGenerationBrief": "Image Brief Prompt",
+      "imageGenerationBriefDescription": "Used to turn a recipe into a short visual brief before its picture is generated. The recipe is appended after the prompt.",
+      "imageGenerationBriefPlaceholder": "Prompt for writing the visual brief...",
+      "imageGenerationStyle": "Image Style Prompt",
+      "imageGenerationStyleDescription": "Sent to the image model, with the visual brief appended after it. Sets the look every generated picture shares.",
+      "imageGenerationStylePlaceholder": "Prompt for the image style..."
     },
     "unsavedChanges": "Unsaved changes",
     "jsonEditor": {
@@ -732,7 +791,8 @@
         "recipe-provenance": "Recipe provenance",
         "ingredient-linking": "Ingredient linking",
         "caldav-sync": "CalDAV sync",
-        "scheduled-tasks": "Scheduled tasks"
+        "scheduled-tasks": "Scheduled tasks",
+        "image-generation": "Image generation"
       },
       "summary": {
         "failed": "{count} failed"
@@ -798,6 +858,15 @@
       "empty": "No Cuisines yet.",
       "duplicate": "A Cuisine with that name already exists.",
       "saveFailed": "Could not save that Cuisine."
+    }
+  },
+  "archiveExport": {
+    "progress": "Exporting… {size}",
+    "errors": {
+      "failedTitle": "Export failed",
+      "failedDescription": "The Recipe Archive could not be downloaded. Please try again.",
+      "signedOut": "Your session has expired. Sign in again to export.",
+      "notAllowed": "You do not have permission to export this."
     }
   }
 }

@@ -1,12 +1,12 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 title: Recipe enrichment
-description: How Norish adds tags, allergy indications, meal categories, nutrition, provenance, and step ingredients to your recipes with AI, and how to run each one yourself.
+description: How Norish adds tags, allergy indications, meal categories, nutrition, provenance, step ingredients, and a picture of the dish to your recipes with AI, and how to run each one yourself.
 ---
 
 # Recipe enrichment
 
-When your Norish instance has AI enabled, it can fill in six things about a
+When your Norish instance has AI enabled, it can fill in seven things about a
 recipe:
 
 - **Tags**: descriptive keywords such as _quick_, _one-pot_, _vegetarian_
@@ -17,6 +17,10 @@ recipe:
   region, cuisines, and a short written explanation
 - **[Step ingredients](./step-ingredients.md)**: which ingredient lines each
   step uses, for the steps you haven't linked yourself
+- **Image generation**: an AI-generated photo for recipes that have no
+  image at all, so an imported recipe still fills its page. It needs its own
+  [image provider](../configuration/ai-provider.md#image-generation), because
+  most AI providers cannot draw
 
 This is called _enrichment_, and it always happens **after** your recipe is
 saved. Importing or creating a recipe never waits for it, and never fails
@@ -25,8 +29,8 @@ have your recipe, and every enrichment can be run manually later.
 
 ## Automatic enrichment
 
-Your administrator chooses which of the six run automatically for newly created
-recipes. Whatever they choose applies the same way to every recipe you create,
+Your administrator chooses which of the seven run automatically for newly
+created recipes. Whatever they choose applies the same way to every recipe you create,
 whether you typed it in yourself or imported it from a link, a photo, or pasted
 text.
 
@@ -34,7 +38,9 @@ Automatic enrichment runs once, when the recipe is new. Editing a recipe later
 never re-runs it, so an edit can't unexpectedly replace values you just set.
 An administrator can catch older recipes up with **Enrich All Recipes** in the
 admin settings, which runs the enabled kinds across the whole library under
-these same rules.
+these same rules — or, by turning on **Overwrite existing data** in its
+confirmation, deliberately redo them and replace what is stored, including
+values you entered yourself.
 
 ### Your own data comes first
 
@@ -56,6 +62,8 @@ takes precedence:
   a tag you added.
 - Step ingredients are filled **per step**: a step you linked yourself is never
   touched, whoever asks see [Step ingredients](./step-ingredients.md).
+- A recipe holding **any image at all** is never touched by automatic image
+  generation. Only a recipe with no picture whatsoever gets one drawn.
 
 ## Running one yourself
 
@@ -68,11 +76,21 @@ edit the recipe, you'll find one action per kind:
 - **Estimate nutrition**
 - **Work out provenance**
 - **Link ingredients to steps**
+- **Generate Picture** — needs an
+  [image provider](../configuration/ai-provider.md#image-generation) configured
 
 These stay available even when your administrator has turned the matching
 automatic switch off, the switch controls background work, not what you can ask
 for. Each action is separate on purpose: asking for categories doesn't also
 spend an AI request on tags.
+
+:::warning
+**Generate Picture replaces the recipe's primary image**, even when that image
+is a photograph you uploaded, and the replaced image is **not recoverable** —
+Norish has no trash. Run it deliberately; a second run replaces the previous
+generated picture rather than adding to the gallery. Your other gallery images
+keep their place.
+:::
 
 ## States
 

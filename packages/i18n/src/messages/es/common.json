@@ -12,6 +12,8 @@
     "apply": "Aplicar",
     "reset": "Restablecer",
     "clear": "Borrar",
+    "selectAll": "Seleccionar todo",
+    "deselectAll": "Deseleccionar todo",
     "confirm": "Confirmar",
     "back": "Volver",
     "next": "Siguiente",
@@ -28,11 +30,12 @@
     "test": "Probar",
     "format": "Formatear",
     "restoreDefaults": "Restablecer valores predeterminados",
-    "saveChanges": "Guardar cambios",
-    "revealSecret": "Mostrar secreto",
-    "hideSecret": "Ocultar secreto",
-    "enterNewValue": "Introduce un nuevo valor",
-    "cancelEditing": "Cancelar edición"
+    "saveChanges": "Guardar cambios"
+  },
+  "secret": {
+    "reveal": "Mostrar secreto",
+    "hide": "Ocultar secreto",
+    "keepsCurrent": "Déjalo vacío para conservar el valor guardado."
   },
   "status": {
     "loading": "Cargando...",

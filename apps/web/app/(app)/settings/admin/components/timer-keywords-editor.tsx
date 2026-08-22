@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { SwitchRow } from "@/app/(app)/settings/components/setting-row";
 import SettingsSwitch from "@/app/(app)/settings/components/settings-switch";
 import { ArrowPathIcon, CheckIcon, ExclamationTriangleIcon } from "@heroicons/react/16/solid";
 import { Button, Description, Label, TextArea, TextField } from "@heroui/react";
@@ -142,12 +143,9 @@ export default function TimerKeywordsEditor({
   }, [onRestoreDefaults]);
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium">{t("enableToggle")}</span>
+      <SwitchRow description={t("description")} title={t("enableToggle")}>
         <SettingsSwitch isSelected={isEnabled} onValueChange={handleEnabledChange} />
-      </div>
-
-      <p className="text-muted text-sm">{t("description")}</p>
+      </SwitchRow>
 
       {/* Hours Field */}
       <TextField
@@ -204,7 +202,7 @@ export default function TimerKeywordsEditor({
         </div>
       )}
 
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Button isDisabled={saving} onPress={handleRestoreDefaults} variant="tertiary">
           {<ArrowPathIcon className="h-5 w-5" />}
           {tActions("restoreDefaults")}

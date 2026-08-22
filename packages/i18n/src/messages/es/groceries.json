@@ -80,6 +80,7 @@
     "placeholder": "p. ej., 1 kg pechuga de pollo",
     "editPlaceholder": "p. ej., leche cada semana",
     "servings": "Raciones",
+    "selectedCount": "{selected} de {total} seleccionados",
     "loadingIngredients": "Cargando ingredientes...",
     "noIngredients": "No hay ingredientes.",
     "addSelectedToGroceries": "Añadir a la lista de la compra",

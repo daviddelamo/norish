@@ -1,6 +1,6 @@
 {
   "name": "@norish/api",
-  "version": "0.20.0-beta",
+  "version": "0.21.0-beta",
   "private": true,
   "type": "module",
   "exports": {
@@ -34,9 +34,8 @@
     "ioredis": "catalog:",
     "mime": "4.1.0",
     "next": "catalog:",
-    "playwright-core": "npm:rebrowser-playwright-core@^1.52.0",
+    "playwright-core": "^1.62.1",
     "superjson": "catalog:",
-    "yt-dlp-wrap": "^2.3.12",
     "zod": "catalog:"
   },
   "devDependencies": {

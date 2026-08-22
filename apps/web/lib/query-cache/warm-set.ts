@@ -114,11 +114,9 @@ export function createWarmSet({
         .findAll({ queryKey: recipePath })
         .filter((query) => query.state.data != null).length;
       const groceriesData = queryClient.getQueryData(trpc.groceries.list.queryKey()) as
-        | { groceries?: unknown[] }
-        | undefined;
+        { groceries?: unknown[] } | undefined;
       const storesData = queryClient.getQueryData(trpc.stores.list.queryKey()) as
-        | unknown[]
-        | undefined;
+        unknown[] | undefined;
       const plannedData = queryClient.getQueryData(
         trpc.calendar.listItems.queryKey(desktopRange)
       ) as unknown[] | undefined;

@@ -104,6 +104,17 @@ const ServerConfigSchema = z.object({
     .pipe(z.array(z.string())),
   UPLOADS_DIR: z.string().default(defaultUploadsDir),
 
+  // Auth endpoint rate limiting. Defaults are the production values; they are
+  // overridable so a harness driving many sessions against one server (the
+  // browser E2E stack reuses a single server across a whole project) is not
+  // throttled into failures that say nothing about the code under test.
+  AUTH_RATE_LIMIT_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  AUTH_RATE_LIMIT_WINDOW: z.coerce.number().int().positive().default(60),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+
   // During build, allow placeholder DB URL so server-only modules can be imported
   // without requiring runtime secrets. Runtime still enforces a real URL.
   DATABASE_URL: isBuild
@@ -191,10 +202,13 @@ const ServerConfigSchema = z.object({
   CONTENT_INDICATORS: z.string().optional(),
   CONTENT_INGREDIENTS: z.string().optional(),
 
-  CHROME_WS_ENDPOINT: z
+  // The Obscura CDP server that renders pages for URL imports. Not necessarily
+  // a raw browser WebSocket URL — it is whatever Playwright's CDP connection
+  // accepts, which the shipped `obscura` service answers on its default port.
+  OBSCURA_ENDPOINT: z
     .string()
-    .min(1, "CHROME_WS_ENDPOINT is required for web scraping")
-    .default("ws://chrome-headless:3000"),
+    .min(1, "OBSCURA_ENDPOINT is required for web scraping")
+    .default("ws://obscura:9222"),
 
   PARSER_API_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
 

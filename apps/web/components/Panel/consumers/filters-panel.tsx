@@ -6,8 +6,8 @@ import Panel from "@/components/Panel/Panel";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/action-button";
 import ChipSkeleton from "@/components/skeleton/chip-skeleton";
 import { useRecipesFiltersContext } from "@/context/recipes-filters-context";
-import { useUserContext } from "@/context/user-context";
 import { useTagsQuery } from "@/hooks/config";
+import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
 import {
   ArrowRightIcon,
   CheckIcon,
@@ -20,10 +20,6 @@ import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 
 import type { FilterMode, RecipeCategory, SortOrder } from "@norish/shared/contracts";
-import {
-  getShowFavoritesPreference,
-  getShowRatingsPreference,
-} from "@norish/shared/lib/user-preferences";
 import StarRating from "@norish/ui/star-rating";
 
 const ALL_CATEGORIES: RecipeCategory[] = ["Breakfast", "Lunch", "Dinner", "Snack"];
@@ -107,12 +103,10 @@ type FiltersPanelProps = {
 };
 export default function FiltersPanel({ open, onOpenChange }: FiltersPanelProps) {
   const { filters, setFilters, clearFilters } = useRecipesFiltersContext();
-  const { user } = useUserContext();
   const t = useTranslations("common.filters");
   const tActions = useTranslations("common.actions");
   const tRecipes = useTranslations("recipes.dashboard");
-  const showRatings = getShowRatingsPreference(user);
-  const showFavorites = getShowFavoritesPreference(user);
+  const { showRatings, showFavorites } = useHiddenItemVisibility();
   const [tagFilter, setTagFilter] = useState("");
   const [workingTags, setWorkingTags] = useState<string[]>(filters.searchTags);
   const [workingCategories, setWorkingCategories] = useState<RecipeCategory[]>(filters.categories);

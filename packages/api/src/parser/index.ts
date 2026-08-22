@@ -1,5 +1,5 @@
 import type { SiteAuthTokenDecryptedDto } from "@norish/shared/contracts/dto/site-auth-tokens";
-import { fetchViaPlaywright } from "@norish/api/parser/fetch";
+import { fetchRenderedPage } from "@norish/api/parser/fetch";
 import { extractRecipeNodesFromJsonLd } from "@norish/api/parser/jsonld";
 import { adaptRecipeScrapersResponse } from "@norish/api/parser/python/adapter";
 import { callRecipeScrapersParser } from "@norish/api/parser/python/client";
@@ -189,7 +189,7 @@ export async function parseRecipeFromUrl(
 
   if (videoResult) return videoResult;
 
-  const html = await fetchViaPlaywright(url, tokens);
+  const html = await fetchRenderedPage(url, tokens);
 
   if (!html) throw new Error("Cannot fetch recipe page.");
 

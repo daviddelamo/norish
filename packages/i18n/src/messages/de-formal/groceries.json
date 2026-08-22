@@ -80,6 +80,7 @@
     "placeholder": "z.B. 500g Hähnchenbrust",
     "editPlaceholder": "z.B. Milch jede Woche",
     "servings": "Portionen",
+    "selectedCount": "{selected} von {total} ausgewählt",
     "loadingIngredients": "Zutaten werden geladen...",
     "noIngredients": "Keine Zutaten.",
     "addSelectedToGroceries": "Zur Einkaufsliste hinzufügen",

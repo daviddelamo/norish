@@ -12,6 +12,8 @@
     "apply": "Apply",
     "reset": "Reset",
     "clear": "Clear",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
     "confirm": "Confirm",
     "back": "Back",
     "next": "Next",
@@ -28,11 +30,12 @@
     "test": "Test",
     "format": "Format",
     "restoreDefaults": "Restore Defaults",
-    "saveChanges": "Save Changes",
-    "revealSecret": "Reveal secret",
-    "hideSecret": "Hide secret",
-    "enterNewValue": "Enter new value",
-    "cancelEditing": "Cancel editing"
+    "saveChanges": "Save Changes"
+  },
+  "secret": {
+    "reveal": "Reveal secret",
+    "hide": "Hide secret",
+    "keepsCurrent": "Leave empty to keep the saved value."
   },
   "status": {
     "loading": "Loading...",

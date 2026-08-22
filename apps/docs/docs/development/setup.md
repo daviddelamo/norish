@@ -13,7 +13,7 @@ There are two supported ways to develop Norish: the provided **devcontainer**
 
 - **Node.js** 22.22.0 (see `.nvmrc`)
 - **pnpm** 10.x or later
-- **Docker** (for PostgreSQL, Redis, and headless Chrome)
+- **Docker** (for PostgreSQL, Redis, and Obscura)
 - **Git**
 
 ## Devcontainer development
@@ -33,7 +33,7 @@ pnpm run dev:mobile
 ```
 
 The devcontainer starts the required dependency services (`db`, `redis`, and
-`chrome-headless`) for you, so you do **not** need to run `pnpm run docker:up`.
+`obscura`) for you, so you do **not** need to run `pnpm run docker:up`.
 
 :::tip
 To customize devcontainer settings, copy the default folder — everything inside
@@ -54,7 +54,7 @@ pnpm install
 # Create your environment file
 cp .env.example .env.local
 
-# Start required services (Postgres, Redis, Chrome)
+# Start required services (Postgres, Redis, Obscura)
 pnpm run docker:up
 
 # Run the web app (also starts the embedded parser from apps/parser-api/.venv)
@@ -63,6 +63,12 @@ pnpm run dev
 # Run the mobile app (Expo)
 pnpm run dev:mobile
 ```
+
+`obscura` is the headless browser URL imports render pages in before the
+structured parser and the AI fallback read the HTML — see
+[Recipe parser](../configuration/parser.md). `.env.example` points
+`OBSCURA_ENDPOINT` at the port the local stack publishes on loopback, so
+imports work without extra setup.
 
 At minimum, your `.env.local` needs `DATABASE_URL`, `REDIS_URL`, `AUTH_URL`, and
 `MASTER_KEY` (generate the last with `openssl rand -base64 32`). See

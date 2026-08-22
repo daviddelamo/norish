@@ -281,6 +281,20 @@
       "when": 1785709646509,
       "tag": "0039_step_ingredients",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1787304565820,
+      "tag": "0040_dish_color",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1787351370601,
+      "tag": "0041_generated_recipe_images",
+      "breakpoints": true
     }
   ]
 }

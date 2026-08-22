@@ -80,6 +80,7 @@
     "placeholder": "напр. 900 г пилешко филе",
     "editPlaceholder": "напр. мляко всяка седмица",
     "servings": "Порции",
+    "selectedCount": "Избрани {selected} от {total}",
     "loadingIngredients": "Зареждане на съставките...",
     "noIngredients": "Няма съставки.",
     "addSelectedToGroceries": "Добави в продуктите",

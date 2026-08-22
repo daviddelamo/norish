@@ -38,6 +38,9 @@
     "backToRecipes": "Back to recipes",
     "viewOriginal": "View original recipe",
     "ingredients": "Ingredients",
+    "ingredientOptions": "Ingredient options",
+    "showMore": "Show more",
+    "showLess": "Show less",
     "steps": "Steps",
     "notes": "Notes",
     "addToGroceries": "Add to groceries",
@@ -51,7 +54,12 @@
     "instructions": "Instructions",
     "cook": "Cook",
     "switchToDecimal": "Show decimals",
-    "switchToFraction": "Show fractions"
+    "switchToFraction": "Show fractions",
+    "servingsCount": "{count, plural, one {# serving} other {# servings}}",
+    "source": "Source",
+    "addedBy": "Added by {name}",
+    "decreaseServings": "Fewer servings",
+    "increaseServings": "More servings"
   },
   "actions": {
     "plan": "Plan",
@@ -76,7 +84,9 @@
     "inferringProvenance": "Working out provenance…",
     "linkIngredients": "Link Ingredients to Steps",
     "linkingIngredients": "Linking ingredients…",
-    "enrichmentFailed": "Last run failed"
+    "enrichmentFailed": "Last run failed",
+    "generateImage": "Generate Picture",
+    "generatingImage": "Generating picture…"
   },
   "sharePanel": {
     "title": "Share recipe",
@@ -125,7 +135,8 @@
   "convert": {
     "ariaLabel": "Convert measurement system",
     "toMetric": "Convert to Metric",
-    "toUS": "Convert to US"
+    "toUS": "Convert to US",
+    "converting": "Converting…"
   },
   "deleteModal": {
     "title": "Delete Recipe",
@@ -155,7 +166,7 @@
     "notesPlaceholder": "Add prep notes, adjustments or serving tips for this recipe...",
     "ingredientsHelp": "Type ingredients like \"2 cups flour\" - we'll automatically parse amounts and units.",
     "instructionsHelp": "Write clear step-by-step instructions. Press Enter to move to the next step.",
-    "tagsHelp": "Type tags and click suggestions to add. Selected tags are blue, new tags have a dashed border.",
+    "tagsHelp": "Type tags and click suggestions to add. Tags on the recipe are filled in; new tags have a dashed border.",
     "tagsAndCategories": "Tags & Categories",
     "categoriesHelp": "Select meal categories for this recipe.",
     "category": {
@@ -296,7 +307,10 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Swipe to navigate steps",
     "swipeIngredients": "Swipe left for ingredients",
-    "swipeBackToSteps": "Swipe right for steps"
+    "swipeBackToSteps": "Swipe right for steps",
+    "readyAt": "Ready around {time}",
+    "timers": "Timers",
+    "nextStep": "Next step"
   },
   "enrichment": {
     "failed": "Enrichment failed",
@@ -312,7 +326,8 @@
       "auto-categorization": "Auto-categorization",
       "nutrition-estimation": "Nutrition estimation",
       "recipe-provenance": "Recipe Provenance",
-      "ingredient-linking": "Ingredient Linking"
+      "ingredient-linking": "Ingredient Linking",
+      "image-generation": "Image Generation"
     }
   },
   "provenance": {
@@ -326,5 +341,16 @@
   "import": {
     "alreadyExists": "You already have this recipe",
     "openExisting": "Open"
+  },
+  "glanceBar": {
+    "totalTime": "Total time",
+    "servings": "{count, plural, one {serving} other {servings}}"
+  },
+  "cookingTime": {
+    "title": "Cooking time",
+    "prep": "Prep",
+    "cook": "Cook",
+    "other": "Other time",
+    "total": "Total"
   }
 }

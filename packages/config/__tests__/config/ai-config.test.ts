@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { AIConfigSchema, DEFAULT_AUTOMATIC_ENRICHMENT } from "@norish/config/zod/server-config";
+import type { ImageGenerationConfig } from "@norish/config/zod/server-config";
+import {
+  AIConfigSchema,
+  DEFAULT_AUTOMATIC_ENRICHMENT,
+  ImageGenerationConfigSchema,
+  isImageGenerationConfigValid,
+  resolveImageGenerationSettings,
+} from "@norish/config/zod/server-config";
 
 const base = {
   enabled: true,
@@ -26,6 +33,7 @@ describe("AIConfigSchema automatic enrichment", () => {
       recipeProvenance: false,
       // A new kind ships off: an upgrade must not silently spend AI.
       ingredientLinking: false,
+      imageGeneration: false,
     });
     expect(config.automaticEnrichment).toEqual(DEFAULT_AUTOMATIC_ENRICHMENT);
   });
@@ -52,6 +60,7 @@ describe("AIConfigSchema automatic enrichment", () => {
         nutritionEstimation: true,
         recipeProvenance: true,
         ingredientLinking: true,
+        imageGeneration: true,
       },
     });
 
@@ -63,7 +72,18 @@ describe("AIConfigSchema automatic enrichment", () => {
       nutritionEstimation: true,
       recipeProvenance: true,
       ingredientLinking: true,
+      imageGeneration: true,
     });
+  });
+
+  it("leaves image generation off for stored config that predates the kind", () => {
+    // The seventh switch arrives through the same fallback as its siblings:
+    // a row written before it existed parses with the kind off, never on.
+    const config = parse({
+      automaticEnrichment: { autoTagging: true, allergyDetection: true },
+    });
+
+    expect(config.automaticEnrichment.imageGeneration).toBe(false);
   });
 
   it("drops the legacy fields from the canonical output", () => {
@@ -120,5 +140,102 @@ describe("AIConfigSchema legacy migration", () => {
     const twice = AIConfigSchema.parse(once);
 
     expect(twice).toEqual(once);
+  });
+});
+
+describe("ImageGenerationConfigSchema", () => {
+  function imageConfig(overrides: Partial<ImageGenerationConfig> = {}): ImageGenerationConfig {
+    return ImageGenerationConfigSchema.parse({
+      provider: "openai",
+      model: "gpt-image-1",
+      apiKey: "image-key",
+      ...overrides,
+    });
+  }
+
+  it("accepts only providers whose SDK package exposes an image model", () => {
+    for (const provider of ["openai", "google", "azure", "lm-studio", "generic-openai"]) {
+      expect(ImageGenerationConfigSchema.parse({ provider, model: "m" }).provider).toBe(provider);
+    }
+    expect(ImageGenerationConfigSchema.parse({ provider: "disabled" }).provider).toBe("disabled");
+  });
+
+  it.each(["anthropic", "mistral", "deepseek", "groq", "perplexity", "ollama"])(
+    "refuses %s, which exposes no image model",
+    (provider) => {
+      expect(() => ImageGenerationConfigSchema.parse({ provider, model: "m" })).toThrow();
+    }
+  );
+
+  it("has no timeout of its own", () => {
+    // ADR-0015: there is one AI timeout, and image generation runs under it.
+    expect(imageConfig()).not.toHaveProperty("timeoutMs");
+  });
+
+  describe("resolveImageGenerationSettings", () => {
+    const aiConfig = { provider: "openai", endpoint: "https://ai.example", apiKey: "ai-key" };
+
+    it("falls back to the AI configuration when the provider matches", () => {
+      const settings = resolveImageGenerationSettings(
+        imageConfig({ apiKey: undefined, endpoint: undefined }),
+        aiConfig
+      );
+
+      expect(settings).toEqual({ endpoint: "https://ai.example", apiKey: "ai-key" });
+    });
+
+    it("does not fall back when the provider differs", () => {
+      const settings = resolveImageGenerationSettings(
+        imageConfig({ provider: "google", apiKey: undefined, endpoint: undefined }),
+        aiConfig
+      );
+
+      expect(settings).toEqual({ endpoint: undefined, apiKey: undefined });
+    });
+
+    it("prefers the block's own endpoint and key over the fallback", () => {
+      const settings = resolveImageGenerationSettings(
+        imageConfig({ endpoint: "https://images.example", apiKey: "own-key" }),
+        aiConfig
+      );
+
+      expect(settings).toEqual({ endpoint: "https://images.example", apiKey: "own-key" });
+    });
+  });
+
+  describe("isImageGenerationConfigValid", () => {
+    it("ships unconfigured: no stored block means no image provider", () => {
+      expect(isImageGenerationConfigValid(null, null)).toBe(false);
+    });
+
+    it("is unconfigured when the provider is disabled or the model is blank", () => {
+      expect(isImageGenerationConfigValid(imageConfig({ provider: "disabled" }), null)).toBe(false);
+      expect(isImageGenerationConfigValid(imageConfig({ model: "  " }), null)).toBe(false);
+      expect(isImageGenerationConfigValid(imageConfig({ model: undefined }), null)).toBe(false);
+    });
+
+    it("requires a key for cloud providers, honouring the matching-provider fallback", () => {
+      const keyless = imageConfig({ apiKey: undefined });
+
+      expect(isImageGenerationConfigValid(keyless, null)).toBe(false);
+      expect(isImageGenerationConfigValid(keyless, { provider: "openai", apiKey: "ai-key" })).toBe(
+        true
+      );
+      expect(
+        isImageGenerationConfigValid(keyless, { provider: "anthropic", apiKey: "ai-key" })
+      ).toBe(false);
+    });
+
+    it("requires an endpoint for the local providers", () => {
+      const local = imageConfig({ provider: "lm-studio", apiKey: undefined, endpoint: undefined });
+
+      expect(isImageGenerationConfigValid(local, null)).toBe(false);
+      expect(
+        isImageGenerationConfigValid(
+          imageConfig({ ...local, endpoint: "http://localhost:1234" }),
+          null
+        )
+      ).toBe(true);
+    });
   });
 });

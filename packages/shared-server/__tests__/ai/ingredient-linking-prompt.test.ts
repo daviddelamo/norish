@@ -26,6 +26,28 @@ describe("the shipped Ingredient Linking prompt", () => {
     expect(LINKING_PROMPT).toMatch(/"Add the spices" means every spice\s+line/i);
   });
 
+  it("asks what a step brings in rather than what it has to hand", () => {
+    expect(LINKING_PROMPT).toMatch(/which ingredient lines the step brings into the dish/i);
+    expect(LINKING_PROMPT).toMatch(/put that ingredient to work for\s+the first time/i);
+  });
+
+  it("keeps back-references to earlier work from opening up into lines", () => {
+    // The over-linking this prompt exists to prevent: a follow-up step that
+    // says "the mixture" listing everything the mixture was made of.
+    expect(LINKING_PROMPT).toMatch(/read the steps in order/i);
+    expect(LINKING_PROMPT).toMatch(/"the mixture", "the batter", "the dough"/i);
+    expect(LINKING_PROMPT).toMatch(/never open such a phrase up\s+into the lines behind it/i);
+  });
+
+  it("works both back-reference shapes through as examples", () => {
+    expect(LINKING_PROMPT).toMatch(/"Blend until homogeneous".+brings in nothing at all/is);
+    expect(LINKING_PROMPT).toMatch(/knead in the mince.+brings in the mince, the salt and the/is);
+  });
+
+  it("still links an ingredient a later step reaches for again", () => {
+    expect(LINKING_PROMPT).toMatch(/"the\s+remaining butter", "the rest of the stock"/i);
+  });
+
   it("teaches fractional shares with the half-the-water example", () => {
     expect(LINKING_PROMPT).toMatch(/"Half the water" is 0\.5/);
     expect(LINKING_PROMPT).toMatch(/the share is 1/i);
@@ -39,7 +61,8 @@ describe("the shipped Ingredient Linking prompt", () => {
   });
 
   it("lets steps that use nothing stay bare", () => {
-    expect(LINKING_PROMPT).toMatch(/Omit steps that use nothing/i);
+    expect(LINKING_PROMPT).toMatch(/Omit steps that use nothing new/i);
+    expect(LINKING_PROMPT).toMatch(/only carries on with what is already in the dish/i);
   });
 
   it("forbids invented numbers and heading links", () => {

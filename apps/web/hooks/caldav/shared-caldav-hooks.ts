@@ -8,9 +8,9 @@ import { createCaldavHooks } from "@norish/shared-react/hooks";
 export const sharedCaldavHooks = createCaldavHooks({
   useTRPC,
   useToastAdapter: () => ({
-    showSyncCompleteToast: (totalSynced: number, totalFailed: number) => {
-      toast("CalDAV Sync Complete", {
-        description: `Synced ${totalSynced} items${totalFailed > 0 ? `, ${totalFailed} failed` : ""}`,
+    showSyncCompleteToast: (totalQueued: number, totalFailed: number) => {
+      toast("CalDAV Sync Started", {
+        description: `Syncing ${totalQueued} items${totalFailed > 0 ? `, ${totalFailed} could not be queued` : ""}`,
         variant: totalFailed > 0 ? "warning" : "success",
       });
     },

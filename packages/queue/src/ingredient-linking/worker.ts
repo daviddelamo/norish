@@ -4,10 +4,11 @@
  * One AI request infers, per step, which ingredient lines the step uses and
  * what fraction of each. The inference is semantic and runs once, against the
  * recipe's active measurement system; the repository write fans it out to
- * every system's rows by order. It is a gap-filler in every case: only steps
- * with no Step Ingredients receive links, so a person's own links are never
- * replaced, whatever the run's origin. An empty claim is an unchanged
- * success, not a failure. Uses lazy worker pattern.
+ * every system's rows by order. Ordinarily it is a gap-filler: only steps with
+ * no Step Ingredients receive links, so a person's own links are never
+ * replaced. An administrator's bulk refresh is the exception, and it clears
+ * the recipe's links before writing. An empty claim is an unchanged success,
+ * not a failure, and never clears anything. Uses lazy worker pattern.
  *
  * The worker holds no database handle and composes no queries: it calls one
  * repository operation, which is where the gap-filling write lives.
@@ -17,9 +18,10 @@ import type { Job } from "bullmq";
 
 import type { RecipeEnrichmentJobData } from "@norish/queue/contracts/job-types";
 import type { RecipeForIngredientLinking } from "@norish/shared-server/ai/enrichment/ingredient-linking-inferrer";
-import { addStepIngredientsToBareSteps } from "@norish/db/repositories/recipe-enrichment";
+import { writeInferredStepIngredients } from "@norish/db/repositories/recipe-enrichment";
 import { inferStepIngredients } from "@norish/shared-server/ai/enrichment/ingredient-linking-inferrer";
 import { createLogger } from "@norish/shared-server/logger";
+import { enrichmentWriteMode } from "@norish/shared/lib/recipe-enrichment";
 import { toLineAmount } from "@norish/shared/lib/step-ingredients";
 
 import { defineLazyWorker, QUEUE_NAMES } from "../config";
@@ -80,24 +82,33 @@ export async function processIngredientLinkingJob(
 
     await reportStep(job, "saving");
 
-    const written = await addStepIngredientsToBareSteps(
+    const mode = enrichmentWriteMode("ingredient-linking", job.data);
+    const written = await writeInferredStepIngredients(
       recipe.id,
-      claim.links.map((link) => ({ stepOrder: link.stepOrder, refs: link.refs }))
+      claim.links.map((link) => ({ stepOrder: link.stepOrder, refs: link.refs })),
+      mode
     );
+
+    // Clearing counts as a change on its own: a refresh whose claim landed on
+    // no step still emptied the ones it removed, and clients would otherwise
+    // keep rendering links the recipe no longer has.
+    const changed = written.filled > 0 || written.cleared > 0;
 
     log.info(
       {
         recipeId: recipe.id,
         claimedSteps: claim.links.length,
-        writtenSteps: written,
+        writtenSteps: written.filled,
+        clearedSteps: written.cleared,
         origin: job.data.origin,
+        mode,
       },
-      written > 0
-        ? "Step Ingredients saved to bare steps"
+      changed
+        ? "Step Ingredients saved"
         : "Step Ingredients deferred: every claimed step already has links"
     );
 
-    return written > 0;
+    return changed;
   });
 }
 

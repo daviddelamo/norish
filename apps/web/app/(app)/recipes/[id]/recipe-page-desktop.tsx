@@ -5,6 +5,7 @@ import ActionsMenu from "@/app/(app)/recipes/[id]/components/actions-menu";
 import AddToGroceries from "@/app/(app)/recipes/[id]/components/add-to-groceries-button";
 import CookingMode from "@/app/(app)/recipes/[id]/components/cookingmode";
 import IngredientsList from "@/app/(app)/recipes/[id]/components/ingredient-list";
+import NotesCard from "@/app/(app)/recipes/[id]/components/notes-card";
 import NutritionCard from "@/app/(app)/recipes/[id]/components/nutrition-card";
 import ProvenanceCard from "@/app/(app)/recipes/[id]/components/provenance-card";
 import StepsList from "@/app/(app)/recipes/[id]/components/steps-list";
@@ -13,22 +14,17 @@ import AmountDisplayToggle from "@/components/recipes/amount-display-toggle";
 import AuthorChip from "@/components/recipes/author-chip";
 import {
   ReadonlyRecipeMedia,
-  ReadonlyRecipeNotes,
   ReadonlyRecipeSummary,
 } from "@/components/recipes/readonly-recipe-sections";
 import DoubleTapContainer from "@/components/shared/double-tap-container";
 import HeartButton from "@/components/shared/heart-button";
-import { useUserContext } from "@/context/user-context";
 import { useFavoritesMutation, useFavoritesQuery } from "@/hooks/favorites";
 import { useRatingQuery, useRatingsMutation } from "@/hooks/ratings";
+import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
 import { ArrowLeftIcon } from "@heroicons/react/16/solid";
 import { Card } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
-import {
-  getShowFavoritesPreference,
-  getShowRatingsPreference,
-} from "@norish/shared/lib/user-preferences";
 import StarRating from "@norish/ui/star-rating";
 
 import ServingsControl from "./components/servings-control";
@@ -45,10 +41,8 @@ export default function RecipePageDesktop() {
   const { toggleFavorite } = useFavoritesMutation();
   const { userRating, averageRating, isLoading: isRatingLoading } = useRatingQuery(recipe.id);
   const { rateRecipe, isRating } = useRatingsMutation();
-  const { user } = useUserContext();
   const t = useTranslations("recipes.detail");
-  const showRatings = getShowRatingsPreference(user);
-  const showFavorites = getShowFavoritesPreference(user);
+  const { showRatings, showFavorites } = useHiddenItemVisibility();
 
   const isFavorite = checkFavorite(recipe.id);
   const handleToggleFavorite = () => toggleFavorite(recipe.id);
@@ -149,16 +143,7 @@ export default function RecipePageDesktop() {
           <ProvenanceCard />
 
           {/* Notes */}
-          {recipe.notes && (
-            <Card className="rounded-2xl">
-              <Card.Header className="flex-row items-center justify-between px-6 pt-6 text-left">
-                <h2 className="text-lg font-semibold">{t("notes")}</h2>
-              </Card.Header>
-              <Card.Content className="p-6 pt-0">
-                <ReadonlyRecipeNotes notes={recipe.notes} />
-              </Card.Content>
-            </Card>
-          )}
+          <NotesCard />
 
           {/* Steps Card (below image in right column) */}
           <Card className="rounded-2xl">

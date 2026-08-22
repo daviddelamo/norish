@@ -133,6 +133,73 @@ test("backend-down unseen navigation boots every Warm Set surface", async () => 
   await expect(page.getByText(SEEDED_RECIPE_NAME).first()).toBeVisible();
 });
 
+test("the Dish Colour tint is present while Offline (ADR-0023)", async () => {
+  // Still backend-down from the previous scenario. The colour travelled
+  // with the warmed recipe data, so the page tints before — and without —
+  // any network.
+  await page.goto(`/recipes/${SEEDED_RECIPE_ID}`);
+  await expect(page.getByText(SEEDED_RECIPE_NAME).first()).toBeVisible();
+
+  const scope = page.locator("[data-dish-tint]");
+
+  await expect(scope).toHaveCount(1);
+  await expect(scope).toHaveAttribute("style", /--dish-h/);
+});
+
+test("a reader who declined the tint never renders a tinted frame offline", async () => {
+  // The two load paths the device-preference machinery exists to cover
+  // without a server pass: a navigation answered from the service worker's
+  // HTML cache (this document was cached while the preference was still
+  // `dish`), and the offline bootstrap fallback. The observer records the
+  // tint attribute ever attaching, so a tinted-then-corrected frame fails
+  // this test even though the corrected state would look right.
+  await offline.context.addInitScript(() => {
+    (window as unknown as { __dishTintSeen: boolean }).__dishTintSeen = false;
+    const record = () => {
+      (window as unknown as { __dishTintSeen: boolean }).__dishTintSeen ||=
+        document.querySelector("[data-dish-tint]") != null;
+    };
+
+    new MutationObserver(record).observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["data-dish-tint"],
+    });
+  });
+  await offline.context.addCookies([
+    {
+      name: "norish_recipe_page_color",
+      value: "theme",
+      url: offline.baseURL,
+    },
+  ]);
+
+  await page.goto(`/recipes/${SEEDED_RECIPE_ID}`);
+  await expect(page.getByText(SEEDED_RECIPE_NAME).first()).toBeVisible();
+  await expect(page.locator("[data-dish-tint]")).toHaveCount(0);
+  expect(
+    await page.evaluate(() => (window as unknown as { __dishTintSeen: boolean }).__dishTintSeen)
+  ).toBe(false);
+
+  // A second document load through the bootstrap surface behaves the same.
+  await page.goto("/");
+  await expect(page.getByText(SEEDED_RECIPE_NAME).first()).toBeVisible();
+  await page.goto(`/recipes/${SEEDED_RECIPE_ID}`);
+  await expect(page.getByText(SEEDED_RECIPE_NAME).first()).toBeVisible();
+  await expect(page.locator("[data-dish-tint]")).toHaveCount(0);
+  expect(
+    await page.evaluate(() => (window as unknown as { __dishTintSeen: boolean }).__dishTintSeen)
+  ).toBe(false);
+
+  // Hand the next scenario the state it inherited before this test: the
+  // preference cookie gone, the session cookies intact, parked on a cached
+  // surface.
+  await offline.selectIdentity("a");
+  await page.goto("/");
+  await expect(page.getByText(SEEDED_RECIPE_NAME).first()).toBeVisible();
+});
+
 test("a hanging network observes the Reachability Deadline (ADR-0013)", async () => {
   // Before the deadline handler, this scenario hung on whatever was on screen
   // indefinitely: NetworkFirst had no timeout for documents and the fallback

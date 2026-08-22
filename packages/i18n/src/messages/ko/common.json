@@ -12,6 +12,8 @@
     "apply": "적용",
     "reset": "초기화",
     "clear": "지우기",
+    "selectAll": "전체 선택",
+    "deselectAll": "전체 선택 해제",
     "confirm": "확인",
     "back": "뒤로",
     "next": "다음",
@@ -28,11 +30,12 @@
     "test": "테스트",
     "format": "서식",
     "restoreDefaults": "기본값 복원",
-    "saveChanges": "변경사항 저장",
-    "revealSecret": "시크릿 표시",
-    "hideSecret": "시크릿 숨기기",
-    "enterNewValue": "새 값을 입력하세요",
-    "cancelEditing": "편집 취소"
+    "saveChanges": "변경사항 저장"
+  },
+  "secret": {
+    "reveal": "시크릿 표시",
+    "hide": "시크릿 숨기기",
+    "keepsCurrent": "저장된 값을 유지하려면 비워 두세요."
   },
   "status": {
     "loading": "불러오는 중...",

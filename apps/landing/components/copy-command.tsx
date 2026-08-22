@@ -41,16 +41,11 @@ export function CopyCommand({
   const collapsed = collapsible && !expanded;
 
   return (
-    <div className="border-border bg-surface overflow-hidden rounded-2xl border text-left shadow-[0_30px_60px_-32px_rgba(0,0,0,0.5)]">
-      <div className="border-border bg-surface-secondary/50 flex items-center justify-between border-b px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <span className="size-2.5 rounded-full bg-[#ff5f57]" />
-          <span className="size-2.5 rounded-full bg-[#febc2e]" />
-          <span className="size-2.5 rounded-full bg-[#28c840]" />
-          <span className="text-muted ml-2 font-mono text-xs">{filename}</span>
-        </div>
+    <div className="border-border bg-surface overflow-hidden rounded-2xl border text-left shadow-[0_30px_70px_-45px_rgb(0_0_0/0.5)]">
+      <div className="border-border flex items-center justify-between border-b px-4 py-2.5">
+        <span className="text-muted font-mono text-xs">{filename}</span>
         <button
-          className="text-muted hover:text-foreground hover:bg-surface inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors"
+          className="text-muted hover:text-foreground inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs transition-colors"
           type="button"
           onClick={copy}
         >

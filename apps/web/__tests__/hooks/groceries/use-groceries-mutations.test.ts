@@ -244,8 +244,7 @@ describe("useGroceriesMutations", () => {
       act(() => result.current.createGrocery("Apples"));
 
       const options = _mockMutations.create.mock.calls[0]?.[1] as
-        | { onError: (error: unknown) => void }
-        | undefined;
+        { onError: (error: unknown) => void } | undefined;
 
       const admissionError = new TypeError("Failed to fetch");
 
@@ -278,8 +277,7 @@ describe("useGroceriesMutations", () => {
       act(() => result.current.toggleGroceries(["g1"], true));
 
       const options = _mockMutations.toggle.mock.calls[0]?.[1] as
-        | { onError: (error: unknown) => void }
-        | undefined;
+        { onError: (error: unknown) => void } | undefined;
 
       const admissionError = new TypeError("Failed to fetch");
 

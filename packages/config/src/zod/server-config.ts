@@ -15,6 +15,7 @@ export const ServerConfigKeys = {
   RECURRENCE_CONFIG: "recurrence_config",
   AI_CONFIG: "ai_config",
   VIDEO_CONFIG: "video_config",
+  IMAGE_GENERATION_CONFIG: "image_generation_config",
   SCHEDULER_CLEANUP_MONTHS: "scheduler_cleanup_months",
   JOB_RETENTION: "job_retention",
   RECIPE_PERMISSION_POLICY: "recipe_permission_policy",
@@ -142,6 +143,8 @@ export const PromptsConfigSchema = z.object({
   imageExtraction: z.string().optional(),
   autoCategorization: z.string().optional(),
   allergyDetection: z.string().optional(),
+  imageGenerationBrief: z.string().optional(),
+  imageGenerationStyle: z.string().optional(),
   isOverridden: z.boolean().optional(),
 });
 
@@ -295,6 +298,7 @@ export const AutomaticEnrichmentSchema = z.object({
   nutritionEstimation: z.boolean(),
   recipeProvenance: z.boolean(),
   ingredientLinking: z.boolean(),
+  imageGeneration: z.boolean(),
 });
 
 export type AutomaticEnrichmentConfig = z.infer<typeof AutomaticEnrichmentSchema>;
@@ -312,6 +316,7 @@ export const DEFAULT_AUTOMATIC_ENRICHMENT: AutomaticEnrichmentConfig = {
   nutritionEstimation: false,
   recipeProvenance: false,
   ingredientLinking: false,
+  imageGeneration: false,
 };
 
 export const DEFAULT_TAG_STRATEGY: TagStrategy = "predefined";
@@ -381,6 +386,8 @@ export const AIConfigSchema = AIConfigInputSchema.transform(
           automaticEnrichment?.recipeProvenance ?? DEFAULT_AUTOMATIC_ENRICHMENT.recipeProvenance,
         ingredientLinking:
           automaticEnrichment?.ingredientLinking ?? DEFAULT_AUTOMATIC_ENRICHMENT.ingredientLinking,
+        imageGeneration:
+          automaticEnrichment?.imageGeneration ?? DEFAULT_AUTOMATIC_ENRICHMENT.imageGeneration,
       },
     };
   }
@@ -483,6 +490,114 @@ export const VideoConfigSchema = z.object({
 });
 
 export type VideoConfig = z.infer<typeof VideoConfigSchema>;
+
+// ============================================================================
+// Image Generation Configuration Schema
+// ============================================================================
+
+/**
+ * Providers whose installed AI SDK package exposes an image model, plus
+ * `disabled` (ADR-0024). Anthropic, Mistral, DeepSeek, Groq, Perplexity and
+ * Ollama expose none, which is why Image Generation reads its own provider
+ * block rather than the server's. This is a fact about the installed provider
+ * packages, not about any model — re-check it when the AI SDK line moves.
+ */
+export const ImageGenerationProviderSchema = z.enum([
+  "openai",
+  "google",
+  "azure",
+  "lm-studio",
+  "generic-openai",
+  "disabled",
+]);
+
+export type ImageGenerationProvider = z.infer<typeof ImageGenerationProviderSchema>;
+
+/** All enabled (non-disabled) image generation providers. */
+export const IMAGE_GENERATION_PROVIDERS_ENABLED = [
+  "openai",
+  "google",
+  "azure",
+  "lm-studio",
+  "generic-openai",
+] as const satisfies readonly ImageGenerationProvider[];
+
+/** Cloud providers that require an API key. */
+export const IMAGE_GENERATION_PROVIDERS_CLOUD = [
+  "openai",
+  "google",
+  "azure",
+] as const satisfies readonly ImageGenerationProvider[];
+
+/** Providers that require an endpoint URL. Azure's is optional, as in the AI block. */
+export const IMAGE_GENERATION_PROVIDERS_NEED_ENDPOINT = [
+  "lm-studio",
+  "generic-openai",
+] as const satisfies readonly ImageGenerationProvider[];
+
+/** Check if provider is a cloud provider (requires API key). */
+export function isCloudImageGenerationProvider(provider: ImageGenerationProvider): boolean {
+  return (IMAGE_GENERATION_PROVIDERS_CLOUD as readonly string[]).includes(provider);
+}
+
+/** Check if provider needs an endpoint URL. */
+export function imageGenerationProviderNeedsEndpoint(provider: ImageGenerationProvider): boolean {
+  return (IMAGE_GENERATION_PROVIDERS_NEED_ENDPOINT as readonly string[]).includes(provider);
+}
+
+/**
+ * The Image Generation block: its own provider, model, endpoint and key,
+ * following transcription's shape (ADR-0024). Deliberately no timeout — the
+ * existing AI timeout governs every model request (ADR-0015). Ships
+ * unconfigured: no stored row means no image provider.
+ */
+export const ImageGenerationConfigSchema = z.object({
+  provider: ImageGenerationProviderSchema,
+  model: z.string().optional(),
+  endpoint: z.url("Endpoint must be a valid URL").optional(),
+  apiKey: z.string().optional(),
+});
+
+export type ImageGenerationConfig = z.infer<typeof ImageGenerationConfigSchema>;
+
+/**
+ * The endpoint and key one image request runs with: the block's own values,
+ * falling back to the AI configuration when the provider matches — so a
+ * matching key is never typed twice, and a differing provider never borrows
+ * credentials that would not work.
+ */
+export function resolveImageGenerationSettings(
+  imageConfig: Pick<ImageGenerationConfig, "provider" | "endpoint" | "apiKey">,
+  aiConfig: { provider: string; endpoint?: string; apiKey?: string } | null | undefined
+): { endpoint?: string; apiKey?: string } {
+  const providerMatches = aiConfig?.provider === imageConfig.provider;
+
+  return {
+    endpoint: imageConfig.endpoint || (providerMatches ? aiConfig?.endpoint : undefined),
+    apiKey: imageConfig.apiKey || (providerMatches ? aiConfig?.apiKey : undefined),
+  };
+}
+
+/**
+ * Whether the stored Image Generation block can serve a request at all.
+ * One definition, shared by the coordinator's skip, the manual request's
+ * refusal, and the runtime's configuration error — so "no image provider
+ * configured" means the same thing everywhere.
+ */
+export function isImageGenerationConfigValid(
+  imageConfig: ImageGenerationConfig | null | undefined,
+  aiConfig: { provider: string; endpoint?: string; apiKey?: string } | null | undefined
+): boolean {
+  if (!imageConfig || imageConfig.provider === "disabled") return false;
+  if (!imageConfig.model?.trim()) return false;
+
+  const { endpoint, apiKey } = resolveImageGenerationSettings(imageConfig, aiConfig);
+
+  if (isCloudImageGenerationProvider(imageConfig.provider) && !apiKey) return false;
+  if (imageGenerationProviderNeedsEndpoint(imageConfig.provider) && !endpoint) return false;
+
+  return true;
+}
 
 // ============================================================================
 // Scheduler Configuration Schema
@@ -630,6 +745,8 @@ export function getSchemaForConfigKey(key: ServerConfigKey): z.ZodType {
       return AIConfigSchema;
     case ServerConfigKeys.VIDEO_CONFIG:
       return VideoConfigSchema;
+    case ServerConfigKeys.IMAGE_GENERATION_CONFIG:
+      return ImageGenerationConfigSchema;
     case ServerConfigKeys.SCHEDULER_CLEANUP_MONTHS:
       return SchedulerCleanupMonthsSchema;
     case ServerConfigKeys.JOB_RETENTION:
@@ -678,6 +795,7 @@ export const SENSITIVE_CONFIG_KEYS: ServerConfigKey[] = [
   ServerConfigKeys.AUTH_PROVIDER_GOOGLE,
   ServerConfigKeys.AI_CONFIG,
   ServerConfigKeys.VIDEO_CONFIG,
+  ServerConfigKeys.IMAGE_GENERATION_CONFIG,
 ];
 
 /**

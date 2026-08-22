@@ -6,7 +6,7 @@ Thank you for your interest in contributing to Norish! This guide will help you 
 
 - **Node.js** 22.22.0 (see `.nvmrc`)
 - **pnpm** 10.x or later
-- **Docker** (for PostgreSQL and Redis)
+- **Docker** (for PostgreSQL, Redis, and Obscura)
 - **Git**
 
 ## Getting Started
@@ -40,9 +40,12 @@ Edit `.env.local` with your local configuration. At minimum, you need:
 ### 4. Start Required Services
 
 ```bash
-docker run -d --name norish-db -e POSTGRES_PASSWORD=norish -e POSTGRES_DB=norish -p 5432:5432 postgres:17-alpine
-docker run -d --name norish-redis -p 6379:6379 redis:8-alpine
+pnpm run docker:up
 ```
+
+That starts PostgreSQL, Redis, and Obscura — the browser that renders pages for
+URL imports — so nothing has to be launched by hand. `pnpm run docker:down`
+stops them again.
 
 ### 5. Run Development Server
 

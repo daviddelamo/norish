@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect } from "react";
+import RecipePageTint from "@/components/recipes/recipe-page-tint";
 import AuthLanguageSelector from "@/components/shared/auth-language-selector";
 import { NotFoundView } from "@/components/shared/not-found-view";
 import RecipeSkeleton from "@/components/skeleton/recipe-skeleton";
@@ -39,8 +40,10 @@ function SharedRecipePageContent({ token }: { token: string }) {
       <div className="hidden justify-end pt-4 md:flex md:px-6">
         <AuthLanguageSelector />
       </div>
-      <SharedRecipePageDesktop />
-      <SharedRecipePageMobile />
+      <RecipePageTint dishColor={recipe.dishColor}>
+        <SharedRecipePageDesktop />
+        <SharedRecipePageMobile />
+      </RecipePageTint>
     </PublicRecipeProvider>
   );
 }

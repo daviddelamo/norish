@@ -248,11 +248,12 @@ function createBetterAuth() {
         await redis.del(key);
       },
     },
-    // Rate limiting configuration
+    // Rate limiting configuration. Values come from the environment so a test
+    // harness can lift the ceiling; the defaults are the production ones.
     rateLimit: {
-      enabled: true,
-      window: 60, // 60 seconds
-      max: 20, // 20 requests per window
+      enabled: SERVER_CONFIG.AUTH_RATE_LIMIT_ENABLED,
+      window: SERVER_CONFIG.AUTH_RATE_LIMIT_WINDOW, // seconds
+      max: SERVER_CONFIG.AUTH_RATE_LIMIT_MAX, // requests per window
       storage: "secondary-storage",
     },
     // Email and password authentication (conditionally enabled)

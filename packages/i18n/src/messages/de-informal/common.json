@@ -12,6 +12,8 @@
     "apply": "Anwenden",
     "reset": "Zurücksetzen",
     "clear": "Löschen",
+    "selectAll": "Alle auswählen",
+    "deselectAll": "Auswahl aufheben",
     "confirm": "Bestätigen",
     "back": "Zurück",
     "next": "Weiter",
@@ -28,11 +30,12 @@
     "test": "Testen",
     "format": "Formatieren",
     "restoreDefaults": "Auf Standard zurücksetzen",
-    "saveChanges": "Änderungen speichern",
-    "revealSecret": "Geheimnis anzeigen",
-    "hideSecret": "Geheimnis verbergen",
-    "enterNewValue": "Neuen Wert eingeben",
-    "cancelEditing": "Bearbeitung abbrechen"
+    "saveChanges": "Änderungen speichern"
+  },
+  "secret": {
+    "reveal": "Geheimnis anzeigen",
+    "hide": "Geheimnis verbergen",
+    "keepsCurrent": "Lass das Feld leer, um den gespeicherten Wert zu behalten."
   },
   "status": {
     "loading": "Wird geladen...",

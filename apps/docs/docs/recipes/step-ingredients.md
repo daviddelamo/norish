@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 5
 title: Step ingredients
 description: Each step can carry the ingredient lines it uses, with amounts computed at the moment you read them — including AI filling in the steps you haven't linked yourself.
 ---
@@ -43,8 +43,7 @@ line with no amount of its own is edited as a share directly. See
 
 ## Letting AI fill the gaps
 
-**Ingredient Linking** is one of the kinds of
-[recipe enrichment](./enrichment.md), and it is deliberately the gentlest one:
+**Ingredient Linking** is one of the [recipe enrichments](./enrichment.md), and it is deliberately the gentlest one:
 it is a **gap-filler in every case**. Automatic or requested by hand, it only
 ever adds links to steps that have none.
 
@@ -56,6 +55,8 @@ ever adds links to steps that have none.
   starts spending AI on its own.
 - A recipe with no ingredients or no steps has nothing to link, and the run
   skips it.
+- The one exception to gap-filling is an administrator's **Enrich All Recipes**
+  sweep with **Overwrite existing data** turned on.
 
 Like every enrichment kind, an automatic run that fails stays quiet, and a run
 you asked for reports its failure and can simply be run again.

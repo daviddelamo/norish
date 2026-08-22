@@ -13,6 +13,8 @@ export const RecipeImageOutputSchema = z.object({
   id: z.uuid(),
   image: z.string(),
   order: z.coerce.number().default(0),
+  /** A Generated Image, drawn by AI (ADR-0025). Carried for archive export; never rendered. */
+  generated: z.boolean().default(false),
   version: z.number(),
 });
 
@@ -20,6 +22,11 @@ export const RecipeImageSchema = z.object({
   id: z.uuid().optional(),
   image: z.string(),
   order: z.coerce.number().default(0),
+  /**
+   * Optional without a default on purpose: an absent field carries no intent,
+   * so an edit-form save or an old archive can never clear a stored marking.
+   */
+  generated: z.boolean().optional(),
   version: z.number().int().positive().optional(),
 });
 

@@ -29,6 +29,7 @@ import { createAutoCategorizationQueue } from "./auto-categorization/queue";
 import { createAutoTaggingQueue } from "./auto-tagging/queue";
 import { createCaldavSyncQueue } from "./caldav-sync/queue";
 import { buildRemovalOptions, QUEUE_NAMES } from "./config";
+import { createImageGenerationQueue } from "./image-generation/queue";
 import { createImageImportQueue } from "./image-import/queue";
 import { createIngredientLinkingQueue } from "./ingredient-linking/queue";
 import { createNutritionEstimationQueue } from "./nutrition-estimation/queue";
@@ -65,6 +66,7 @@ interface QueueRegistry {
   allergyDetection: Queue<RecipeEnrichmentJobData>;
   recipeProvenance: Queue<RecipeEnrichmentJobData>;
   ingredientLinking: Queue<RecipeEnrichmentJobData>;
+  imageGeneration: Queue<RecipeEnrichmentJobData>;
   caldavSync: Queue<CaldavSyncJobData>;
   scheduledTasks: Queue<ScheduledTaskJobData>;
 }
@@ -121,6 +123,7 @@ export async function initializeQueues(): Promise<QueueRegistry> {
       allergyDetection: createAllergyDetectionQueue(removalOptions),
       recipeProvenance: createRecipeProvenanceQueue(removalOptions),
       ingredientLinking: createIngredientLinkingQueue(removalOptions),
+      imageGeneration: createImageGenerationQueue(removalOptions),
       caldavSync: createCaldavSyncQueue(removalOptions),
       scheduledTasks: createScheduledTasksQueue(removalOptions),
     };
@@ -169,6 +172,7 @@ export function getQueueByName(name: QueueName): Queue {
     [QUEUE_NAMES.ALLERGY_DETECTION]: getQueues().allergyDetection,
     [QUEUE_NAMES.RECIPE_PROVENANCE]: getQueues().recipeProvenance,
     [QUEUE_NAMES.INGREDIENT_LINKING]: getQueues().ingredientLinking,
+    [QUEUE_NAMES.IMAGE_GENERATION]: getQueues().imageGeneration,
     [QUEUE_NAMES.CALDAV_SYNC]: getQueues().caldavSync,
     [QUEUE_NAMES.SCHEDULED_TASKS]: getQueues().scheduledTasks,
   };
@@ -210,6 +214,7 @@ export async function closeAllQueues(): Promise<void> {
     registry.allergyDetection.close(),
     registry.recipeProvenance.close(),
     registry.ingredientLinking.close(),
+    registry.imageGeneration.close(),
     registry.caldavSync.close(),
     registry.scheduledTasks.close(),
   ]);

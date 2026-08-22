@@ -21,6 +21,7 @@ vi.mock("@norish/db/repositories/recipes", () => ({
 vi.mock("@norish/shared-server/config/server-config-loader", () => ({
   isAIEnabled,
   getAutomaticEnrichmentConfig,
+  isImageGenerationConfigured: vi.fn(async () => true),
 }));
 
 vi.mock("@norish/shared-server/logger", () => ({
@@ -44,9 +45,10 @@ const ALL_ON = {
   nutritionEstimation: true,
   recipeProvenance: true,
   ingredientLinking: true,
+  imageGeneration: true,
 };
 
-const KIND_COUNT = 6;
+const KIND_COUNT = 7;
 
 function recipe(id: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -55,6 +57,8 @@ function recipe(id: string, overrides: Record<string, unknown> = {}) {
     recipeIngredients: [{ ingredientName: "flour" }],
     steps: [{ step: "Mix the flour in.", systemUsed: "metric", order: 0 }],
     categories: [],
+    image: null,
+    images: [],
     calories: null,
     fat: null,
     carbs: null,
@@ -110,6 +114,7 @@ describe("enrollEnrichmentForAllRecipes", () => {
       nutritionEstimation: false,
       recipeProvenance: false,
       ingredientLinking: false,
+      imageGeneration: false,
     });
 
     const result = await enrollEnrichmentForAllRecipes(requester);
@@ -136,6 +141,51 @@ describe("enrollEnrichmentForAllRecipes", () => {
         ([, data]) => data.recipeId === "recipe-1" && data.kind === "nutrition-estimation"
       )
     ).toBe(false);
+  });
+
+  it("carries no replace intent unless one was asked for", async () => {
+    await enrollEnrichmentForAllRecipes(requester);
+
+    expect(
+      addEnrichmentJob.mock.calls.every(([, data]) => data.replaceExisting === undefined)
+    ).toBe(true);
+  });
+
+  it("runs the suppressed kinds too when asked to replace, and marks every job", async () => {
+    getRecipeFull.mockImplementation(async (id: string) =>
+      id === "recipe-1"
+        ? recipe(id, { calories: 240, fat: "9", carbs: "30", protein: "12" })
+        : recipe(id)
+    );
+
+    const result = await enrollEnrichmentForAllRecipes(requester, { replaceExisting: true });
+
+    // The complete group no longer suppresses anything: redoing it is the point.
+    expect(result.queued).toBe(2 * KIND_COUNT);
+    expect(addEnrichmentJob.mock.calls.every(([, data]) => data.replaceExisting === true)).toBe(
+      true
+    );
+  });
+
+  it("stays automatic while replacing, so a library-sized sweep names no requester", async () => {
+    await enrollEnrichmentForAllRecipes(requester, { replaceExisting: true });
+
+    expect(
+      addEnrichmentJob.mock.calls.every(
+        ([, data]) => data.origin === "automatic" && data.requestedByUserId === undefined
+      )
+    ).toBe(true);
+  });
+
+  it("still respects the automatic switches while replacing", async () => {
+    getAutomaticEnrichmentConfig.mockResolvedValue({ ...ALL_ON, autoTagging: false });
+
+    const result = await enrollEnrichmentForAllRecipes(requester, { replaceExisting: true });
+
+    expect(result.queued).toBe(2 * (KIND_COUNT - 1));
+    expect(addEnrichmentJob.mock.calls.some(([, data]) => data.kind === "auto-tagging")).toBe(
+      false
+    );
   });
 
   it("falls back to the requester's context for a recipe whose owner is gone", async () => {

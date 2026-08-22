@@ -38,6 +38,9 @@
     "backToRecipes": "Terug naar recepten",
     "viewOriginal": "Bekijk origineel recept",
     "ingredients": "Ingrediënten",
+    "ingredientOptions": "Ingrediëntopties",
+    "showMore": "Meer tonen",
+    "showLess": "Minder tonen",
     "steps": "Stappen",
     "notes": "Notities",
     "addToGroceries": "Toevoegen aan boodschappen",
@@ -51,7 +54,12 @@
     "instructions": "Instructies",
     "cook": "Koken",
     "switchToDecimal": "Toon decimalen",
-    "switchToFraction": "Toon breuken"
+    "switchToFraction": "Toon breuken",
+    "servingsCount": "{count, plural, one {# portie} other {# porties}}",
+    "source": "Bron",
+    "addedBy": "Toegevoegd door {name}",
+    "decreaseServings": "Minder porties",
+    "increaseServings": "Meer porties"
   },
   "actions": {
     "plan": "Plan",
@@ -76,7 +84,9 @@
     "inferringProvenance": "Herkomst bepalen…",
     "linkIngredients": "Ingrediënten aan stappen koppelen",
     "linkingIngredients": "Ingrediënten koppelen…",
-    "enrichmentFailed": "Laatste poging mislukt"
+    "enrichmentFailed": "Laatste poging mislukt",
+    "generateImage": "Afbeelding genereren",
+    "generatingImage": "Afbeelding genereren…"
   },
   "sharePanel": {
     "title": "Recept delen",
@@ -125,7 +135,8 @@
   "convert": {
     "ariaLabel": "Converteer meetsysteem",
     "toMetric": "Converteer naar metrisch",
-    "toUS": "Converteer naar US"
+    "toUS": "Converteer naar US",
+    "converting": "Bezig met omrekenen…"
   },
   "deleteModal": {
     "title": "Recept verwijderen",
@@ -155,7 +166,7 @@
     "notesPlaceholder": "Voeg tips voor de voorbereiding, aanpassingen of serveersuggesties toe voor dit recept...",
     "ingredientsHelp": "Typ ingrediënten zoals \"2 kopjes bloem\" - we verwerken automatisch hoeveelheden en eenheden.",
     "instructionsHelp": "Schrijf duidelijke stapsgewijze instructies. Druk op Enter om naar de volgende stap te gaan.",
-    "tagsHelp": "Typ tags en klik op suggesties om toe te voegen. Geselecteerde tags zijn blauw, nieuwe tags hebben een omstippelde rand.",
+    "tagsHelp": "Typ tags en klik op suggesties om toe te voegen. Tags op het recept zijn gevuld, nieuwe tags hebben een omstippelde rand.",
     "tagsAndCategories": "Tags & Categorieën",
     "categoriesHelp": "Selecteer maaltijdcategorieën voor dit recept.",
     "category": {
@@ -296,7 +307,10 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Veeg om door stappen te navigeren",
     "swipeIngredients": "Veeg links voor ingrediënten",
-    "swipeBackToSteps": "Veeg rechts voor stappen"
+    "swipeBackToSteps": "Veeg rechts voor stappen",
+    "readyAt": "Rond {time} klaar",
+    "timers": "Timers",
+    "nextStep": "Volgende stap"
   },
   "enrichment": {
     "failed": "Verrijking mislukt",
@@ -312,7 +326,8 @@
       "auto-categorization": "Automatisch categoriseren",
       "nutrition-estimation": "Voedingswaarde schatten",
       "recipe-provenance": "Receptherkomst",
-      "ingredient-linking": "Ingrediëntkoppeling"
+      "ingredient-linking": "Ingrediëntkoppeling",
+      "image-generation": "Afbeeldingen genereren"
     }
   },
   "provenance": {
@@ -326,5 +341,16 @@
   "import": {
     "alreadyExists": "Je hebt dit recept al",
     "openExisting": "Openen"
+  },
+  "glanceBar": {
+    "totalTime": "Totale tijd",
+    "servings": "{count, plural, one {portie} other {porties}}"
+  },
+  "cookingTime": {
+    "title": "Kooktijd",
+    "prep": "Voorbereiden",
+    "cook": "Koken",
+    "other": "Overige tijd",
+    "total": "Totaal"
   }
 }

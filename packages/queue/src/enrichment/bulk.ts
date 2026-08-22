@@ -3,10 +3,17 @@
  *
  * One deliberate administrator action that sends every recipe on the server
  * through the same coordinator a newly created recipe goes through — with the
- * automatic origin on purpose. The enabled automatic switches decide which
- * kinds run, and Supplied Recipe Data keeps winning, so the sweep fills gaps
+ * automatic origin on purpose, so the enabled automatic switches decide which
+ * kinds run and a library-sized sweep never addresses its failures to whoever
+ * clicked.
+ *
+ * By default Supplied Recipe Data keeps winning, so the sweep fills gaps
  * across the library without replacing anything a person or a source already
- * provided, and without running kinds the administrator has turned off.
+ * provided. `replaceExisting` is the administrator asking for the opposite:
+ * every eligible kind reruns and overwrites what is stored. Categories,
+ * Nutrition Information, Recipe Provenance and Step Ingredients are rewritten;
+ * tags and allergy indications are appends and are unaffected either way,
+ * because nothing records which of them AI wrote.
  */
 
 import { getAllRecipesForEnrichment } from "@norish/db/repositories/recipes";
@@ -30,9 +37,16 @@ export interface BulkEnrichmentResult {
   queued: number;
 }
 
+export interface BulkEnrichmentOptions {
+  /** Overwrite what is stored instead of filling gaps. Defaults to false. */
+  replaceExisting?: boolean;
+}
+
 export async function enrollEnrichmentForAllRecipes(
-  requester: BulkEnrichmentRequester
+  requester: BulkEnrichmentRequester,
+  options: BulkEnrichmentOptions = {}
 ): Promise<BulkEnrichmentResult> {
+  const replaceExisting = options.replaceExisting === true;
   const targets = await getAllRecipesForEnrichment();
   const outcomes: Record<string, number> = {};
   let queued = 0;
@@ -48,7 +62,7 @@ export async function enrollEnrichmentForAllRecipes(
       householdUserIds: null,
     };
 
-    const results = await enrichRecipe(context, { origin: "automatic" });
+    const results = await enrichRecipe(context, { origin: "automatic", replaceExisting });
 
     queued += results.filter((result) => result.status === "queued").length;
 
@@ -64,7 +78,10 @@ export async function enrollEnrichmentForAllRecipes(
     }
   }
 
-  log.info({ recipes: targets.length, queued, outcomes }, "Bulk enrichment enrollment complete");
+  log.info(
+    { recipes: targets.length, queued, replaceExisting, outcomes },
+    "Bulk enrichment enrollment complete"
+  );
 
   return { recipes: targets.length, queued };
 }

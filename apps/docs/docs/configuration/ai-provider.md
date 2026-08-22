@@ -14,7 +14,7 @@ AI enables:
 - **Image import** from screenshots or photos of recipes
 - **Video import** from YouTube Shorts, Instagram Reels, TikTok, Pinterest,
   and more
-- **Recipe Enrichment**: tags, allergy indications, meal categories, nutrition values and ingredient to step linking.
+- **Recipe Enrichment**: tags, allergy indications, meal categories, nutrition values, ingredient to step linking, and a generated picture of the dish.
 - **Unit conversion** between metric and US units
 
 ## Enable AI via the environment
@@ -56,7 +56,7 @@ adjust AI settings at runtime in **Settings => Admin**.
 
 Recipe Enrichment is the optional AI work that runs **after** a recipe is saved:
 auto-tagging, allergy detection, auto-categorization, nutrition estimation,
-recipe provenance, and ingredient linking.
+recipe provenance, ingredient linking, and image generation.
 
 Importing and creating a recipe never depend on it. The recipe is saved first;
 enrichment is enrolled separately, and a disabled, unavailable, slow, or failing
@@ -75,6 +75,7 @@ every newly created recipe, manual entry and every import path alike.
 | **Nutrition estimation** | Estimates calories, fat, carbs, and protein when the recipe doesn't already have all four | Off     |
 | **Recipe Provenance**    | Works out the country, region, cuisines, and a short note                                 | Off     |
 | **Ingredient Linking**   | Links ingredient lines to the steps that have none                                        | Off     |
+| **Image Generation**     | Draws a picture of the dish for new recipes that have no image at all                     | Off     |
 
 Enabling AI globally does not switch these on by itself, each is opt-in
 (except allergy detection, which keeps the behaviour of the setting it
@@ -97,6 +98,10 @@ Information you entered yourself, or that an import source stated explicitly, ou
   whole claim, so it is never mixed with a value you set yourself.
 - Ingredients are decided **per step**: a step you linked yourself is left alone, and only steps with no links at all are filled. This holds for a run you request by hand too. See
   [Step ingredients](../recipes/step-ingredients.md#letting-ai-fill-the-gaps).
+- A recipe holding **any image at all**, a gallery image or the older single
+  image field, suppresses **automatic** image generation entirely. Background
+  work never replaces a stored picture; only the manual **Generate Picture**
+  action and a bulk run with **Overwrite existing data** do.
 - Empty and blank values do not count as supplied, so placeholders don't block useful enrichment.
 
 Tags and allergy indications work differently: enrichment appends findings and
@@ -135,6 +140,54 @@ creating a near-duplicate. The list itself is managed under
 **Settings => Admin => AI & Processing => Cuisines**; see
 [Recipe provenance](../recipes/provenance.md).
 
+### Image generation
+
+![Image Generation settings](/img/screenshots/admin-image-generation.png)
+
+Image generation is the one enrichment kind that needs its own provider,
+because most AI providers cannot draw: Anthropic, Mistral, DeepSeek, Groq,
+Perplexity and Ollama expose no image model at all. So a self-hoster running a
+local text model can still point image generation somewhere else. Configure it
+under **Settings => Admin => AI & Processing => Image Generation**:
+
+| Field              | Notes                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Image Provider** | OpenAI, Google AI, Azure OpenAI, LM Studio, or a generic OpenAI-compatible endpoint, only providers that can actually generate images are offered |
+| **Endpoint URL**   | For LM Studio and generic endpoints; optional custom resource URL for Azure                                                                       |
+| **API Key**        | For the cloud providers                                                                                                                           |
+| **Image Model**    | Must be an image model, e.g. `gpt-image-1` or `imagen-4.0-generate-001`, not a text model                                                         |
+
+When the image provider is the **same** provider as your AI configuration, the
+endpoint and API key fall back to it, so you don't type a key twice.
+
+The feature makes **two AI requests per picture**: a cheap text request first,
+turning the recipe into a short visual brief with your regular AI provider, and
+then the image request that draws it. Both prompts, the brief and the image
+style, are editable under **Prompts**, like every other AI feature.
+
+How pictures reach recipes:
+
+- **Automatically**, when the **Image Generation** switch above is on: newly
+  created recipes that have **no image at all** get one drawn in the
+  background. Recipes holding any image are left alone, and a failed
+  generation changes nothing and tells nobody.
+- **On request**, from a recipe's actions menu (**Generate Picture**), on web
+  and on mobile. This runs regardless of the automatic switch and **replaces
+  the recipe's primary image outright**, including a photograph, and the
+  replaced image is not recoverable. See
+  [Recipe enrichment](../recipes/enrichment.md#running-one-yourself).
+- **In bulk**, through **Enrich All Recipes** below.
+
+With no image provider configured the rest of Recipe Enrichment is unaffected:
+the automatic run and the sweep simply skip the kind, and the manual action is
+refused with a message that says the server has no image provider.
+
+The generated picture is stored in the recipe's gallery at 1280×720 like any
+other image, nothing in the interface marks it as generated, and it sets the
+recipe page's tint the way a photograph would. When the recipe travels in a
+[Recipe Archive](../recipes/recipe-archive.md), the receiving instance is told
+which images were generated.
+
 ### Run it on your whole library
 
 Automatic enrichment only runs when a recipe is created, so recipes imported
@@ -146,9 +199,22 @@ rules as the automatic run, supplied data wins and only gaps are filled.
 
 The action asks for confirmation first, because it can be an expensive
 operation: with many recipes it may take a long time and, on a paid AI
-provider, use a significant amount of credits. It replaces the old
+provider, use a significant amount of credits. When image generation is among
+the enabled kinds, the confirmation also states **how many images the sweep
+will generate**, image models are billed per picture, so the number is worth
+reading before you confirm. By default that is only the recipes with no image
+at all; with **Overwrite existing data** on it is every recipe with
+ingredients, and stored photographs are replaced and not recoverable.
+
+![Bulk enrichment image count](/img/screenshots/bulk-enrichment-image-count.png) It replaces the old
 **Categorize All Recipes** button, which ran only categorization and ignored
 the switches.
+
+The confirmation also offers **Overwrite existing data**, which turns the behaviour from filling gaps into redoing them. Every recipe's categories, nutrition, provenance and step ingredients are inferred again and replace what is stored useful after tuning a prompt, or after an upgrade improves one of the kinds. Two things to know before using it:
+
+- **It cannot be undone, and it does not spare your own work.**
+- **It costs more than the default sweep.**
+- **Tags and allergy indications are never overwritten**
 
 ### Turning it all off
 

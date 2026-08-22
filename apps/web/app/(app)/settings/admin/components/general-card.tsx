@@ -1,11 +1,12 @@
 "use client";
 
-import type { Key } from "react";
 import { useEffect, useState } from "react";
+import ArchiveExportButton from "@/app/(app)/settings/components/archive-export-button";
+import { SettingRow, SwitchRow } from "@/app/(app)/settings/components/setting-row";
 import SettingsSwitch from "@/app/(app)/settings/components/settings-switch";
 import { showSafeErrorToast } from "@/lib/ui/safe-error-toast";
 import { Cog6ToothIcon } from "@heroicons/react/24/outline";
-import { Button, Card, Label, ListBox, Select, Separator, toast } from "@heroui/react";
+import { Button, Card, ListBox, Select, Separator, toast } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import { useAdminSettingsContext } from "../context";
@@ -118,33 +119,26 @@ export default function GeneralCard() {
       </Card.Header>
       <Card.Content className="flex flex-col gap-6">
         {/* Registration Toggle */}
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">{t("allowRegistration")}</span>
-            <span className="text-muted text-base">{t("registrationDescription")}</span>
-          </div>
+        <SwitchRow description={t("registrationDescription")} title={t("allowRegistration")}>
           <SettingsSwitch
             color="success"
             isDisabled={isLoading}
             isSelected={registrationEnabled ?? false}
             onValueChange={handleRegistrationToggle}
           />
-        </div>
+        </SwitchRow>
 
         <Separator />
 
         {/* Locale Configuration */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <span className="flex items-center gap-2 font-medium">
-              {t("locales")}
-              {hasLocaleChanges && <UnsavedChangesChip />}
-            </span>
-            <span className="text-muted text-base">{t("localesDescription")}</span>
-          </div>
-
+        <SettingRow
+          badges={hasLocaleChanges ? <UnsavedChangesChip /> : null}
+          description={t("localesDescription")}
+          title={t("locales")}
+        >
           <Select
-            className="max-w-xs"
+            aria-label={t("locales")}
+            className="w-full sm:w-80"
             isDisabled={isLoading || isSaving}
             placeholder={t("locales")}
             selectedKeys={new Set(enabledLocales)}
@@ -160,13 +154,16 @@ export default function GeneralCard() {
               }
             }}
           >
-            <Label>{t("locales")}</Label>
             <Select.Trigger>
-              <Select.Value>
+              <Select.Value className="min-w-0">
                 {({ defaultChildren, isPlaceholder }) =>
-                  isPlaceholder
-                    ? defaultChildren
-                    : enabledLocaleOptions.map((locale) => locale.name).join(", ")
+                  isPlaceholder ? (
+                    defaultChildren
+                  ) : (
+                    <span className="block truncate">
+                      {enabledLocaleOptions.map((locale) => locale.name).join(", ")}
+                    </span>
+                  )
                 }
               </Select.Value>
               <Select.Indicator />
@@ -182,18 +179,14 @@ export default function GeneralCard() {
               </ListBox>
             </Select.Popover>
           </Select>
-        </div>
+        </SettingRow>
 
         {/* Default Locale Selector */}
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">{t("defaultLocale")}</span>
-            <span className="text-muted text-base">{t("defaultLocaleDescription")}</span>
-          </div>
-
+        <SettingRow description={t("defaultLocaleDescription")} title={t("defaultLocale")}>
           <Select
+            aria-label={t("defaultLocale")}
             variant="secondary"
-            className="max-w-xs"
+            className="w-full sm:w-80"
             isDisabled={isLoading || isSaving}
             placeholder={t("defaultLocale")}
             selectedKey={defaultLocale || null}
@@ -203,7 +196,6 @@ export default function GeneralCard() {
               }
             }}
           >
-            <Label>{t("defaultLocale")}</Label>
             <Select.Trigger>
               <Select.Value />
               <Select.Indicator />
@@ -219,7 +211,7 @@ export default function GeneralCard() {
               </ListBox>
             </Select.Popover>
           </Select>
-        </div>
+        </SettingRow>
 
         {/* Save Button */}
         <div className="flex justify-end">
@@ -232,6 +224,13 @@ export default function GeneralCard() {
             {t("saveLocales")}
           </Button>
         </div>
+
+        <Separator />
+
+        {/* Instance-wide Recipe Archive export */}
+        <SettingRow description={t("export.description")} title={t("export.title")}>
+          <ArchiveExportButton label={t("export.button")} scope="instance" />
+        </SettingRow>
       </Card.Content>
     </Card>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { SwitchRow } from "@/app/(app)/settings/components/setting-row";
 import SettingsSwitch from "@/app/(app)/settings/components/settings-switch";
 import { ExclamationTriangleIcon, UserGroupIcon } from "@heroicons/react/16/solid";
 import { Description, Input, Label, Separator, TextField } from "@heroui/react";
@@ -35,20 +36,27 @@ export function OIDCClaimMapping({ values, onChange, isDirty = false }: OIDCClai
   return (
     <>
       <Separator className="my-2" />
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <UserGroupIcon className="text-muted h-4 w-4" />
-          <span className="text-foreground font-medium">{tClaimMapping("title")}</span>
-          {isDirty && <UnsavedChangesChip />}
-          <RestartRequiredChip />
-        </div>
+      <SwitchRow
+        badges={
+          <>
+            {isDirty && <UnsavedChangesChip />}
+            <RestartRequiredChip />
+          </>
+        }
+        description={tClaimMapping("description")}
+        title={
+          <span className="flex items-center gap-2">
+            <UserGroupIcon className="text-muted h-4 w-4 shrink-0" />
+            {tClaimMapping("title")}
+          </span>
+        }
+      >
         <SettingsSwitch
           color="success"
           isSelected={values.enabled}
           onValueChange={(enabled) => updateField("enabled", enabled)}
         />
-      </div>
-      <p className="text-muted text-sm">{tClaimMapping("description")}</p>
+      </SwitchRow>
 
       {values.enabled && (
         <div className="bg-warning/10 border-warning/30 text-warning flex items-start gap-2 rounded-lg border p-3">

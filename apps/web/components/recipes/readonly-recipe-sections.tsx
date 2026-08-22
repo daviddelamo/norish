@@ -66,6 +66,11 @@ type ReadonlyRecipeMediaProps = {
   className?: string;
   mediaClassName?: string;
   rounded?: boolean;
+  /**
+   * The author chip drawn on the photo when nothing else claims the top-left
+   * slot. Off where the header underneath already names the author.
+   */
+  showAuthorFallback?: boolean;
   topLeftContent?: React.ReactNode;
   topRightContent?: React.ReactNode;
   bottomRightContent?: React.ReactNode;
@@ -84,6 +89,7 @@ export function ReadonlyRecipeMedia({
   className = "",
   mediaClassName = "",
   rounded = false,
+  showAuthorFallback = true,
   topLeftContent,
   topRightContent,
   bottomRightContent,
@@ -105,7 +111,7 @@ export function ReadonlyRecipeMedia({
         <div className="absolute right-4 bottom-8 z-50">{bottomRightContent}</div>
       )}
 
-      {!topLeftContent && recipe.author && (
+      {showAuthorFallback && !topLeftContent && recipe.author && (
         <div className="absolute top-4 left-4 z-50">
           <AuthorChip
             image={recipe.author.image}
@@ -209,7 +215,7 @@ export function ReadonlyRecipeSummary({
                 key={tag.name}
                 className={isAllergen ? "bg-warning text-warning-foreground" : ""}
                 size="sm"
-                variant="soft"
+                variant="tertiary"
               >
                 {tag.name}
               </Chip>

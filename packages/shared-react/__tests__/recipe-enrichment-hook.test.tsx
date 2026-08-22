@@ -137,6 +137,7 @@ describe("useRecipeEnrichment", () => {
       "nutrition-estimation": "idle",
       "recipe-provenance": "idle",
       "ingredient-linking": "idle",
+      "image-generation": "idle",
     });
   });
 

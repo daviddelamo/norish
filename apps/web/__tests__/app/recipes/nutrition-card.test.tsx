@@ -8,6 +8,15 @@ import NutritionCard from "@/app/(app)/recipes/[id]/components/nutrition-card";
 const mocks = vi.hoisted(() => ({
   hasData: false,
   state: "idle" as "idle" | "queued" | "processing" | "succeeded" | "failed",
+  hidden: [] as string[],
+}));
+
+vi.mock("@/context/user-context", () => ({
+  useUserContext: () => ({ user: { id: "owner-1" } }),
+}));
+
+vi.mock("@/context/hidden-items-context", () => ({
+  useHiddenItems: () => mocks.hidden,
 }));
 
 vi.mock("@/app/(app)/recipes/[id]/context", () => ({
@@ -29,8 +38,8 @@ vi.mock("@/app/(app)/recipes/[id]/context", () => ({
 }));
 
 vi.mock("@/components/recipes/readonly-nutrition", () => ({
-  MACROS: [],
   getNutritionData: () => ({ hasData: mocks.hasData, values: {} }),
+  NutritionBody: () => <div data-testid="nutrition-body" />,
 }));
 
 vi.mock("@/components/recipes/nutrition-portion-control", () => ({
@@ -67,6 +76,7 @@ describe("NutritionCard", () => {
   beforeEach(() => {
     mocks.hasData = false;
     mocks.state = "idle";
+    mocks.hidden = [];
   });
 
   it("is absent when nothing is stored and nothing is running", () => {
@@ -107,5 +117,23 @@ describe("NutritionCard", () => {
     expect(screen.getByRole("heading", { name: "title" })).toBeInTheDocument();
     expect(screen.queryByText("Last run failed")).not.toBeInTheDocument();
     expect(screen.queryByTestId("skeleton")).not.toBeInTheDocument();
+  });
+
+  it("is absent when the reader has hidden Nutrition Information", () => {
+    mocks.hasData = true;
+    mocks.hidden = ["nutrition"];
+
+    const { container } = render(<NutritionCard />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("stays absent for a hiding reader even while a run is in flight", () => {
+    mocks.hidden = ["nutrition"];
+    mocks.state = "processing";
+
+    const { container } = render(<NutritionCard />);
+
+    expect(container).toBeEmptyDOMElement();
   });
 });

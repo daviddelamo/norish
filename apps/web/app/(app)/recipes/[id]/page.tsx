@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect } from "react";
+import RecipePageTint from "@/components/recipes/recipe-page-tint";
 import { NotFoundView } from "@/components/shared/not-found-view";
 import RecipeSkeleton from "@/components/skeleton/recipe-skeleton";
 import { useTranslations } from "next-intl";
@@ -38,7 +39,7 @@ function RecipePageContent() {
   }
 
   return (
-    <>
+    <RecipePageTint dishColor={recipe.dishColor}>
       {/* Desktop layout - smooth fade in */}
       <div key={`${recipe?.id}-desktop`} className="fade-in hidden md:block">
         <RecipePageDesktop />
@@ -51,7 +52,7 @@ function RecipePageContent() {
       >
         <RecipePageMobile />
       </div>
-    </>
+    </RecipePageTint>
   );
 }
 

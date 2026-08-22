@@ -1,9 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AnimatedNumber } from "@/components/recipes/animated-number";
 import { BeakerIcon, BoltIcon, CubeIcon, FireIcon } from "@heroicons/react/16/solid";
 import { Card, Separator } from "@heroui/react";
 import { useTranslations } from "next-intl";
+
+import type { MacroCalorieShare, MacroKey } from "@norish/shared/lib/nutrition-macros";
+import { macroCalorieShares } from "@norish/shared/lib/nutrition-macros";
 
 import NutritionPortionControl from "./nutrition-portion-control";
 
@@ -14,40 +18,11 @@ export type NutritionRecipeLike = {
   protein: number | string | null;
 };
 
-export const MACROS = [
-  {
-    key: "calories",
-    labelKey: "calories",
-    unit: "kcal",
-    icon: FireIcon,
-    color: "text-nutrition-calories",
-    bg: "bg-nutrition-calories-soft",
-  },
-  {
-    key: "fat",
-    labelKey: "fat",
-    unit: "g",
-    icon: BeakerIcon,
-    color: "text-nutrition-fat",
-    bg: "bg-nutrition-fat-soft",
-  },
-  {
-    key: "carbs",
-    labelKey: "carbs",
-    unit: "g",
-    icon: CubeIcon,
-    color: "text-nutrition-carbs",
-    bg: "bg-nutrition-carbs-soft",
-  },
-  {
-    key: "protein",
-    labelKey: "protein",
-    unit: "g",
-    icon: BoltIcon,
-    color: "text-nutrition-protein",
-    bg: "bg-nutrition-protein-soft",
-  },
-] as const;
+const MACRO_STYLES: Record<MacroKey, { color: string; label: string; icon: typeof BeakerIcon }> = {
+  fat: { color: "text-nutrition-fat", label: "fat", icon: BeakerIcon },
+  carbs: { color: "text-nutrition-carbs", label: "carbs", icon: CubeIcon },
+  protein: { color: "text-nutrition-protein", label: "protein", icon: BoltIcon },
+};
 
 export function getNutritionData(recipe: NutritionRecipeLike, portions: number) {
   const parsedFat = typeof recipe.fat === "string" ? parseFloat(recipe.fat) : recipe.fat;
@@ -65,6 +40,125 @@ export function getNutritionData(recipe: NutritionRecipeLike, portions: number) 
       protein: parsedProtein != null ? parsedProtein * portions : null,
     },
   };
+}
+
+/**
+ * The macro ring: one arc per stored macro, sized by the calories it
+ * contributes rather than by its weight in grams. The recipe's own stored
+ * calories sit in the centre — the arcs and that figure may disagree, and
+ * where they do the stored figure wins, because a calorie count computed
+ * from macros is not a number anybody supplied.
+ */
+function NutritionDonut({
+  shares,
+  calories,
+}: {
+  shares: MacroCalorieShare[];
+  calories: number | null;
+}) {
+  const t = useTranslations("recipes.nutrition");
+  let drawn = 0;
+
+  return (
+    <div className="relative size-32 shrink-0">
+      <svg aria-hidden className="size-full -rotate-90" viewBox="0 0 36 36">
+        {shares.map((macro) => {
+          const length = macro.share * 100;
+          const arc = (
+            <circle
+              key={macro.key}
+              className={MACRO_STYLES[macro.key].color}
+              cx="18"
+              cy="18"
+              fill="none"
+              pathLength={100}
+              r="15.9155"
+              stroke="currentColor"
+              strokeDasharray={`${length} ${100 - length}`}
+              strokeDashoffset={-drawn}
+              strokeWidth="3.6"
+            />
+          );
+
+          drawn += length;
+
+          return arc;
+        })}
+      </svg>
+      {calories != null && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <AnimatedNumber
+            className="text-foreground text-2xl leading-none font-semibold"
+            value={String(Math.round(calories))}
+          />
+          <span className="text-muted mt-1 text-xs">{t("calories")}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A recipe's nutrition values: a macro ring with the stored calories in its
+ * centre and the macros as its legend. A recipe with calories and no macros
+ * has no ring to draw, so its calories are shown as a row of their own.
+ */
+export function NutritionBody({
+  recipe,
+  portions,
+}: {
+  recipe: NutritionRecipeLike;
+  portions: number;
+}) {
+  const t = useTranslations("recipes.nutrition");
+  // The arcs read the stored macros, so the portion control moves the legend
+  // and leaves the ring where it is.
+  const shares = useMemo(() => macroCalorieShares(recipe), [recipe]);
+  const values = getNutritionData(recipe, portions).values;
+
+  if (shares.length === 0) {
+    if (values.calories == null) return null;
+
+    return (
+      <div className="flex items-center justify-between py-2">
+        <div className="flex items-center gap-3">
+          <div className="bg-nutrition-calories-soft flex size-8 items-center justify-center rounded-full">
+            <FireIcon className="text-nutrition-calories size-4" />
+          </div>
+          <span className="text-base">{t("calories")}</span>
+        </div>
+        <span className="text-foreground flex items-baseline text-base font-semibold">
+          <AnimatedNumber value={String(Math.round(values.calories))} />
+          <span className="text-muted ml-1 font-normal">kcal</span>
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-5">
+      <NutritionDonut calories={values.calories} shares={shares} />
+      <dl className="divide-border min-w-0 flex-1 divide-y">
+        {shares.map((macro) => {
+          const style = MACRO_STYLES[macro.key];
+          const value = values[macro.key];
+
+          return (
+            <div key={macro.key} className="flex items-center justify-between gap-2 py-2">
+              <dt className="flex min-w-0 items-center gap-2">
+                <style.icon className={`${style.color} size-4 shrink-0`} />
+                <span className="truncate text-base">{t(style.label)}</span>
+              </dt>
+              <dd className="text-foreground flex items-baseline text-base font-semibold">
+                <AnimatedNumber value={String(Math.round(value ?? macro.grams))} />
+                <span className="text-muted ml-1 font-normal">g</span>
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </div>
+  );
 }
 
 function NutritionValues({
@@ -88,28 +182,7 @@ function NutritionValues({
         <h2 className="text-lg font-semibold">{t("title")}</h2>
         <NutritionPortionControl portions={portions} onChange={setPortions} />
       </div>
-      <div className="divide-border divide-y">
-        {MACROS.map(({ key, labelKey, unit, icon: Icon, color, bg }) => {
-          const value = nutritionData.values[key];
-
-          if (value == null) return null;
-
-          return (
-            <div key={key} className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3">
-                <div className={`flex h-8 w-8 items-center justify-center rounded-full ${bg}`}>
-                  <Icon className={`h-4 w-4 ${color}`} />
-                </div>
-                <span className="text-base">{t(labelKey)}</span>
-              </div>
-              <span className="text-foreground text-base font-semibold">
-                {Math.round(value)}
-                <span className="text-muted ml-1 font-normal">{unit}</span>
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      <NutritionBody portions={portions} recipe={recipe} />
       {portions !== 1 && (
         <p className="text-muted mt-2 text-center text-xs">
           {t("showingPortions", { count: portions })}

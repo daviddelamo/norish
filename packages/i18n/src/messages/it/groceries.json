@@ -80,6 +80,7 @@
     "placeholder": "es. 1 kg petto di pollo",
     "editPlaceholder": "es. latte ogni settimana",
     "servings": "Porzioni",
+    "selectedCount": "{selected} di {total} selezionati",
     "loadingIngredients": "Caricamento ingredienti...",
     "noIngredients": "Nessun ingrediente.",
     "addSelectedToGroceries": "Aggiungi alla spesa",

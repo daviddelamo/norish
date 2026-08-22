@@ -9,9 +9,17 @@ type MockRecipe = {
   id: string;
   userId: string;
   name: string;
+  description: string | null;
+  url: string | null;
+  categories: string[];
+  tags: { name: string }[];
+  prepMinutes: number | null;
+  cookMinutes: number | null;
+  totalMinutes: number | null;
   notes: string | null;
-  servings: number;
+  servings: number | null;
   systemUsed: "metric" | "us";
+  recipeIngredients: { systemUsed: "metric" | "us" }[];
   calories: number | null;
   fat: string | null;
   carbs: string | null;
@@ -27,9 +35,17 @@ const baseRecipe = (): MockRecipe => ({
   id: "recipe-1",
   userId: "owner-1",
   name: "Cacio e Pepe",
+  description: null,
+  url: "https://example.test/cacio-e-pepe",
+  categories: [],
+  tags: [],
+  prepMinutes: 10,
+  cookMinutes: 20,
+  totalMinutes: 30,
   notes: "Serve immediately.",
   servings: 2,
   systemUsed: "metric",
+  recipeIngredients: [{ systemUsed: "metric" }, { systemUsed: "us" }],
   calories: 520,
   fat: "18",
   carbs: "60",
@@ -40,17 +56,39 @@ const baseRecipe = (): MockRecipe => ({
   cuisines: [],
 });
 
+/** A recipe with nothing optional stored: no times, calories, notes or source. */
+const bareRecipe = (): MockRecipe => ({
+  ...baseRecipe(),
+  url: null,
+  prepMinutes: null,
+  cookMinutes: null,
+  totalMinutes: null,
+  notes: null,
+  calories: null,
+  fat: null,
+  carbs: null,
+  protein: null,
+  originCountry: null,
+  originRegion: null,
+  provenanceNote: null,
+});
+
 const mocks = vi.hoisted(() => ({
   recipe: {} as Record<string, unknown>,
   busyKinds: new Set<string>(),
+  hidden: [] as string[],
+  currentServings: 2,
 }));
 
 vi.mock("@/app/(app)/recipes/[id]/context", () => {
   const context = () => ({
     recipe: mocks.recipe,
-    currentServings: 2,
+    currentServings: mocks.currentServings,
     allergies: [],
     allergySet: new Set<string>(),
+    convertingTo: null,
+    startConversion: vi.fn(),
+    setIngredientAmounts: vi.fn(),
     enrichment: {
       isBusy: (kind: string) => mocks.busyKinds.has(kind),
     },
@@ -66,10 +104,15 @@ vi.mock("@/app/(app)/recipes/[id]/components/add-to-groceries-button", () => ({
   default: () => <div data-testid="add-to-groceries" />,
 }));
 vi.mock("@/app/(app)/recipes/[id]/components/cookingmode", () => ({
-  default: () => <div data-testid="cooking-mode" />,
+  default: ({ floating }: { floating?: boolean }) => (
+    <div data-floating={String(Boolean(floating))} data-testid="cooking-mode" />
+  ),
 }));
 vi.mock("@/app/(app)/recipes/[id]/components/ingredient-list", () => ({
   default: () => <div data-testid="ingredients-list" />,
+}));
+vi.mock("@/app/(app)/recipes/[id]/components/ingredients-options-menu", () => ({
+  default: () => <div data-testid="ingredients-options" />,
 }));
 vi.mock("@/app/(app)/recipes/[id]/components/servings-control", () => ({
   default: () => <div data-testid="servings-control" />,
@@ -77,22 +120,38 @@ vi.mock("@/app/(app)/recipes/[id]/components/servings-control", () => ({
 vi.mock("@/app/(app)/recipes/[id]/components/steps-list", () => ({
   default: () => <div data-testid="steps-list" />,
 }));
-vi.mock("@/app/(app)/recipes/[id]/components/system-convert-menu", () => ({
-  default: () => <div data-testid="system-convert-menu" />,
-}));
-vi.mock("@/components/recipes/amount-display-toggle", () => ({
-  default: () => <div data-testid="amount-display-toggle" />,
-}));
 vi.mock("@/components/recipes/author-chip", () => ({
   default: () => <div data-testid="author-chip" />,
 }));
 vi.mock("@/components/recipes/nutrition-portion-control", () => ({
   default: () => <div data-testid="nutrition-portion-control" />,
 }));
+vi.mock("@/components/shared/media-carousel", () => ({
+  default: () => <div data-testid="media-carousel" />,
+  buildMediaItems: () => [],
+}));
+vi.mock("@/components/shared/smart-markdown-renderer", () => ({
+  default: ({ text }: { text: string }) => <div>{text}</div>,
+}));
 vi.mock("@/components/recipes/readonly-recipe-sections", () => ({
-  ReadonlyRecipeMedia: () => <div data-testid="recipe-media" />,
+  // The page decides what floats on the media, so the mock renders the
+  // overlay slots it was handed.
+  ReadonlyRecipeMedia: ({
+    topLeftContent,
+    topRightContent,
+  }: {
+    topLeftContent?: React.ReactNode;
+    topRightContent?: React.ReactNode;
+  }) => (
+    <div data-testid="recipe-media">
+      {topLeftContent}
+      {topRightContent}
+    </div>
+  ),
   ReadonlyRecipeNotes: () => <div data-testid="recipe-notes" />,
-  ReadonlyRecipeSummary: () => <div data-testid="recipe-summary" />,
+}));
+vi.mock("@/context/permissions-context", () => ({
+  usePermissionsContext: () => ({ isAIEnabled: false }),
 }));
 vi.mock("@/components/shared/double-tap-container", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -107,6 +166,10 @@ vi.mock("@norish/ui/star-rating", () => ({
 vi.mock("@/context/user-context", () => ({
   useUserContext: () => ({ user: { id: "owner-1" } }),
 }));
+
+vi.mock("@/context/hidden-items-context", () => ({
+  useHiddenItems: () => mocks.hidden,
+}));
 vi.mock("@/hooks/favorites", () => ({
   useFavoritesQuery: () => ({ isFavorite: () => false }),
   useFavoritesMutation: () => ({ toggleFavorite: vi.fn() }),
@@ -115,21 +178,23 @@ vi.mock("@/hooks/ratings", () => ({
   useRatingQuery: () => ({ userRating: null, averageRating: null, isLoading: false }),
   useRatingsMutation: () => ({ rateRecipe: vi.fn(), isRating: false }),
 }));
-vi.mock("@norish/shared/lib/user-preferences", () => ({
-  getShowRatingsPreference: () => true,
-  getShowFavoritesPreference: () => true,
-}));
-
 vi.mock("@heroui/react", () => ({
-  Card: Object.assign(({ children }: { children: React.ReactNode }) => <div>{children}</div>, {
-    Content: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="page-sections">{children}</div>
+  Button: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
+  Card: Object.assign(
+    ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="section-card">{children}</div>
     ),
-  }),
+    {
+      Header: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+      Content: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    }
+  ),
   Chip: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  Label: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
   Separator: () => <hr />,
   Skeleton: () => <span data-testid="skeleton" />,
+  Spinner: () => <span data-testid="spinner" />,
 }));
 
 vi.mock("next-intl", () => ({
@@ -140,118 +205,220 @@ vi.mock("next-intl", () => ({
 beforeEach(() => {
   mocks.recipe = baseRecipe();
   mocks.busyKinds = new Set();
+  mocks.hidden = [];
+  mocks.currentServings = 2;
 });
 
-/** Marker elements for each section, in the order they appear in the DOM. */
-function sectionMarkers(): HTMLElement[] {
-  const markers: (HTMLElement | null)[] = [
-    screen.getByTestId("recipe-summary"),
-    screen.getByTestId("cooking-mode"),
-    screen.queryByRole("heading", { name: /Italia/ }),
-    screen.queryByText("recipes.detail.ingredients"),
-    screen.queryByText("recipes.detail.notes"),
-    screen.getByText("recipes.detail.steps"),
-    screen.queryByText("recipes.nutrition.title"),
-  ];
+const CARD_TITLES = {
+  ingredients: "recipes.detail.ingredients",
+  steps: "recipes.detail.steps",
+  notes: "recipes.detail.notes",
+  cookingTime: "recipes.cookingTime.title",
+  nutrition: "recipes.nutrition.title",
+  source: "recipes.detail.source",
+  rating: "recipes.detail.ratingPrompt",
+} as const;
 
-  return markers.filter((el): el is HTMLElement => el !== null);
+/** Every card that rendered, in the order it appears in the DOM. */
+function cardTitlesInOrder(): string[] {
+  const found = Object.values(CARD_TITLES)
+    .map((title) => screen.queryByText(title))
+    .filter((element): element is HTMLElement => element !== null);
+  const provenance =
+    screen.queryByRole("heading", { name: /Italia/ }) ??
+    screen.queryByText("recipes.provenance.title");
+
+  const all = provenance ? [...found, provenance] : found;
+
+  return all
+    .sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
+    .map((element) => element.textContent ?? "");
 }
 
-function expectMarkersInDocumentOrder(markers: HTMLElement[]) {
-  for (let i = 0; i < markers.length - 1; i++) {
-    const position = markers[i].compareDocumentPosition(markers[i + 1]);
-
-    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  }
+function cardCount(): number {
+  return screen.queryAllByTestId("section-card").length;
 }
 
-function separators(): HTMLElement[] {
-  return screen.getAllByRole("separator");
-}
-
-function expectNoDoubledRules() {
-  for (const separator of separators()) {
-    expect(separator.nextElementSibling?.tagName).not.toBe("HR");
-    expect(separator.previousElementSibling?.tagName).not.toBe("HR");
-  }
-}
-
-describe("RecipePageMobile section layout", () => {
-  it("orders sections summary → cooking mode → provenance → ingredients → notes → steps → nutrition", () => {
+/**
+ * The phone page is a header followed by one card per section, in cooking
+ * order. A section with nothing stored and nothing running draws no card, so
+ * absence renders as a slimmer page rather than as an empty box.
+ */
+describe("RecipePageMobile card body", () => {
+  it("orders the cards ingredients → steps → notes → cooking time → nutrition → provenance → source → rating", () => {
     render(<RecipePageMobile />);
 
-    const markers = sectionMarkers();
-
-    // All seven sections are present for the full fixture.
-    expect(markers).toHaveLength(7);
-    expectMarkersInDocumentOrder(markers);
+    expect(cardTitlesInOrder()).toEqual([
+      CARD_TITLES.ingredients,
+      CARD_TITLES.steps,
+      CARD_TITLES.notes,
+      CARD_TITLES.cookingTime,
+      CARD_TITLES.nutrition,
+      "🇮🇹Italia",
+      CARD_TITLES.source,
+      CARD_TITLES.rating,
+    ]);
   });
 
-  it("draws exactly one rule between adjacent sections", () => {
+  it("draws no rules between the sections", () => {
     render(<RecipePageMobile />);
 
-    // Six boundaries follow the header group: cooking mode | provenance |
-    // ingredients | notes | steps | nutrition — five rules, one each.
-    expect(separators()).toHaveLength(5);
-    expectNoDoubledRules();
+    expect(screen.queryAllByRole("separator")).toHaveLength(0);
   });
 
-  it("keeps a single rule where provenance is absent", () => {
-    mocks.recipe = {
-      ...baseRecipe(),
-      originCountry: null,
-      originRegion: null,
-      provenanceNote: null,
-    };
+  it("renders the rating outside the steps card", () => {
+    render(<RecipePageMobile />);
+
+    const stepsCard = screen.getByText(CARD_TITLES.steps).closest("[data-testid='section-card']");
+
+    expect(stepsCard).not.toBeNull();
+    expect(stepsCard).not.toContainElement(screen.getByTestId("star-rating"));
+  });
+
+  it("keeps ingredients and steps for a recipe that stores nothing else", () => {
+    mocks.recipe = bareRecipe();
 
     render(<RecipePageMobile />);
 
-    expect(screen.queryByRole("heading", { name: /Italia/ })).not.toBeInTheDocument();
-    // One fewer boundary, one fewer rule — and never two rules in a row.
-    expect(separators()).toHaveLength(4);
-    expectNoDoubledRules();
+    expect(cardTitlesInOrder()).toEqual([
+      CARD_TITLES.ingredients,
+      CARD_TITLES.steps,
+      CARD_TITLES.rating,
+    ]);
+    // Three cards drawn, three cards with something in them.
+    expect(cardCount()).toBe(3);
   });
 
-  it("shows provenance while a run is in flight, before the ingredients", () => {
-    mocks.recipe = {
-      ...baseRecipe(),
-      originCountry: null,
-      originRegion: null,
-      provenanceNote: null,
-    };
+  it("renders a section with a run in flight as working", () => {
+    mocks.recipe = bareRecipe();
     mocks.busyKinds = new Set(["recipe-provenance"]);
 
     render(<RecipePageMobile />);
 
-    const provenanceTitle = screen.getByText("recipes.provenance.title");
-    const ingredientsTitle = screen.getByText("recipes.detail.ingredients");
-    const position = provenanceTitle.compareDocumentPosition(ingredientsTitle);
-
-    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(separators()).toHaveLength(5);
-    expectNoDoubledRules();
+    expect(screen.getByText("recipes.provenance.title")).toBeInTheDocument();
+    expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
   });
 
-  it("draws no trailing rule when the nutrition section is absent", () => {
-    mocks.recipe = { ...baseRecipe(), calories: null, fat: null, carbs: null, protein: null };
+  it("keeps provenance after the cooking, not before the ingredients", () => {
+    render(<RecipePageMobile />);
+
+    const ingredients = screen.getByText(CARD_TITLES.ingredients);
+    const provenance = screen.getByRole("heading", { name: /Italia/ });
+
+    expect(
+      ingredients.compareDocumentPosition(provenance) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it("floats the cook control outside every card", () => {
+    render(<RecipePageMobile />);
+
+    const cook = screen.getByTestId("cooking-mode");
+
+    expect(cook.dataset.floating).toBe("true");
+    expect(cook.closest("[data-testid='section-card']")).toBeNull();
+  });
+
+  it("gives the ingredients card a servings row", () => {
+    render(<RecipePageMobile />);
+
+    const ingredientsCard = screen
+      .getByText(CARD_TITLES.ingredients)
+      .closest("[data-testid='section-card']");
+
+    expect(ingredientsCard).toContainElement(screen.getByTestId("servings-control"));
+  });
+});
+
+describe("RecipePageMobile hidden items", () => {
+  it("shows the rating card to a reader who has hidden nothing", () => {
+    render(<RecipePageMobile />);
+
+    expect(screen.getByText(CARD_TITLES.rating)).toBeInTheDocument();
+  });
+
+  it("drops the rating card for a reader who has hidden ratings", () => {
+    mocks.hidden = ["rating"];
 
     render(<RecipePageMobile />);
 
-    expect(screen.queryByText("recipes.nutrition.title")).not.toBeInTheDocument();
-    expect(separators()).toHaveLength(4);
-
-    const sections = screen.getByTestId("page-sections");
-
-    expect(sections.lastElementChild?.tagName).not.toBe("HR");
+    expect(screen.queryByText(CARD_TITLES.rating)).not.toBeInTheDocument();
   });
 
-  it("omits the notes boundary when the recipe has no notes", () => {
-    mocks.recipe = { ...baseRecipe(), notes: null };
+  it("ignores a stored name it does not recognise", () => {
+    mocks.hidden = ["something-newer"];
 
     render(<RecipePageMobile />);
 
-    expect(screen.queryByText("recipes.detail.notes")).not.toBeInTheDocument();
-    expect(separators()).toHaveLength(4);
-    expectNoDoubledRules();
+    expect(cardTitlesInOrder()).toHaveLength(8);
+  });
+
+  it("drops the provenance card but keeps the origin flag beside the title", () => {
+    mocks.hidden = ["provenance"];
+
+    render(<RecipePageMobile />);
+
+    expect(screen.queryByRole("heading", { name: /Italia/ })).not.toBeInTheDocument();
+    // The flag beside the recipe title is chrome, not Recipe Provenance.
+    expect(screen.getByText("🇮🇹")).toBeInTheDocument();
+  });
+
+  it("keeps a hidden provenance card absent even while a run is in flight", () => {
+    mocks.hidden = ["provenance"];
+    mocks.busyKinds = new Set(["recipe-provenance"]);
+
+    render(<RecipePageMobile />);
+
+    expect(screen.queryByText("recipes.provenance.title")).not.toBeInTheDocument();
+  });
+
+  it("takes the calories out of the Glance Bar with the nutrition card", () => {
+    mocks.hidden = ["nutrition"];
+
+    render(<RecipePageMobile />);
+
+    // The card and its Glance Bar entry leave together — a bar restating a
+    // hidden fact is exactly the bug a restating bar invites.
+    expect(screen.queryByText(CARD_TITLES.nutrition)).not.toBeInTheDocument();
+    expect(screen.queryByText("recipes.nutrition.calories")).not.toBeInTheDocument();
+    expect(screen.queryByText("520")).not.toBeInTheDocument();
+    // The rest of the bar is untouched.
+    expect(screen.getByText("recipes.glanceBar.totalTime")).toBeInTheDocument();
+  });
+
+  it("reads the Glance Bar's servings off the scaled figure, not the stored one", () => {
+    mocks.currentServings = 5;
+
+    render(<RecipePageMobile />);
+
+    // The bar restates what the sections below render, so it cannot disagree
+    // with the stepper an inch under it. Read off the bar's own entry, since
+    // the stepper is showing the same figure elsewhere on the page.
+    const entry = screen.getByText("recipes.glanceBar.servings").parentElement;
+
+    expect(entry?.textContent).toContain("5");
+  });
+
+  it("drops the notes card for a reader who has hidden notes", () => {
+    mocks.hidden = ["notes"];
+
+    render(<RecipePageMobile />);
+
+    expect(screen.queryByText(CARD_TITLES.notes)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("recipe-notes")).not.toBeInTheDocument();
+  });
+
+  it("shows the heart to a reader who has hidden nothing", () => {
+    render(<RecipePageMobile />);
+
+    expect(screen.getByTestId("heart-button")).toBeInTheDocument();
+  });
+
+  it("drops the heart for a reader who has hidden favourites", () => {
+    mocks.hidden = ["favorites"];
+
+    render(<RecipePageMobile />);
+
+    expect(screen.queryByTestId("heart-button")).not.toBeInTheDocument();
   });
 });

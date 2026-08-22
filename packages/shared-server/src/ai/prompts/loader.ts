@@ -23,6 +23,8 @@ const PROMPT_FIELDS = {
   "allergy-detection": "allergyDetection",
   "recipe-provenance": "recipeProvenance",
   "ingredient-linking": "ingredientLinking",
+  "image-generation-brief": "imageGenerationBrief",
+  "image-generation-style": "imageGenerationStyle",
 } as const satisfies Record<string, PromptConfigField>;
 
 export type PromptName = keyof typeof PROMPT_FIELDS;
@@ -46,6 +48,8 @@ export function loadDefaultPrompts(): PromptValues {
     allergyDetection: readDefaultPrompt("allergy-detection"),
     recipeProvenance: readDefaultPrompt("recipe-provenance"),
     ingredientLinking: readDefaultPrompt("ingredient-linking"),
+    imageGenerationBrief: readDefaultPrompt("image-generation-brief"),
+    imageGenerationStyle: readDefaultPrompt("image-generation-style"),
   };
 }
 

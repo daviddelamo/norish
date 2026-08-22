@@ -1,76 +1,68 @@
+import type { CSSProperties } from "react";
 import { links } from "@/lib/css-tokens";
-import { ArrowTopRightOnSquareIcon, ScaleIcon, ServerStackIcon } from "@heroicons/react/24/outline";
+import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
 
-import { CTAButton } from "../cta-button";
-import { DockerIcon, GitHubIcon } from "../icons";
-import { Reveal } from "../motion/reveal";
+import { Action } from "../action";
+import { DotList } from "../dot-list";
+import { Drift } from "../drift";
+import { GitHubIcon } from "../icons";
+import { Mark } from "../marks";
+import { Reveal } from "../reveal";
 import { SelfHostCompose } from "./self-host-compose";
-
-const badges = [
-  { icon: ScaleIcon, label: "AGPL-3.0 licensed" },
-  { icon: ServerStackIcon, label: "Self-hosted" },
-  { icon: DockerIcon, label: "One-command Docker" },
-];
 
 export function SelfHost() {
   return (
-    <section className="scroll-mt-24 px-4 py-20 sm:py-28" id="self-host">
-      <div className="mx-auto max-w-6xl">
-        <div className="border-border bg-surface relative overflow-hidden rounded-3xl border p-6 sm:p-10 lg:p-14">
-          {/* soft accent glow */}
-          <div
-            aria-hidden
-            className="bg-accent/10 pointer-events-none absolute -top-24 -right-24 size-72 rounded-full blur-[120px]"
+    <section
+      className="border-border relative scroll-mt-24 border-t px-5 py-24 sm:px-8 sm:py-32"
+      id="self-host"
+    >
+      <Drift>
+        <div aria-hidden className="pointer-events-none absolute inset-0 hidden lg:block">
+          <Mark at="top-[18%] left-[4%] size-11" depth={1.1} shape="tomato" turn={16} />
+          <Mark
+            at="right-[3%] bottom-[20%] size-11"
+            delay={180}
+            depth={-1.2}
+            shape="pear"
+            turn={13}
           />
+        </div>
 
-          <div className="grid items-start gap-12 lg:grid-cols-2">
-            <Reveal className="min-w-0">
-              <p className="text-accent text-sm font-semibold tracking-wide uppercase">
-                Open source &amp; self-hosted
-              </p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-                Your recipes. Your server. Your rules.
-              </h2>
-              <p className="text-muted mt-4 text-pretty">
-                Norish is free and fully open source under the AGPL-3.0 license. Run it on your own
-                hardware with Docker, with no subscriptions and no lock-in. Bring your own auth with
-                OIDC, GitHub or Google, or keep it simple with email and password.
-              </p>
+        <div className="mx-auto grid max-w-5xl items-start gap-14 lg:grid-cols-2 lg:gap-16">
+          <Reveal className="min-w-0">
+            <h2 className="font-serif text-3xl leading-tight font-medium text-balance sm:text-4xl">
+              Your recipes, your server
+            </h2>
+            <p className="text-muted mt-4 text-pretty">
+              Norish is free and fully open source under the AGPL-3.0 license. Run it on your own
+              hardware with Docker: no subscription, no account with us, nothing to migrate away
+              from later.
+            </p>
 
-              <div className="mt-6 flex flex-wrap gap-2">
-                {badges.map(({ icon: Icon, label }) => (
-                  <span
-                    key={label}
-                    className="border-border bg-surface-secondary/40 text-muted inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs"
-                  >
-                    <Icon className="text-accent size-3.5" />
-                    {label}
-                  </span>
-                ))}
-              </div>
+            <DotList
+              className="mt-6 text-sm"
+              items={["AGPL-3.0", "Self-hosted", "One Docker command"]}
+            />
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <CTAButton external className="w-full sm:w-auto" href={links.github} size="lg">
-                  <GitHubIcon className="size-4.5" />
-                  View on GitHub
-                </CTAButton>
-                <CTAButton
-                  external
-                  className="w-full sm:w-auto"
-                  href={links.selfHost}
-                  size="lg"
-                  variant="secondary"
-                >
-                  Read the docs
-                  <ArrowTopRightOnSquareIcon className="size-4" />
-                </CTAButton>
-              </div>
-            </Reveal>
+            <div className="mt-8 flex items-center gap-2">
+              <Action external href={links.github}>
+                <GitHubIcon className="size-4" />
+                View on GitHub
+              </Action>
+              <Action external href={links.selfHost} variant="secondary">
+                Read the docs
+                <ArrowUpRightIcon className="size-3.5" />
+              </Action>
+            </div>
+          </Reveal>
 
+          {/* The card rides a little behind the words beside it, so the two
+              columns are not quite one flat sheet as you go past. */}
+          <div className="parallax min-w-0" style={{ "--depth": 0.45 } as CSSProperties}>
             <SelfHostCompose />
           </div>
         </div>
-      </div>
+      </Drift>
     </section>
   );
 }

@@ -37,6 +37,7 @@ describe("getRecipeEnrichmentStatus", () => {
       "nutrition-estimation",
       "recipe-provenance",
       "ingredient-linking",
+      "image-generation",
     ]);
     expect(status.kinds.every((entry) => entry.state === "idle")).toBe(true);
   });

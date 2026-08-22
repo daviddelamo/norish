@@ -230,9 +230,10 @@
           >
         </h1>
         <p class="meta">
-          Updated July 29, 2026 · branch <code>feat/web-offline-safe</code> · source decisions in
+          Updated August 9, 2026 · branch <code>rc/0.21.0-beta</code> · source decisions in
           <code>docs/adr/offline</code> · <code>docs/adr/releases</code> ·
-          <code>docs/adr/recipes</code>
+          <code>docs/adr/recipes</code> · <code>docs/adr/ai</code> ·
+          <code>docs/adr/imports</code>
         </p>
         <p class="lede">
           Norish web targets flaky connectivity and backend-down page loads with a persisted Warm
@@ -655,6 +656,101 @@
             settled facts, and only a complete group suppresses the run. Rejects whole-group
             suppression by any single value, merging blind to the model, and append-merging
             supplied Cuisines.
+          </p>
+        </li>
+        <li>
+          <a href="imports/0019-obscura-is-the-only-rendered-page-engine.md"
+            >ADR-0019 — Obscura is the only rendered-page engine</a
+          >
+          <p>
+            <b>Accepted and implemented.</b> URL imports render in one Norish-owned Obscura
+            sidecar, repackaged from upstream's render+stealth release archive at a pinned
+            version, started with stealth always on, reached with official Playwright Core over
+            CDP; private-network protection is retained. Rejects upstream's render-only image,
+            a from-source build, a Chrome fallback or per-site engine policy, and any
+            Norish-authored fingerprint beside Obscura's.
+          </p>
+        </li>
+        <li>
+          <a href="ui/0020-norish-does-not-fake-glass.md"
+            >ADR-0020 — Norish does not fake glass</a
+          >
+          <p>
+            <b>Accepted.</b> Every <code>backdrop-blur</code> and see-through fill is removed
+            from the web app; anything that floats is an opaque object with a surface fill,
+            border and shadow, and the four <code>cssGlassBackdrop*</code> tokens are deleted so
+            there is nothing left to reach for. Rejects the narrower rule of keeping blur over
+            photos and video, which is the concession that seeded the pattern everywhere else.
+            Scoped to the web: native platform blur is a real compositor effect and is untouched.
+          </p>
+        </li>
+        <li>
+          <a href="ui/0021-avatar-urls-are-versioned-and-immutable.md"
+            >ADR-0021 — Avatar URLs are versioned and immutable</a
+          >
+          <p>
+            <b>Accepted.</b> An avatar upload mints a new filename and the route serves it
+            immutable, so a changed picture is a changed URL and every cache is correct by
+            construction; the predecessor file survives until the next upload's cleanup and a
+            <code>memberProfileUpdated</code> household event nudges live clients to converge.
+            Rejects per-call-site <code>?v=</code> cache-busting and a never-cache route, which
+            traded staleness for a guaranteed loading flash and nothing offline.
+          </p>
+        </li>
+        <li>
+          <a href="imports/0022-recipe-archives-are-portability-not-backup.md"
+            >ADR-0022 — Recipe Archives are portability, not backup</a
+          >
+          <p>
+            <b>Accepted.</b> The <code>.norishrecipes</code> export is an ownership-free
+            exchange of recipe content: importing one makes the importer the owner, identity
+            travels only as display-name attribution plus the exporter's own rating and
+            favourite, and no PII rides inside. Cuisine names attach only where the receiving
+            vocabulary already knows them and are dropped visibly otherwise; the Norish parser
+            inherits the shared archive loop unchanged, overwrite on match included. Rejects
+            ownership-preserving restore, auto-created or tag-demoted cuisines, a skip-on-match
+            special case, and server-side export artifacts.
+          </p>
+        </li>
+        <li>
+          <a href="ui/0023-recipe-pages-take-their-hue-from-the-dish.md"
+            >ADR-0023 &mdash; Recipe pages take their hue from the dish</a
+          >
+          <p>
+            <b>Accepted and implemented.</b> One Dish Colour is extracted server-side from a
+            recipe's primary image and kept on the recipe; the page container scopes it as hue
+            and clamped saturation only, so lightness stays with the reader's theme and contrast
+            is unchanged by construction. Rejects browser-side extraction on render, using the
+            colour directly with luminance-chosen text, and tinting the page while leaving cards
+            neutral. Not a reversal of ADR-0020: a tinted surface is still an opaque object.
+          </p>
+        </li>
+        <li>
+          <a href="ai/0024-image-generation-is-the-runtimes-third-entry-point.md"
+            >ADR-0024 &mdash; Image generation is the runtime's third entry point, on its own
+            provider</a
+          >
+          <p>
+            <b>Proposed.</b> The AI Runtime gains <code>generateImage</code> beside
+            <code>generateStructured</code> and <code>transcribe</code>, reading its own provider
+            block rather than the server's, because only four of eleven providers expose an image
+            model at all. One feature, two requests: a structured call writes a short English
+            visual brief, and the image model draws from it. Rejects a lone
+            <code>imageModel</code> field beside <code>visionModel</code>, an OpenAI-compatible
+            endpoint as the only route, and going straight from recipe to image model.
+          </p>
+        </li>
+        <li>
+          <a href="recipes/0025-a-generated-image-takes-the-primary-slot.md"
+            >ADR-0025 &mdash; A Generated Image takes the recipe's primary slot</a
+          >
+          <p>
+            <b>Proposed.</b> A Generated Image is always order 0, and writing one deletes the row
+            and file that held that slot; a recipe holds at most one. Eligibility is the
+            counterweight &mdash; automatic runs and default sweeps skip any recipe that already
+            has an image, so only a manual action or an explicit overwrite sweep can reach stored
+            media. Rejects demoting instead of deleting, sparing supplied photographs, and a
+            confirmation on the manual action.
           </p>
         </li>
       </ul>

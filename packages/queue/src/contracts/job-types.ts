@@ -97,4 +97,10 @@ export interface RecipeEnrichmentJobData {
   origin: RecipeEnrichmentOrigin;
   /** Set for manual runs only, so a terminal failure reaches the requester alone. */
   requestedByUserId?: string;
+  /**
+   * An administrator's bulk refresh: this run's write replaces Supplied Recipe
+   * Data instead of deferring to it. Absent on every ordinary run, including
+   * every automatic enrollment a new recipe triggers.
+   */
+  replaceExisting?: boolean;
 }

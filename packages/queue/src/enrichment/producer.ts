@@ -17,6 +17,7 @@ import type {
 import { createLogger } from "@norish/shared-server/logger";
 
 import type { RecipeEnrichmentJobData } from "../contracts/job-types";
+import { removeRetainedTerminalJob } from "../helpers";
 import { publishEnrichmentLifecycle } from "./announce";
 import { ENRICHMENT_JOB_NAMES, enrichmentJobId, findActiveEnrichmentJobId } from "./identity";
 
@@ -43,10 +44,13 @@ export async function addEnrichmentJob(
     return { kind, status: "duplicate", existingJobId: activeJobId };
   }
 
-  if (data.origin === "manual") {
+  if (data.origin === "manual" || data.replaceExisting === true) {
     // A deliberate rerun clears the retained terminal job so history cannot
-    // block it. Automatic enrollment deliberately does not: a duplicate
-    // creation event must coalesce onto the completed run, not re-spend AI.
+    // block it. Ordinary automatic enrollment deliberately does not: a
+    // duplicate creation event must coalesce onto the completed run, not
+    // re-spend AI. An administrator's refresh is automatic but deliberate, and
+    // would otherwise be swallowed as a duplicate for exactly the recipes that
+    // ran recently enough to still have a retained job.
     await removeRetainedJob(queue, jobId, kind, recipeId);
   } else if (await queue.getJob(jobId)) {
     // Automatic creation signals can be delivered more than once. A retained
@@ -88,12 +92,8 @@ async function removeRetainedJob(
   kind: RecipeEnrichmentKind,
   recipeId: string
 ): Promise<void> {
-  const retained = await queue.getJob(jobId);
-
-  if (!retained) return;
-
   try {
-    await retained.remove();
+    await removeRetainedTerminalJob(queue, jobId);
   } catch (err) {
     // Returning queued here would be false: BullMQ can keep the retained job
     // under the same deterministic id and treat the later add as a no-op.

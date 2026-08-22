@@ -41,6 +41,7 @@ import {
   isVideoParsingEnabled,
 } from "@norish/shared-server/config/server-config-loader";
 import { trpcLogger as log } from "@norish/shared-server/logger";
+import { withDishColor, withDishColorForUpdate } from "@norish/shared-server/media/dish-color";
 import { deleteRecipeImagesDir } from "@norish/shared-server/media/storage";
 import { selectWeightedRandomRecipe } from "@norish/shared-server/recipes/randomizer";
 import { FilterMode, RecipeCategory, SortOrder } from "@norish/shared/contracts";
@@ -204,7 +205,10 @@ export const createRecipeProcedure = authedProcedure
       log.error({ inputId: input.id, generatedId: recipeId }, "Recipe ID mismatch detected!");
     }
 
-    createRecipeWithRefs(recipeId, ctx.user.id, input)
+    // The Dish Colour rides the payload from here: derived from the image
+    // the recipe is being stored with, overwriting anything the client sent.
+    withDishColor(input)
+      .then((dto) => createRecipeWithRefs(recipeId, ctx.user.id, dto))
       .then(async (created) => {
         if (!created) {
           throw new TRPCError({
@@ -250,7 +254,10 @@ const update = authedProcedure.input(RecipeUpdateInputSchema).mutation(({ ctx, i
 
   assertRecipeAccess(ctx, id, "edit")
     .then(async () => {
-      const result = await updateRecipeWithRefs(id, ctx.user.id, data, version);
+      // An edit that touches the media recomputes the Dish Colour from what
+      // the recipe now shows; one that does not leaves the colour alone.
+      const dto = await withDishColorForUpdate(data);
+      const result = await updateRecipeWithRefs(id, ctx.user.id, dto, version);
 
       if (result.stale) {
         log.info({ userId: ctx.user.id, recipeId: id, version }, "Ignoring stale recipe update");
@@ -782,6 +789,7 @@ const ENRICHMENT_SKIP_MESSAGES: Record<RecipeEnrichmentSkipReason, string> = {
   "insufficient-input": "This recipe does not have enough information for that enrichment",
   "no-household-allergies": "No allergies configured for your household",
   "supplied-data-present": "This recipe already has that information",
+  "no-image-provider": "No image provider is configured on this server",
 };
 
 /**

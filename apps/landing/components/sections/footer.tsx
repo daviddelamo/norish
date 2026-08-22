@@ -8,9 +8,7 @@ const columns = [
     title: "Product",
     items: [
       { label: "Features", href: "#features" },
-      { label: "Showcase", href: "#showcase" },
-      { label: "How it works", href: "#how" },
-      { label: "Self-host", href: "#self-host" },
+      { label: "Getting started", href: "#self-host" },
     ],
   },
   {
@@ -26,16 +24,16 @@ const columns = [
 
 export function Footer() {
   return (
-    <footer className="border-border/60 border-t px-4 py-14">
-      <div className="mx-auto grid max-w-6xl gap-10 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="lg:col-span-2">
-          <BrandLogo height={28} width={104} />
+    <footer className="border-border border-t px-5 py-14 sm:px-8">
+      <div className="mx-auto grid max-w-5xl gap-10 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto] lg:gap-20">
+        <div>
+          <BrandLogo height={26} width={97} />
           <p className="text-muted mt-4 max-w-xs text-sm text-pretty">
-            The open-source recipe app for families &amp; friends. Nourish every meal.
+            The open-source recipe app for families &amp; friends.
           </p>
           <a
             aria-label="Norish on GitHub"
-            className="border-border bg-surface text-foreground hover:bg-surface-secondary mt-5 inline-grid size-9 place-items-center rounded-full border transition-colors"
+            className="text-muted hover:text-foreground mt-5 inline-grid size-9 place-items-center rounded-full transition-colors"
             href={links.github}
             rel="noreferrer"
             target="_blank"
@@ -46,8 +44,8 @@ export function Footer() {
 
         {columns.map((column) => (
           <div key={column.title}>
-            <h3 className="text-sm font-semibold">{column.title}</h3>
-            <ul className="mt-4 space-y-3">
+            <h3 className="text-sm font-medium">{column.title}</h3>
+            <ul className="mt-4 space-y-2.5">
               {column.items.map((item) => (
                 <li key={item.label}>
                   <a
@@ -66,11 +64,11 @@ export function Footer() {
         ))}
       </div>
 
-      <div className="border-border/60 mx-auto mt-12 flex max-w-6xl flex-col items-center justify-between gap-3 border-t pt-6 sm:flex-row">
-        <p className="text-muted text-xs">
-          © {new Date().getFullYear()} Norish · Released under the AGPL-3.0 License.
+      <div className="border-border mx-auto mt-12 flex max-w-5xl flex-col gap-2 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-muted/70 text-xs">
+          © {new Date().getFullYear()} Norish is released under the AGPL-3.0 License.
         </p>
-        <p className="text-muted text-xs">Built for people who love to cook.</p>
+        <p className="text-muted/70 text-xs">Built for people who love to cook.</p>
       </div>
     </footer>
   );

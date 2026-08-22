@@ -5,7 +5,7 @@ import { links } from "@/lib/css-tokens";
 import { LockClosedIcon } from "@heroicons/react/24/outline";
 
 import { CopyCommand } from "../copy-command";
-import { Reveal } from "../motion/reveal";
+import { Reveal } from "../reveal";
 
 const PLACEHOLDER = "<openssl rand -base64 32>";
 
@@ -22,8 +22,8 @@ function buildCompose(masterKey: string) {
       DATABASE_URL: postgres://postgres:norish@db:5432/norish
       MASTER_KEY: ${masterKey}
       REDIS_URL: redis://redis:6379
-      CHROME_WS_ENDPOINT: ws://chrome-headless:3000
-    depends_on: [db, redis, chrome-headless]
+      OBSCURA_ENDPOINT: ws://obscura:9222
+    depends_on: [db, redis, obscura]
 
   db:
     image: postgres:17-alpine
@@ -38,15 +38,9 @@ function buildCompose(masterKey: string) {
     volumes:
       - redis_data:/data
 
-  # Headless Chrome, used to scrape recipes from the web
-  chrome-headless:
-    image: zenika/alpine-chrome:latest
-    command:
-      - --no-sandbox
-      - --remote-debugging-address=0.0.0.0
-      - --remote-debugging-port=3000
-      - --headless
-    shm_size: 256m
+  # Renders recipe pages for URL imports
+  obscura:
+    image: norishapp/obscura:0.2.0-norish.1
 
 volumes:
   db_data:
@@ -57,9 +51,11 @@ volumes:
 /** Generate a 32-byte random key, base64-encoded — matches `openssl rand -base64 32`. */
 function generateMasterKey() {
   const bytes = new Uint8Array(32);
+
   crypto.getRandomValues(bytes);
 
   let binary = "";
+
   for (const byte of bytes) binary += String.fromCharCode(byte);
 
   return btoa(binary);
@@ -78,10 +74,10 @@ export function SelfHostCompose() {
   const ready = masterKey !== PLACEHOLDER;
 
   return (
-    <Reveal className="min-w-0" delay={0.1}>
+    <Reveal className="min-w-0" delay={120}>
       <CopyCommand collapsible code={buildCompose(masterKey)} />
-      <p className="text-muted mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-balance">
-        <LockClosedIcon className="text-accent size-3.5 shrink-0" />
+      <p className="text-muted mt-3 flex items-start gap-1.5 text-xs text-pretty">
+        <LockClosedIcon className="text-accent mt-0.5 size-3.5 shrink-0" />
         {ready ? (
           <span>
             A unique <span className="text-foreground font-mono">MASTER_KEY</span> was generated

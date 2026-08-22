@@ -25,6 +25,14 @@ export const recipes = pgTable(
     }),
     name: text("name").notNull(),
     description: text("description"),
+    /**
+     * @deprecated — the primary image lives in `recipe_images`. Readers
+     * resolve gallery-first (`primaryRecipeImage` / the repository's
+     * PRIMARY_IMAGE_SQL); writers never store a value here any more (a
+     * payload scalar is translated into the gallery, and media-touching
+     * writes clear this column). Only untouched legacy rows still carry a
+     * value, until a migration retires the column.
+     */
     image: text("image"),
     url: text("url"),
     servings: integer("servings").notNull().default(1),
@@ -48,6 +56,11 @@ export const recipes = pgTable(
     originCountryName: text("origin_country_name"),
     originRegion: text("origin_region"),
     provenanceNote: text("provenance_note"),
+    // The Dish Colour (ADR-0023): one colour extracted from the recipe's
+    // primary image when that image is stored, as a `#rrggbb` hex string.
+    // Derived, never supplied — it does not travel in a Recipe Archive, and
+    // a recipe with no image simply has none.
+    dishColor: text("dish_color"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     categories: recipeCategoryEnum("categories").array().notNull().default([]),

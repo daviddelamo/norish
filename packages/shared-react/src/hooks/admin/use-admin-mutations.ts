@@ -5,6 +5,7 @@ import type {
   AuthProviderGitHubInput,
   AuthProviderGoogleInput,
   AuthProviderOIDCInput,
+  ImageGenerationConfig,
   PromptsConfigInput,
   RecipePermissionPolicy,
   ServerConfigKey,
@@ -46,6 +47,9 @@ export type AdminMutationsResult = {
   ) => Promise<{ success: boolean; error?: string }>;
   updateAIConfig: (config: AIConfig) => Promise<{ success: boolean; error?: string }>;
   updateVideoConfig: (config: VideoConfig) => Promise<{ success: boolean; error?: string }>;
+  updateImageGenerationConfig: (
+    config: ImageGenerationConfig
+  ) => Promise<{ success: boolean; error?: string }>;
   testAIEndpoint: (
     config: Pick<AIConfig, "provider" | "endpoint" | "apiKey">
   ) => Promise<{ success: boolean; error?: string }>;
@@ -92,6 +96,9 @@ export function createUseAdminMutations({
     );
     const updateAIConfigMutation = useMutation(trpc.admin.updateAIConfig.mutationOptions());
     const updateVideoConfigMutation = useMutation(trpc.admin.updateVideoConfig.mutationOptions());
+    const updateImageGenerationConfigMutation = useMutation(
+      trpc.admin.updateImageGenerationConfig.mutationOptions()
+    );
     const testAIEndpointMutation = useMutation(trpc.admin.testAIEndpoint.mutationOptions());
     const updatePermissionPolicyMutation = useMutation(
       trpc.admin.updateRecipePermissionPolicy.mutationOptions()
@@ -172,6 +179,9 @@ export function createUseAdminMutations({
       },
       updateVideoConfig: async (config) => {
         return withInvalidate(updateVideoConfigMutation.mutateAsync(config));
+      },
+      updateImageGenerationConfig: async (config) => {
+        return withInvalidate(updateImageGenerationConfigMutation.mutateAsync(config));
       },
       testAIEndpoint: async (config) => {
         return testAIEndpointMutation.mutateAsync(config);

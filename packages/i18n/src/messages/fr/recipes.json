@@ -38,6 +38,9 @@
     "backToRecipes": "Retour aux recettes",
     "viewOriginal": "Voir la recette originale",
     "ingredients": "Ingrédients",
+    "ingredientOptions": "Options des ingrédients",
+    "showMore": "Afficher plus",
+    "showLess": "Afficher moins",
     "steps": "Étapes",
     "notes": "Notes",
     "addToGroceries": "Ajouter aux courses",
@@ -51,7 +54,12 @@
     "instructions": "Instructions",
     "cook": "Cuisiner",
     "switchToDecimal": "Afficher en décimales",
-    "switchToFraction": "Afficher en fractions"
+    "switchToFraction": "Afficher en fractions",
+    "servingsCount": "{count, plural, one {# portion} other {# portions}}",
+    "source": "Source",
+    "addedBy": "Ajouté par {name}",
+    "decreaseServings": "Moins de portions",
+    "increaseServings": "Plus de portions"
   },
   "actions": {
     "plan": "Planifier",
@@ -76,7 +84,9 @@
     "inferringProvenance": "Détermination de la provenance…",
     "linkIngredients": "Lier les ingrédients aux étapes",
     "linkingIngredients": "Liaison des ingrédients…",
-    "enrichmentFailed": "Dernière tentative échouée"
+    "enrichmentFailed": "Dernière tentative échouée",
+    "generateImage": "Générer une image",
+    "generatingImage": "Génération de l'image…"
   },
   "sharePanel": {
     "title": "Partager la recette",
@@ -125,7 +135,8 @@
   "convert": {
     "ariaLabel": "Convertir le système de mesure",
     "toMetric": "Convertir en métrique",
-    "toUS": "Convertir en US"
+    "toUS": "Convertir en US",
+    "converting": "Conversion en cours…"
   },
   "deleteModal": {
     "title": "Supprimer la recette",
@@ -155,7 +166,7 @@
     "notesPlaceholder": "Ajoutez des conseils de préparation, des ajustements ou des suggestions de service pour cette recette...",
     "ingredientsHelp": "Saisissez les ingrédients comme « 2 tasses de farine » — nous détecterons automatiquement les quantités et unités.",
     "instructionsHelp": "Rédigez des instructions claires étape par étape. Appuyez sur Entrée pour passer à l’étape suivante.",
-    "tagsHelp": "Tapez des tags et cliquez sur les suggestions pour ajouter. Les tags sélectionnés sont bleus, les nouveaux ont une bordure en pointillé.",
+    "tagsHelp": "Tapez des tags et cliquez sur les suggestions pour ajouter. Les tags de la recette sont remplis, les nouveaux ont une bordure en pointillé.",
     "tagsAndCategories": "Tags & Catégories",
     "categoriesHelp": "Sélectionnez les catégories de repas pour cette recette.",
     "category": {
@@ -296,7 +307,10 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Glissez pour naviguer entre les étapes",
     "swipeIngredients": "Glissez à gauche pour les ingrédients",
-    "swipeBackToSteps": "Glissez à droite pour les étapes"
+    "swipeBackToSteps": "Glissez à droite pour les étapes",
+    "readyAt": "Prêt vers {time}",
+    "timers": "Minuteurs",
+    "nextStep": "Étape suivante"
   },
   "enrichment": {
     "failed": "L'enrichissement a échoué",
@@ -312,7 +326,8 @@
       "auto-categorization": "Catégorisation automatique",
       "nutrition-estimation": "Estimation nutritionnelle",
       "recipe-provenance": "Provenance de la recette",
-      "ingredient-linking": "Liaison des ingrédients"
+      "ingredient-linking": "Liaison des ingrédients",
+      "image-generation": "Génération d'images"
     }
   },
   "provenance": {
@@ -326,5 +341,16 @@
   "import": {
     "alreadyExists": "Vous avez déjà cette recette",
     "openExisting": "Ouvrir"
+  },
+  "glanceBar": {
+    "totalTime": "Temps total",
+    "servings": "{count, plural, one {portion} other {portions}}"
+  },
+  "cookingTime": {
+    "title": "Temps de cuisine",
+    "prep": "Préparation",
+    "cook": "Cuisson",
+    "other": "Autre temps",
+    "total": "Total"
   }
 }

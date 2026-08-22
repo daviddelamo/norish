@@ -1,13 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
 import { useTheme } from "next-themes";
+import { flushSync } from "react-dom";
 
-/** Light/dark switch. Guards on `mounted` so the icon never mismatches on hydration. */
+/** Feature-detected: present in browsers that ship the View Transition API. */
+type DocumentWithViewTransition = Document & {
+  startViewTransition?: (update: () => void) => unknown;
+};
+
+/**
+ * Light/dark switch. Where the View Transition API exists, the new theme
+ * sweeps out from this button as a growing circle (see `theme-reveal` in
+ * globals.css); everywhere else, and under reduced motion, it just switches.
+ * Guards on `mounted` so the icon never mismatches on hydration.
+ */
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -16,12 +28,45 @@ export function ThemeToggle() {
   // and first client render match (no hydration mismatch).
   const label = !mounted ? "Toggle theme" : isDark ? "Switch to light mode" : "Switch to dark mode";
 
+  const toggle = () => {
+    const next = isDark ? "light" : "dark";
+    const doc = document as DocumentWithViewTransition;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!doc.startViewTransition || reduced || !button.current) {
+      setTheme(next);
+
+      return;
+    }
+
+    // The circle grows from the button itself, reaching the farthest corner.
+    const { left, top, width, height } = button.current.getBoundingClientRect();
+    const x = left + width / 2;
+    const y = top + height / 2;
+    const radius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const root = document.documentElement.style;
+
+    root.setProperty("--theme-reveal-x", `${x}px`);
+    root.setProperty("--theme-reveal-y", `${y}px`);
+    root.setProperty("--theme-reveal-r", `${radius}px`);
+
+    doc.startViewTransition(() => {
+      // The snapshot pair needs the DOM flipped synchronously inside the callback.
+      flushSync(() => setTheme(next));
+    });
+  };
+
   return (
     <button
+      ref={button}
       aria-label={label}
-      className="border-border bg-surface-secondary text-foreground hover:bg-surface-tertiary focus-visible:ring-accent/50 focus-visible:ring-offset-background grid size-9 place-items-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="text-muted hover:text-foreground hover:bg-default grid size-9 place-items-center rounded-full transition-colors"
       type="button"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={toggle}
     >
       {mounted ? (
         isDark ? (

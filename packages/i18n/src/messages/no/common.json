@@ -12,6 +12,8 @@
     "apply": "Bruk",
     "reset": "Tilbakestill",
     "clear": "Tøm",
+    "selectAll": "Velg alle",
+    "deselectAll": "Fjern alle",
     "confirm": "Bekreft",
     "back": "Tilbake",
     "next": "Neste",
@@ -28,11 +30,12 @@
     "test": "Test",
     "format": "Formater",
     "restoreDefaults": "Gjenopprett standardinnstillinger",
-    "saveChanges": "Lagre endringer",
-    "revealSecret": "Vis hemmelighet",
-    "hideSecret": "Skjul hemmelighet",
-    "enterNewValue": "Skriv inn ny verdi",
-    "cancelEditing": "Avbryt redigering"
+    "saveChanges": "Lagre endringer"
+  },
+  "secret": {
+    "reveal": "Vis hemmelighet",
+    "hide": "Skjul hemmelighet",
+    "keepsCurrent": "La feltet stå tomt for å beholde den lagrede verdien."
   },
   "status": {
     "loading": "Laster...",

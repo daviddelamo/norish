@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { SwitchRow } from "@/app/(app)/settings/components/setting-row";
 import SettingsSwitch from "@/app/(app)/settings/components/settings-switch";
 import { KeyIcon } from "@heroicons/react/24/outline";
 import { Accordion, Card, Separator } from "@heroui/react";
@@ -39,9 +40,11 @@ export function AuthProvidersCard() {
   return (
     <Card>
       <Card.Header>
-        <div className="flex items-center gap-2">
-          <KeyIcon className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">{t("title")}</h2>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <KeyIcon className="h-5 w-5 shrink-0" />
+            {t("title")}
+          </h2>
           <RestartRequiredChip />
         </div>
       </Card.Header>
@@ -50,20 +53,14 @@ export function AuthProvidersCard() {
 
         {/* Password Auth Toggle */}
         <div className="bg-surface-secondary rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-medium">{t("passwordAuth.title")}</span>
-                <span className="text-muted text-base">{t("passwordAuth.description")}</span>
-              </div>
-            </div>
+          <SwitchRow description={t("passwordAuth.description")} title={t("passwordAuth.title")}>
             <SettingsSwitch
               color="success"
               isDisabled={isLoading}
               isSelected={passwordAuthEnabled ?? false}
               onValueChange={updatePasswordAuth}
             />
-          </div>
+          </SwitchRow>
         </div>
 
         <Separator />
@@ -75,8 +72,8 @@ export function AuthProvidersCard() {
           <Accordion.Item id="oidc">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <span className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <span className="flex flex-wrap items-center gap-2">
                     {t("oidc.title")}{" "}
                     <EnvManagedBadge isOverridden={authProviderOIDC?.isOverridden} />
                     {dirtySections.oidc && <UnsavedChangesChip />}
@@ -99,8 +96,8 @@ export function AuthProvidersCard() {
           <Accordion.Item id="github">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <span className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <span className="flex flex-wrap items-center gap-2">
                     {t("github.title")}{" "}
                     <EnvManagedBadge isOverridden={authProviderGitHub?.isOverridden} />
                     {dirtySections.github && <UnsavedChangesChip />}
@@ -129,8 +126,8 @@ export function AuthProvidersCard() {
           <Accordion.Item id="google">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <span className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <span className="flex flex-wrap items-center gap-2">
                     {t("google.title")}{" "}
                     <EnvManagedBadge isOverridden={authProviderGoogle?.isOverridden} />
                     {dirtySections.google && <UnsavedChangesChip />}

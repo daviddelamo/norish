@@ -7,8 +7,7 @@ import RecipePageDesktop from "@/app/(app)/recipes/[id]/recipe-page-desktop";
 import RecipePageMobile from "@/app/(app)/recipes/[id]/recipe-page-mobile";
 
 const userPreferencesState = {
-  showFavorites: false,
-  showRatings: true,
+  hidden: ["favorites"] as string[],
 };
 
 vi.mock("next-intl", () => ({
@@ -24,6 +23,10 @@ vi.mock("@/context/user-context", () => ({
   useUserContext: () => ({
     user: { preferences: userPreferencesState },
   }),
+}));
+
+vi.mock("@/context/hidden-items-context", () => ({
+  useHiddenItems: () => userPreferencesState.hidden,
 }));
 
 vi.mock("@/app/(app)/recipes/[id]/context", () => ({
@@ -86,14 +89,17 @@ vi.mock("@/components/shared/media-carousel", () => ({
 
 vi.mock("@/app/(app)/recipes/[id]/components/provenance-card", () => ({
   default: () => <div>provenance-card</div>,
-  ProvenanceSection: () => <div>provenance-section</div>,
   useProvenanceSectionVisible: () => true,
 }));
 
 vi.mock("@/app/(app)/recipes/[id]/components/nutrition-card", () => ({
   default: () => <div>nutrition-card</div>,
-  NutritionSection: () => <div>nutrition-section</div>,
   useNutritionSectionVisible: () => true,
+}));
+
+vi.mock("@/app/(app)/recipes/[id]/components/notes-card", () => ({
+  default: () => <div>notes-card</div>,
+  useNotesSectionVisible: () => false,
 }));
 
 vi.mock("@/app/(app)/recipes/[id]/components/actions-menu", () => ({
@@ -104,6 +110,9 @@ vi.mock("@/app/(app)/recipes/[id]/components/add-to-groceries-button", () => ({
 }));
 vi.mock("@/app/(app)/recipes/[id]/components/ingredient-list", () => ({
   default: () => <div>ingredients-list</div>,
+}));
+vi.mock("@/app/(app)/recipes/[id]/components/ingredients-options-menu", () => ({
+  default: () => <div data-testid="ingredients-options" />,
 }));
 vi.mock("@/app/(app)/recipes/[id]/components/servings-control", () => ({
   default: () => <div>servings-control</div>,
@@ -129,7 +138,7 @@ vi.mock("@/components/recipes/author-chip", () => ({
 
 describe("recipe pages favorite visibility", () => {
   it("keeps tap interactions enabled on desktop when favorites are hidden", () => {
-    userPreferencesState.showFavorites = false;
+    userPreferencesState.hidden = ["favorites"];
 
     render(<RecipePageDesktop />);
 
@@ -141,7 +150,7 @@ describe("recipe pages favorite visibility", () => {
   });
 
   it("keeps tap interactions enabled on mobile when favorites are hidden", () => {
-    userPreferencesState.showFavorites = false;
+    userPreferencesState.hidden = ["favorites"];
 
     render(<RecipePageMobile />);
 

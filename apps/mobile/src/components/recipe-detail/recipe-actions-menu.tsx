@@ -257,6 +257,14 @@ export function RecipeActionsMenu({ ctx }: RecipeActionsMenuProps) {
           onPress={() => enrichment.request("nutrition-estimation")}
         />
       ) : null}
+      {isAIEnabled && canEdit ? (
+        <UIButton
+          label={enrichmentLabel("image-generation", "recipes.actions.generateImage")}
+          modifiers={[disabledModifier(enrichment.isBusy("image-generation"))]}
+          systemImage="sparkles"
+          onPress={() => enrichment.request("image-generation")}
+        />
+      ) : null}
 
       {/* Destructive */}
       {canDelete ? <UIDivider /> : null}

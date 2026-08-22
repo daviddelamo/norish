@@ -38,6 +38,9 @@
     "backToRecipes": "Назад к рецептам",
     "viewOriginal": "Открыть оригинальный рецепт",
     "ingredients": "Ингредиенты",
+    "ingredientOptions": "Настройки ингредиентов",
+    "showMore": "Показать больше",
+    "showLess": "Показать меньше",
     "steps": "Шаги",
     "notes": "Заметки",
     "addToGroceries": "Добавить в список покупок",
@@ -51,7 +54,12 @@
     "instructions": "Инструкция",
     "cook": "Готовить",
     "switchToDecimal": "Показывать десятичные",
-    "switchToFraction": "Показывать дроби"
+    "switchToFraction": "Показывать дроби",
+    "servingsCount": "{count, plural, one {# порция} few {# порции} many {# порций} other {# порции}}",
+    "source": "Источник",
+    "addedBy": "Добавил(а) {name}",
+    "decreaseServings": "Меньше порций",
+    "increaseServings": "Больше порций"
   },
   "actions": {
     "plan": "Запланировать",
@@ -76,7 +84,9 @@
     "inferringProvenance": "Определяем происхождение…",
     "linkIngredients": "Связать ингредиенты с шагами",
     "linkingIngredients": "Связывание ингредиентов…",
-    "enrichmentFailed": "Последняя попытка не удалась"
+    "enrichmentFailed": "Последняя попытка не удалась",
+    "generateImage": "Сгенерировать изображение",
+    "generatingImage": "Генерация изображения…"
   },
   "sharePanel": {
     "title": "Поделиться рецептом",
@@ -125,7 +135,8 @@
   "convert": {
     "ariaLabel": "Преобразовать систему мер",
     "toMetric": "Преобразовать в метрическую",
-    "toUS": "Преобразовать в US"
+    "toUS": "Преобразовать в US",
+    "converting": "Преобразование…"
   },
   "deleteModal": {
     "title": "Удалить рецепт",
@@ -155,7 +166,7 @@
     "notesPlaceholder": "Добавьте заметки по подготовке, корректировкам или подаче...",
     "ingredientsHelp": "Введите ингредиенты, например «2 стакана муки» — мы автоматически распознаем количество и единицы.",
     "instructionsHelp": "Пишите понятные пошаговые инструкции. Нажмите Enter, чтобы перейти к следующему шагу.",
-    "tagsHelp": "Введите теги и нажмите на подсказки, чтобы добавить. Выбранные теги выделены синим, новые теги имеют пунктирную рамку.",
+    "tagsHelp": "Введите теги и нажмите на подсказки, чтобы добавить. Теги рецепта залиты цветом, новые теги имеют пунктирную рамку.",
     "tagsAndCategories": "Теги и категории",
     "categoriesHelp": "Выберите категории приёма пищи для этого рецепта.",
     "category": {
@@ -296,7 +307,10 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Проведите для навигации по шагам",
     "swipeIngredients": "Проведите влево для ингредиентов",
-    "swipeBackToSteps": "Проведите вправо для шагов"
+    "swipeBackToSteps": "Проведите вправо для шагов",
+    "readyAt": "Готово примерно в {time}",
+    "timers": "Таймеры",
+    "nextStep": "Следующий шаг"
   },
   "enrichment": {
     "failed": "Не удалось выполнить обогащение",
@@ -312,7 +326,8 @@
       "auto-categorization": "Автоматическая категоризация",
       "nutrition-estimation": "Оценка пищевой ценности",
       "recipe-provenance": "Происхождение рецепта",
-      "ingredient-linking": "Связывание ингредиентов"
+      "ingredient-linking": "Связывание ингредиентов",
+      "image-generation": "Генерация изображений"
     }
   },
   "provenance": {
@@ -326,5 +341,16 @@
   "import": {
     "alreadyExists": "У вас уже есть этот рецепт",
     "openExisting": "Открыть"
+  },
+  "glanceBar": {
+    "totalTime": "Общее время",
+    "servings": "{count, plural, one {порция} few {порции} many {порций} other {порции}}"
+  },
+  "cookingTime": {
+    "title": "Время приготовления",
+    "prep": "Подготовка",
+    "cook": "Готовка",
+    "other": "Прочее время",
+    "total": "Всего"
   }
 }

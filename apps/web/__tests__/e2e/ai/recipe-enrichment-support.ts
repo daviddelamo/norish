@@ -30,7 +30,9 @@ export async function setAutomaticEnrichment(
       | "allergyDetection"
       | "autoCategorization"
       | "nutritionEstimation"
-      | "recipeProvenance",
+      | "recipeProvenance"
+      | "ingredientLinking"
+      | "imageGeneration",
       boolean
     >
   >
@@ -51,6 +53,8 @@ export async function setAutomaticEnrichment(
           autoCategorization: false,
           nutritionEstimation: false,
           recipeProvenance: false,
+          ingredientLinking: false,
+          imageGeneration: false,
           ...switches,
         }),
       ]

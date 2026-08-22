@@ -1,7 +1,6 @@
 {
   "page": {
     "title": "Indstillinger",
-    "loading": "Indlæser...",
     "ariaLabel": "Indstillingsfaner"
   },
   "tabs": {
@@ -62,7 +61,12 @@
     },
     "archiveImport": {
       "title": "Importer opskriftarkiv",
-      "description": "Importer opskrifter fra Mela (.melarecipes), Paprika (.paprikarecipes) eller Mealie/Tandoor (.zip)-eksporter"
+      "description": "Importer opskrifter fra Norish (.norishrecipes), Mela (.melarecipes), Paprika (.paprikarecipes) eller Mealie/Tandoor (.zip)-eksporter"
+    },
+    "archiveExport": {
+      "title": "Eksportér opskriftsarkiv",
+      "description": "Download alle de opskrifter, du kan se.",
+      "button": "Eksportér"
     },
     "siteAuthTokens": {
       "title": "Websteds-godkendelsestokens",
@@ -111,21 +115,19 @@
         "title": "Sprog",
         "description": "Vælg dit foretrukne sprog"
       },
-      "timers": {
-        "title": "Aktivér opskrifttimere",
-        "description": "Vis interaktive timere i opskriftinstruktioner"
-      },
-      "conversion": {
-        "title": "Vis knap til ingredienskonvertering",
-        "description": "Vis en knap på opskriftsider til at konvertere mellem målesystemer"
-      },
-      "ratings": {
-        "title": "Vis bedømmelser",
-        "description": "Vis stjernebedømmelser på opskriftskort og detaljesider"
-      },
-      "favorites": {
-        "title": "Vis favoritter",
-        "description": "Vis favorit/hjerte-ikoner på opskriftskort og detaljesider"
+      "hidden": {
+        "title": "Skjulte elementer",
+        "description": "Vælg hvad du helst ikke vil have vist. Alt vises som standard, og dette ændrer kun din egen visning.",
+        "placeholder": "Intet skjult",
+        "options": {
+          "provenance": "Oprindelse",
+          "nutrition": "Næring",
+          "notes": "Noter",
+          "rating": "Bedømmelser",
+          "favorites": "Favoritter",
+          "conversion": "Ingredienskonvertering",
+          "timers": "Opskriftstimere"
+        }
       },
       "todaySection": {
         "title": "I dag-sektion",
@@ -134,6 +136,14 @@
           "always": "Altid synlig",
           "planned": "Kun planlagte måltider",
           "hidden": "Skjult"
+        }
+      },
+      "recipePageColor": {
+        "title": "Farve på opskriftssider",
+        "description": "Ton hver opskriftsside med farverne fra dens eget foto, eller behold temaets farver på denne enhed",
+        "options": {
+          "dish": "Fra rettens foto",
+          "theme": "Temaets farver"
         }
       },
       "applyError": "Kunne ikke anvende præference"
@@ -354,7 +364,12 @@
       "saveLocales": "Gem sprogindstillinger",
       "localesSaved": "Sprogindstillinger gemt",
       "localesError": "Kunne ikke gemme sprogindstillinger",
-      "atLeastOneLocale": "Mindst ét sprog skal være aktiveret"
+      "atLeastOneLocale": "Mindst ét sprog skal være aktiveret",
+      "export": {
+        "title": "Opskriftsarkiv",
+        "description": "Download alle opskrifter på denne server.",
+        "button": "Eksportér opskriftsarkiv"
+      }
     },
     "registration": {
       "title": "Registrering",
@@ -517,6 +532,10 @@
         "title": "Videobehandling",
         "subtitle": "Udtrækning og transskription fra sociale medier"
       },
+      "imageGeneration": {
+        "title": "Billedgenerering",
+        "subtitle": "Tegn et billede af retten til opskrifter uden billede"
+      },
       "prompts": {
         "title": "Prompt-tekster",
         "subtitle": "Tilpas AI-instruktioner til opskriftbehandling"
@@ -528,15 +547,20 @@
       "bulkEnrichment": {
         "title": "Masseberigelse",
         "subtitle": "Kør aktiveret berigelse på alle opskrifter",
-        "description": "Sæt hver berigelsestype, hvis automatiske kontakt er slået til, i kø for alle opskrifter på denne server. Opskrifter beholder de data, de allerede har, kun huller udfyldes.",
+        "description": "Sæt hver berigelsestype, hvis automatiske kontakt er slået til, i kø for alle opskrifter på denne server. Som standard udfyldes kun huller; bekræftelsen tilbyder at overskrive det, der allerede findes.",
         "button": "Berig alle opskrifter",
         "confirmTitle": "Kør berigelse på alle opskrifter?",
         "confirmMessage": "Dette sætter AI-arbejde i kø for hver opskrift på denne server. Hver berigelsestype, hvis automatiske kontakt er slået til, kører hvor der mangler data.",
+        "replaceExisting": "Overskriv eksisterende data",
+        "replaceExistingDescription": "Lav kategorier, næringsindhold, oprindelse og triningredienser om, også hvor en opskrift allerede har dem. Tags og allergiangivelser bliver kun tilføjet.",
+        "replaceWarning": "Dette kan ikke fortrydes. Data, du selv har indtastet, bliver også erstattet, inklusive triningredienser, du har knyttet manuelt: intet registrerer, hvilke værdier der kom fra AI.",
         "costWarning": "Dette kan være en dyr operation: Med mange opskrifter kan det tage lang tid og hos en betalt AI-udbyder bruge betydelig kredit.",
         "confirmButton": "Kør på alle opskrifter",
+        "confirmButtonReplace": "Overskriv alle opskrifter",
         "queued": "{queued, plural, =0 {Ingen kørsler i kø} one {# kørsel i kø} other {# kørsler i kø}} for {recipes, plural, one {# opskrift} other {# opskrifter}}",
         "aiDisabled": "AI er deaktiveret på denne server. Aktivér AI først.",
-        "error": "Kunne ikke starte masseberigelse"
+        "error": "Kunne ikke starte masseberigelse",
+        "imageCount": "{count, plural, =0 {Der genereres ingen billeder.} one {Der genereres # billede.} other {Der genereres # billeder.}}"
       }
     },
     "aiConfig": {
@@ -576,6 +600,7 @@
       "vision": "vision",
       "automaticEnrichment": "Automatisk opskriftsberigelse",
       "automaticEnrichmentDescription": "Vælg hvilken AI-berigelse der kører automatisk for nye opskrifter. Medlemmer kan stadig køre hver enkelt manuelt, når AI er slået til.",
+      "automaticEnrichmentPlaceholder": "Intet kører automatisk",
       "automaticEnrichmentKinds": {
         "autoTagging": "Automatiske tags",
         "autoTaggingDescription": "Tilføj AI-foreslåede tags til nye opskrifter uden at fjerne eksisterende tags",
@@ -588,7 +613,9 @@
         "recipeProvenance": "Opskriftens oprindelse",
         "recipeProvenanceDescription": "Udled land, region, køkkener og en kort note for nye opskrifter, kun det der mangler udfyldes, det du selv har angivet bevares",
         "ingredientLinking": "Ingredienstilknytning",
-        "ingredientLinkingDescription": "Tilknytter hvert trin de ingredienslinjer, det bruger, kun for trin uden tilknytninger"
+        "ingredientLinkingDescription": "Tilknytter hvert trin de ingredienslinjer, det bruger, kun for trin uden tilknytninger",
+        "imageGeneration": "Billedgenerering",
+        "imageGenerationDescription": "Tegn et billede af retten til nye opskrifter helt uden billede"
       },
       "tagStrategy": "Tagstrategi",
       "tagStrategyDescription": "Hvilke tags automatisk tagging må bruge, uanset om den kører automatisk eller manuelt",
@@ -603,6 +630,11 @@
         "existing": "Kun eksisterende køkkener",
         "extend": "AI må oprette nye køkkener"
       }
+    },
+    "modelListing": {
+      "empty": "Ingen modeller kom retur. Tjek API-nøglen eller endpointet, eller skriv et modelnavn.",
+      "refused": "{provider} afviste anmodningen ({status}). Tjek API-nøglen.",
+      "unreachable": "Kunne ikke nå {provider}. Tjek endpointet."
     },
     "videoConfig": {
       "enableVideo": "Aktivér videoanalyse",
@@ -644,6 +676,27 @@
       "transcriptionApiKeyOptionalDescription": "De fleste lokale Whisper-servere kræver ikke en API-nøgle",
       "transcriptionApiKeyOptionalPlaceholder": "Lad stå tomt for lokale servere"
     },
+    "imageGenerationConfig": {
+      "description": "Billedgenerering bruger sin egen udbyder, fordi de fleste AI-udbydere ikke kan tegne. Billeder genereres med denne udbyder; AI-udbyderen ovenfor klarer alt andet.",
+      "provider": "Billedudbyder",
+      "providers": {
+        "disabled": "Deaktiveret",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "Generisk OpenAI-kompatibel"
+      },
+      "endpoint": "Endpoint-URL",
+      "endpointOptional": "Valgfrit: brugerdefineret Azure-ressource-URL",
+      "apiKey": "API-nøgle",
+      "apiKeyPlaceholder": "Indtast API-nøgle...",
+      "apiKeyInherited": "Bruger API-nøglen fra din AI-konfiguration.",
+      "model": "Billedmodel",
+      "modelPlaceholder": "f.eks. gpt-image-1",
+      "modelDescription": "Modellen der tegner billedet. Det skal være en billedmodel, ikke en tekstmodel.",
+      "fallbackHint": "Samme udbyder som din AI-konfiguration: endpoint og API-nøgle falder tilbage til den, medmindre du angiver dem her."
+    },
     "promptsConfig": {
       "recipeExtraction": "Prompt til opskriftudtrækning",
       "recipeExtractionDescription": "Denne prompt bruges ved udtrækning af opskriftdata fra websider eller videotransskriptioner.",
@@ -671,7 +724,13 @@
       "recipeProvenancePlaceholder": "Indtast prompten til opskriftens oprindelse ...",
       "ingredientLinking": "Prompt til ingredienstilknytning",
       "ingredientLinkingDescription": "Bruges når hvert trin tilknyttes de ingredienslinjer, det bruger",
-      "ingredientLinkingPlaceholder": "Prompt til at tilknytte ingredienser til trin..."
+      "ingredientLinkingPlaceholder": "Prompt til at tilknytte ingredienser til trin...",
+      "imageGenerationBrief": "Billedbeskrivelses-prompt",
+      "imageGenerationBriefDescription": "Bruges til at omdanne en opskrift til en kort visuel beskrivelse, før billedet genereres. Opskriften tilføjes efter prompten.",
+      "imageGenerationBriefPlaceholder": "Prompt til den visuelle beskrivelse...",
+      "imageGenerationStyle": "Billedstil-prompt",
+      "imageGenerationStyleDescription": "Sendes til billedmodellen med den visuelle beskrivelse tilføjet efter. Bestemmer det udtryk, alle genererede billeder deler.",
+      "imageGenerationStylePlaceholder": "Prompt til billedstilen..."
     },
     "unsavedChanges": "Ugemte ændringer",
     "jsonEditor": {
@@ -732,7 +791,8 @@
         "recipe-provenance": "Opskriftens oprindelse",
         "ingredient-linking": "Ingredienstilknytning",
         "caldav-sync": "CalDAV sync",
-        "scheduled-tasks": "Scheduled tasks"
+        "scheduled-tasks": "Scheduled tasks",
+        "image-generation": "Billedgenerering"
       },
       "summary": {
         "failed": "{count} failed"
@@ -798,6 +858,15 @@
       "empty": "Ingen køkkener endnu.",
       "duplicate": "Der findes allerede et køkken med det navn.",
       "saveFailed": "Kunne ikke gemme det køkken."
+    }
+  },
+  "archiveExport": {
+    "progress": "Eksporterer… {size}",
+    "errors": {
+      "failedTitle": "Eksport mislykkedes",
+      "failedDescription": "Opskriftsarkivet kunne ikke downloades. Prøv igen.",
+      "signedOut": "Din session er udløbet. Log ind igen for at eksportere.",
+      "notAllowed": "Du har ikke tilladelse til at eksportere dette."
     }
   }
 }

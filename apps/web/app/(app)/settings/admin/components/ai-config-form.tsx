@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SettingRow, SwitchRow } from "@/app/(app)/settings/components/setting-row";
 import SettingsSwitch from "@/app/(app)/settings/components/settings-switch";
 import SecretInput from "@/components/shared/secret-input";
 import { useAvailableModelsQuery } from "@/hooks/admin";
@@ -14,7 +15,6 @@ import {
   ListBox,
   Select,
   Slider,
-  Spinner,
   TextField,
 } from "@heroui/react";
 import { useTranslations } from "next-intl";
@@ -33,6 +33,7 @@ import {
 } from "@norish/config/zod/server-config";
 
 import { useAdminSettingsContext } from "../context";
+import ModelListingEmptyState from "./model-listing-empty-state";
 
 interface AIConfigFormProps {
   onDirtyChange?: (isDirty: boolean) => void;
@@ -69,6 +70,7 @@ const AUTOMATIC_ENRICHMENT_KEYS = [
   "nutritionEstimation",
   "recipeProvenance",
   "ingredientLinking",
+  "imageGeneration",
 ] as const satisfies readonly (keyof AutomaticEnrichmentConfig)[];
 export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
   const t = useTranslations("settings.admin.aiConfig");
@@ -130,7 +132,11 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         ? endpoint
         : endpoint); // generic-openai needs endpoint
 
-  const { models: availableModels, isLoading: isLoadingModels } = useAvailableModelsQuery({
+  const {
+    models: availableModels,
+    refusal: modelRefusal,
+    isLoading: isLoadingModels,
+  } = useAvailableModelsQuery({
     provider: provider as AIConfig["provider"],
     endpoint: endpoint || undefined,
     apiKey: apiKey || undefined,
@@ -238,6 +244,27 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
     return await fetchConfigSecret(ServerConfigKeys.AI_CONFIG, "apiKey");
   }, [fetchConfigSecret]);
 
+  /**
+   * The stored record read as the list the picker selects over. A column of
+   * switches read as separate decisions; which kinds are allowed to run unasked
+   * is one. Every kind belongs here — one left out of the list is not merely
+   * unreachable, it is rewritten to its default the moment any other kind is
+   * toggled, because the picker rebuilds the whole record from this list.
+   */
+  const selectedEnrichmentKinds = useMemo(
+    () => AUTOMATIC_ENRICHMENT_KEYS.filter((key) => automaticEnrichment[key]),
+    [automaticEnrichment]
+  );
+  const handleEnrichmentKindsChange = useCallback((chosen: string[]) => {
+    const selected = new Set(chosen);
+
+    setAutomaticEnrichment(
+      Object.fromEntries(
+        AUTOMATIC_ENRICHMENT_KEYS.map((key) => [key, selected.has(key)])
+      ) as AutomaticEnrichmentConfig
+    );
+  }, []);
+
   // Clear model fields when provider changes to avoid invalid model selection
   const handleProviderChange = (newProvider: AIConfig["provider"]) => {
     if (newProvider !== provider) {
@@ -295,19 +322,18 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         cuisineStrategy,
         automaticEnrichment,
       });
+      // Saved keys live on the server, not in the form: a key left in state
+      // reads as an unsaved change on every later render.
+      setApiKey("");
     } finally {
       setSaving(false);
     }
   };
   return (
     <div className="flex flex-col gap-4 p-2">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="font-medium">{t("enableAI")}</span>
-          <span className="text-muted text-base">{t("enableAIDescription")}</span>
-        </div>
+      <SwitchRow description={t("enableAIDescription")} title={t("enableAI")}>
         <SettingsSwitch color="success" isSelected={enabled} onValueChange={setEnabled} />
-      </div>
+      </SwitchRow>
 
       {showValidationWarning && (
         <div className="text-warning bg-warning/10 rounded-lg p-3 text-base">
@@ -395,13 +421,9 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         </ComboBox.InputGroup>
         <ComboBox.Popover>
           <ListBox
-            renderEmptyState={() =>
-              isLoadingModels ? (
-                <div className="flex justify-center py-2">
-                  <Spinner size="sm" />
-                </div>
-              ) : null
-            }
+            renderEmptyState={() => (
+              <ModelListingEmptyState isLoading={isLoadingModels} refusal={modelRefusal} />
+            )}
           >
             {modelOptions.map((item) => (
               <ListBox.Item key={item.value} id={item.value} textValue={item.value}>
@@ -432,13 +454,9 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         <Description>{t("visionModelDescription")}</Description>
         <ComboBox.Popover>
           <ListBox
-            renderEmptyState={() =>
-              isLoadingModels ? (
-                <div className="flex justify-center py-2">
-                  <Spinner size="sm" />
-                </div>
-              ) : null
-            }
+            renderEmptyState={() => (
+              <ModelListingEmptyState isLoading={isLoadingModels} refusal={modelRefusal} />
+            )}
           >
             {visionModelOptions.map((item) => (
               <ListBox.Item key={item.value} id={item.value} textValue={item.value}>
@@ -498,42 +516,68 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         <Input variant="secondary" />
       </TextField>
 
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="font-medium">{t("alwaysUseAI")}</span>
-          <span className="text-muted text-base">{t("alwaysUseAIDescription")}</span>
-        </div>
+      <SwitchRow description={t("alwaysUseAIDescription")} title={t("alwaysUseAI")}>
         <SettingsSwitch
           color="success"
           isDisabled={!enabled}
           isSelected={alwaysUseAI}
           onValueChange={setAlwaysUseAI}
         />
-      </div>
+      </SwitchRow>
 
-      <div className="flex flex-col gap-1">
-        <span className="font-medium">{t("automaticEnrichment")}</span>
-        <span className="text-muted text-base">{t("automaticEnrichmentDescription")}</span>
-      </div>
-
-      {AUTOMATIC_ENRICHMENT_KEYS.map((key) => (
-        <div key={key} className="flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">{t(`automaticEnrichmentKinds.${key}`)}</span>
-            <span className="text-muted text-base">
-              {t(`automaticEnrichmentKinds.${key}Description`)}
-            </span>
-          </div>
-          <SettingsSwitch
-            color="success"
-            isDisabled={!enabled}
-            isSelected={automaticEnrichment[key]}
-            onValueChange={(value) =>
-              setAutomaticEnrichment((current) => ({ ...current, [key]: value }))
-            }
-          />
-        </div>
-      ))}
+      <SettingRow
+        description={t("automaticEnrichmentDescription")}
+        title={t("automaticEnrichment")}
+      >
+        <Select
+          aria-label={t("automaticEnrichment")}
+          className="w-full sm:w-80"
+          isDisabled={!enabled}
+          placeholder={t("automaticEnrichmentPlaceholder")}
+          selectionMode="multiple"
+          value={selectedEnrichmentKinds}
+          variant="secondary"
+          onChange={(selected) => handleEnrichmentKindsChange(selected.map(String))}
+        >
+          <Label className="sr-only">{t("automaticEnrichment")}</Label>
+          <Select.Trigger>
+            {/* A flex child will not shrink past its text without `min-w-0`,
+                which is what let the joined list push the trigger wide enough
+                to be cut off by the panel instead of clipped by the field. */}
+            <Select.Value className="min-w-0">
+              {({ defaultChildren, isPlaceholder }) =>
+                isPlaceholder ? (
+                  defaultChildren
+                ) : (
+                  // Seven names joined read as a paragraph inside the trigger;
+                  // one clipped line says as much and keeps the row a row.
+                  <span className="block truncate">
+                    {selectedEnrichmentKinds
+                      .map((key) => t(`automaticEnrichmentKinds.${key}`))
+                      .join(", ")}
+                  </span>
+                )
+              }
+            </Select.Value>
+            <Select.Indicator />
+          </Select.Trigger>
+          <Select.Popover>
+            <ListBox selectionMode="multiple">
+              {AUTOMATIC_ENRICHMENT_KEYS.map((key) => (
+                <ListBox.Item key={key} id={key} textValue={t(`automaticEnrichmentKinds.${key}`)}>
+                  <div className="flex flex-col">
+                    <span>{t(`automaticEnrichmentKinds.${key}`)}</span>
+                    <span className="text-muted text-xs">
+                      {t(`automaticEnrichmentKinds.${key}Description`)}
+                    </span>
+                  </div>
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+              ))}
+            </ListBox>
+          </Select.Popover>
+        </Select>
+      </SettingRow>
 
       <Select
         variant="secondary"
@@ -620,7 +664,7 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         </div>
       )}
 
-      <div className="flex items-center justify-end gap-2 pt-2">
+      <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
         <Button isDisabled={!enabled} onPress={handleTest} variant="tertiary" isPending={testing}>
           {<BeakerIcon className="h-5 w-5" />}
           {t("testConnection")}

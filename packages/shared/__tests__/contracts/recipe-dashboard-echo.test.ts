@@ -17,6 +17,37 @@ const echoableKeys = RECIPE_DASHBOARD_KEYS.filter((key) => key in FullRecipeSche
 const dashboardOnlyKeys = RECIPE_DASHBOARD_KEYS.filter((key) => !(key in FullRecipeSchema.shape));
 
 describe("patchDashboardRecipeFromFull", () => {
+  it("resolves the thumbnail from the gallery, not the legacy scalar", () => {
+    // The dashboard's `image` is the resolved primary. An echo whose gallery
+    // leads with a different file than the legacy scalar must patch the card
+    // to the gallery's primary — a raw scalar copy would regress a
+    // gallery-only recipe's thumbnail to nothing.
+    const stale = Object.fromEntries(
+      RECIPE_DASHBOARD_KEYS.map((key) => [key, `stale-${key}`])
+    ) as unknown as DashboardRecipe;
+    const echo = {
+      image: null,
+      images: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          image: "/recipes/r/b.jpg",
+          order: 1,
+          version: 1,
+        },
+        {
+          id: "22222222-2222-4222-8222-222222222222",
+          image: "/recipes/r/a.jpg",
+          order: 0,
+          version: 1,
+        },
+      ],
+    } as unknown as FullRecipe;
+
+    const patched = patchDashboardRecipeFromFull(stale, echo) as Record<string, unknown>;
+
+    expect(patched.image).toBe("/recipes/r/a.jpg");
+  });
+
   it("carries the origin country, the field the hand-list forgot", () => {
     // The dashboard contract deliberately keeps originCountry (it flies the
     // flag beside the recipe name); the old hand-copied allowlist dropped it,

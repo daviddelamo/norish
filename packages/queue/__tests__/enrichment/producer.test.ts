@@ -201,6 +201,23 @@ describe("addEnrichmentJob", () => {
     expect(mocks.publishLifecycle).not.toHaveBeenCalled();
   });
 
+  it.each(["completed", "failed"])(
+    "lets an administrator's refresh replace a retained %s job",
+    async (state) => {
+      // Without this the sweep would be swallowed as a duplicate for exactly
+      // the recipes that ran recently enough to still have a retained job.
+      getJob.mockResolvedValue(retained(state));
+
+      const result = await addEnrichmentJob(
+        queue,
+        job({ origin: "automatic", replaceExisting: true })
+      );
+
+      expect(remove).toHaveBeenCalled();
+      expect(result.status).toBe("queued");
+    }
+  );
+
   it("does not report a rerun when a retained job cannot be removed", async () => {
     getJob.mockResolvedValue(retained("failed"));
     remove.mockRejectedValue(new Error("locked"));

@@ -12,6 +12,8 @@
     "apply": "Toepassen",
     "reset": "Resetten",
     "clear": "Wissen",
+    "selectAll": "Alles selecteren",
+    "deselectAll": "Niets selecteren",
     "confirm": "Bevestigen",
     "back": "Terug",
     "next": "Volgende",
@@ -28,11 +30,12 @@
     "test": "Test",
     "format": "Formatteren",
     "restoreDefaults": "Resetten",
-    "saveChanges": "Wijzigingen opslaan",
-    "revealSecret": "Geheim tonen",
-    "hideSecret": "Geheim verbergen",
-    "enterNewValue": "Nieuwe waarde invoeren",
-    "cancelEditing": "Bewerking annuleren"
+    "saveChanges": "Wijzigingen opslaan"
+  },
+  "secret": {
+    "reveal": "Geheim tonen",
+    "hide": "Geheim verbergen",
+    "keepsCurrent": "Laat leeg om de opgeslagen waarde te behouden."
   },
   "status": {
     "loading": "Laden...",

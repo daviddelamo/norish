@@ -3,7 +3,7 @@
  * Regenerate packages/shared-server/src/ai/prompts/retired-defaults.json:
  * for every administrator-editable prompt, every default text any release
  * shipped — including the current one — collected from the git history of
- * the shipped prompt files.
+ * the shipped prompt files and merged onto what the file already records.
  *
  * The boot migration uses this to tell a database row still carrying a
  * seeded copy of an old default apart from a prompt an administrator wrote.
@@ -13,7 +13,7 @@
  *   node tooling/monorepo/scripts/generate-retired-prompt-defaults.mjs
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,6 +32,8 @@ const PROMPT_FILES = {
   "allergy-detection": "allergyDetection",
   "recipe-provenance": "recipeProvenance",
   "ingredient-linking": "ingredientLinking",
+  "image-generation-brief": "imageGenerationBrief",
+  "image-generation-style": "imageGenerationStyle",
 };
 
 function git(...args) {
@@ -67,6 +69,27 @@ function fileHistory(path) {
     .filter((entry) => entry.path);
 }
 
+/**
+ * What the file already records, which is not always re-derivable: a squash
+ * merge collapses the revisions that carried a wording, so a prompt edited
+ * and re-edited on a branch reaches main as one commit and the intermediate
+ * text disappears from --follow. Deployments that seeded that text still
+ * hold it, so the file only ever grows: history is merged onto what is
+ * already recorded, never substituted for it.
+ */
+function alreadyRecorded() {
+  if (!existsSync(outputPath)) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(readFileSync(outputPath, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+const recorded = alreadyRecorded();
 const retired = {};
 
 for (const [file, field] of Object.entries(PROMPT_FILES)) {
@@ -93,6 +116,17 @@ for (const [file, field] of Object.entries(PROMPT_FILES)) {
     }
 
     const normalized = normalize(content);
+
+    if (normalized === "" || seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    variants.push(normalized);
+  }
+
+  for (const variant of recorded[field] ?? []) {
+    const normalized = normalize(typeof variant === "string" ? variant : "");
 
     if (normalized === "" || seen.has(normalized)) {
       continue;

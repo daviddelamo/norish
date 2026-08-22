@@ -102,17 +102,23 @@ describe("processRecipeProvenanceJob", () => {
   it("persists a validated claim through the repository and reports success", async () => {
     await processRecipeProvenanceJob(jobFor());
 
-    expect(mocks.replaceRecipeProvenance).toHaveBeenCalledWith("recipe-1", INFERENCE, "automatic");
+    expect(mocks.replaceRecipeProvenance).toHaveBeenCalledWith("recipe-1", INFERENCE, "gap-fill");
     expect(mocks.publishLifecycle.mock.calls.map(([, state]) => state)).toEqual([
       "processing",
       "succeeded",
     ]);
   });
 
-  it("passes the run's origin through, so a manual run replaces unconditionally", async () => {
+  it("asks for a replacing write on a manual run", async () => {
     await processRecipeProvenanceJob(jobFor({ origin: "manual", requestedByUserId: "user-1" }));
 
-    expect(mocks.replaceRecipeProvenance).toHaveBeenCalledWith("recipe-1", INFERENCE, "manual");
+    expect(mocks.replaceRecipeProvenance).toHaveBeenCalledWith("recipe-1", INFERENCE, "replace");
+  });
+
+  it("asks for a replacing write on an administrator's refresh", async () => {
+    await processRecipeProvenanceJob(jobFor({ replaceExisting: true }));
+
+    expect(mocks.replaceRecipeProvenance).toHaveBeenCalledWith("recipe-1", INFERENCE, "replace");
   });
 
   it("hands the stored provenance slots to inference as settled facts", async () => {
@@ -137,6 +143,23 @@ describe("processRecipeProvenanceJob", () => {
           cuisineNames: ["Italian"],
         },
       })
+    );
+  });
+
+  it("withholds the stored slots from a replacing run, which is about to discard them", async () => {
+    // Told the stored country is settled, a refresh can only hand it back —
+    // so the run that exists to reconsider it is given nothing to defer to.
+    mocks.getRecipeFull.mockResolvedValue({
+      ...RECIPE,
+      originCountry: "IT",
+      provenanceNote: "My grandmother's, from Rome.",
+      cuisines: [{ id: "id-italian", name: "Italian" }],
+    });
+
+    await processRecipeProvenanceJob(jobFor({ replaceExisting: true }));
+
+    expect(mocks.inferRecipeProvenance).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Cacio e Pepe", supplied: undefined })
     );
   });
 
@@ -191,7 +214,7 @@ describe("processRecipeProvenanceJob", () => {
     expect(mocks.replaceRecipeProvenance).toHaveBeenCalledWith(
       "recipe-1",
       expect.objectContaining({ cuisineIds: ["id-italian", "id-japanese"] }),
-      "automatic"
+      "gap-fill"
     );
   });
 

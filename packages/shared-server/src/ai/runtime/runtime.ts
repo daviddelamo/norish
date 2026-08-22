@@ -2,11 +2,12 @@
  * The AI Runtime — the single seam through which Norish issues a model
  * request.
  *
- * Two entry points, because Norish makes two genuinely different kinds of
- * request: structured generation and transcription. Both are built on the
- * shared transport. The runtime owns what every caller would otherwise do for
- * itself: the enabled check, model selection, Generation Preferences, the
- * model call, token logging, and turning provider failures into typed errors.
+ * Three entry points, because Norish makes three genuinely different kinds of
+ * request: structured generation, transcription, and image generation
+ * (ADR-0015, ADR-0024). All are built on the shared transport. The runtime
+ * owns what every caller would otherwise do for itself: the enabled check,
+ * model selection, Generation Preferences, the model call, token logging, and
+ * turning provider failures into typed errors.
  *
  * A feature never constructs a provider client, never reads Generation
  * Preferences, and never calls the SDK. It passes the name of an
@@ -19,11 +20,24 @@ import { createReadStream } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import type { z } from "zod";
-import { experimental_transcribe, generateText, Output } from "ai";
+import {
+  experimental_transcribe,
+  generateImage as generateImageWithModel,
+  generateText,
+  Output,
+} from "ai";
 
 import type { TranscriptionProvider } from "@norish/config/zod/server-config";
-import { isCloudTranscriptionProvider } from "@norish/config/zod/server-config";
-import { getAIConfig, getVideoConfig } from "@norish/shared-server/config/server-config-loader";
+import {
+  isCloudTranscriptionProvider,
+  isImageGenerationConfigValid,
+  resolveImageGenerationSettings,
+} from "@norish/config/zod/server-config";
+import {
+  getAIConfig,
+  getImageGenerationConfig,
+  getVideoConfig,
+} from "@norish/shared-server/config/server-config-loader";
 import { aiLogger } from "@norish/shared-server/logger";
 
 import type { PromptName } from "../prompts/loader";
@@ -31,6 +45,7 @@ import { fillPrompt, loadPrompt } from "../prompts/loader";
 import { AIConfigurationError, AIDisabledError, AIResponseError, toAIError } from "./errors";
 import {
   createGenericTranscriptionClient,
+  createImageModelFromConfig,
   createModelsFromConfig,
   createTranscriptionModel,
   requestOllamaTranscription,
@@ -41,13 +56,21 @@ import {
 // ============================================================================
 
 /**
+ * Prompts that start a structured-generation request. The image style prompt
+ * is the one exception: it is sent to an image model, which takes a single
+ * prompt and no system turn, so it can never be the base of a structured
+ * request and needs no system message.
+ */
+export type StructuredPromptName = Exclude<PromptName, "image-generation-style">;
+
+/**
  * System messages are not configuration. They encode invariants the code
  * depends on: schema-parseable output, and Recipe Provenance's deliberate
  * silence about language — a system message naming a language would override
  * the prompt's inference from the recipe. An administrator's intent is
  * already expressible in the prompt, which follows the system message.
  */
-const SYSTEM_MESSAGES: Record<PromptName, string> = {
+const SYSTEM_MESSAGES: Record<StructuredPromptName, string> = {
   "recipe-extraction": "You extract recipe data as JSON-LD with both metric and US measurements.",
   "image-extraction":
     "You extract recipe data from images as JSON-LD with both metric and US measurements.",
@@ -66,6 +89,11 @@ const SYSTEM_MESSAGES: Record<PromptName, string> = {
     "You are a culinary historian who places dishes in their country and region of origin.",
   "ingredient-linking":
     "You are a careful recipe reader who says which ingredient lines each step uses, and only what the text supports.",
+  // English by instruction, not by system message alone: the brief is a model
+  // instruction rather than recipe content, so ADR-0018's language care does
+  // not apply to it.
+  "image-generation-brief":
+    "You write short visual briefs that tell an image model what a finished dish looks like.",
 };
 
 // ============================================================================
@@ -83,7 +111,7 @@ export interface GenerateOptions<T> {
    * The feature's identity: names the administrator-editable prompt the
    * request starts from, and labels its log line.
    */
-  prompt: PromptName;
+  prompt: StructuredPromptName;
   /**
    * The output schema, as a value: Recipe Provenance builds its schema per
    * request from the administrator's current Cuisine vocabulary.
@@ -349,5 +377,119 @@ async function transcribeWithProvider(
 
       return requireTranscript(result.response);
     }
+  }
+}
+
+// ============================================================================
+// Image generation (ADR-0024)
+// ============================================================================
+
+export interface GenerateImageOptions {
+  /** The administrator-editable prompt the request starts from. */
+  prompt: "image-generation-style";
+  /** Input blocks appended after the prompt, blank-line separated (ADR-0016). */
+  sections?: readonly string[];
+}
+
+export interface GeneratedImageBytes {
+  bytes: Buffer;
+  mediaType: string;
+}
+
+/**
+ * Issue one image-generation request and return the drawn bytes.
+ *
+ * Reads the Image Generation block rather than the server's AI provider
+ * (ADR-0024), with endpoint and key falling back to the AI configuration when
+ * the provider matches. The provider is asked for its widest supported
+ * landscape; cropping to the stored size is the save path's job. There is no
+ * image timeout: the request runs under the existing AI timeout on the shared
+ * transport (ADR-0015).
+ *
+ * Throws an {@link AIError} on failure: disabled AI and a missing or invalid
+ * image configuration never retry, an empty or unusable image always does,
+ * and provider failures follow the SDK's own retryability.
+ */
+export async function generateImage(options: GenerateImageOptions): Promise<GeneratedImageBytes> {
+  const { prompt: promptName, sections = [] } = options;
+
+  const [aiConfig, imageConfig] = await Promise.all([
+    getAIConfig(true),
+    getImageGenerationConfig(true),
+  ]);
+
+  if (!aiConfig?.enabled) {
+    aiLogger.info({ feature: promptName }, "AI features are disabled, refusing AI request");
+    throw new AIDisabledError();
+  }
+
+  if (
+    !imageConfig ||
+    imageConfig.provider === "disabled" ||
+    !imageConfig.model?.trim() ||
+    !isImageGenerationConfigValid(imageConfig, aiConfig)
+  ) {
+    throw new AIConfigurationError(
+      "No image provider is configured. Set one in the admin settings."
+    );
+  }
+
+  const provider = imageConfig.provider;
+  const { endpoint, apiKey } = resolveImageGenerationSettings(imageConfig, aiConfig);
+  const model = imageConfig.model.trim();
+
+  const basePrompt = await loadPrompt(promptName);
+  const prompt = [basePrompt, ...sections].join("\n\n");
+
+  try {
+    const imageModel = createImageModelFromConfig({
+      provider,
+      model,
+      endpoint,
+      apiKey,
+      timeoutMs: aiConfig.timeoutMs,
+    });
+
+    aiLogger.debug(
+      { feature: promptName, provider: imageModel.providerName, promptLength: prompt.length },
+      "Sending image generation request"
+    );
+
+    const result = await generateImageWithModel({
+      model: imageModel.model,
+      prompt,
+      ...imageModel.landscape,
+      // Image calls are billed per request, so the SDK's silent in-call
+      // retries are disabled: the queue's attempts are the one retry budget.
+      maxRetries: 0,
+      abortSignal: AbortSignal.timeout(aiConfig.timeoutMs),
+    });
+
+    const bytes = Buffer.from(result.image.uint8Array);
+
+    if (bytes.length === 0) {
+      throw new AIResponseError("The model returned no usable image.");
+    }
+
+    aiLogger.info(
+      {
+        feature: promptName,
+        provider: imageModel.providerName,
+        model,
+        imageBytes: bytes.length,
+      },
+      "Image generation completed"
+    );
+
+    return { bytes, mediaType: result.image.mediaType };
+  } catch (error) {
+    const aiError = toAIError(error);
+
+    aiLogger.error(
+      { err: error, feature: promptName, provider, model, retryable: aiError.retryable },
+      "Image generation failed"
+    );
+
+    throw aiError;
   }
 }

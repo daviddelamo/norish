@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatedNumber } from "@/components/recipes/animated-number";
 import { MinusIcon, PlusIcon } from "@heroicons/react/16/solid";
 import { Button } from "@heroui/react";
 
@@ -43,7 +44,7 @@ export default function NutritionPortionControl({
       >
         <MinusIcon className="h-4 w-4" />
       </Button>
-      <span className="min-w-8 text-center text-sm">{formatPortions(portions)}</span>
+      <AnimatedNumber className="min-w-8 justify-center text-sm" value={formatPortions(portions)} />
       <Button
         isIconOnly
         aria-label="Increase portions"

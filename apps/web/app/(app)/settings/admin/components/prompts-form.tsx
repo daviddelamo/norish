@@ -25,6 +25,8 @@ const PROMPT_FIELDS = [
   { key: "allergyDetection", rows: 6 },
   { key: "recipeProvenance", rows: 6 },
   { key: "ingredientLinking", rows: 6 },
+  { key: "imageGenerationBrief", rows: 6 },
+  { key: "imageGenerationStyle", rows: 4 },
 ] as const satisfies readonly { key: keyof PromptsConfigInput; rows: number }[];
 
 type PromptKey = (typeof PROMPT_FIELDS)[number]["key"];
@@ -105,7 +107,7 @@ export default function PromptsForm({ onDirtyChange }: PromptsFormProps) {
         </div>
       ))}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Button isPending={restoring} variant="tertiary" onPress={handleRestoreDefaults}>
           {!restoring && <ArrowPathIcon className="h-5 w-5" />}
           {tActions("restoreDefaults")}

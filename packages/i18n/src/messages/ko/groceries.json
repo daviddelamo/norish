@@ -80,6 +80,7 @@
     "placeholder": "예: 닭 가슴살 2파운드",
     "editPlaceholder": "예: 매주 우유",
     "servings": "인분",
+    "selectedCount": "{total}개 중 {selected}개 선택됨",
     "loadingIngredients": "재료 불러오는 중...",
     "noIngredients": "재료가 없습니다.",
     "addSelectedToGroceries": "장보기에 추가",

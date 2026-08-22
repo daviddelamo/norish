@@ -36,7 +36,7 @@ const boundary = vi.hoisted(() => ({
   transcribe: vi.fn(),
   extractRecipeFromVideo: vi.fn(),
   extractRecipeWithAI: vi.fn(),
-  fetchViaPlaywright: vi.fn(),
+  fetchRenderedPage: vi.fn(),
 }));
 
 vi.mock("@norish/api/video/yt-dlp", () => ({
@@ -62,7 +62,7 @@ vi.mock("@norish/api/video/normalizer", () => ({
 vi.mock("@norish/api/parser/recipe-extraction", () => ({
   extractRecipeWithAI: boundary.extractRecipeWithAI,
 }));
-vi.mock("@norish/api/parser/fetch", () => ({ fetchViaPlaywright: boundary.fetchViaPlaywright }));
+vi.mock("@norish/api/parser/fetch", () => ({ fetchRenderedPage: boundary.fetchRenderedPage }));
 vi.mock("@norish/api/video/cleanup", () => ({ cleanupFile: vi.fn() }));
 vi.mock("@norish/shared-server/logger", () => ({
   videoLogger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -173,7 +173,7 @@ describe("an Unclassified Post", () => {
     boundary.getVideoMetadata.mockResolvedValue(metadata({ videoStream: "unknown" }));
     boundary.downloadVideo.mockRejectedValue(new MediaUnavailableError("Video unavailable"));
     boundary.downloadVideoAudio.mockRejectedValue(new MediaUnavailableError("Video unavailable"));
-    boundary.fetchViaPlaywright.mockResolvedValue(
+    boundary.fetchRenderedPage.mockResolvedValue(
       `<meta property="og:description" content="${SHORT_CAPTION}" />`
     );
     boundary.extractRecipeWithAI.mockResolvedValue(recipe());
@@ -189,7 +189,7 @@ describe("an Unclassified Post", () => {
     boundary.validateVideoLength.mockRejectedValue(
       new MediaUnavailableError("Video exceeds maximum length of 2:00 (actual: 9:13)")
     );
-    boundary.fetchViaPlaywright.mockResolvedValue(
+    boundary.fetchRenderedPage.mockResolvedValue(
       `<meta property="og:description" content="${SHORT_CAPTION}" />`
     );
     boundary.extractRecipeWithAI.mockResolvedValue(recipe());

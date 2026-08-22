@@ -12,8 +12,7 @@ export default function ArchiveImporter() {
   const {
     current,
     imported,
-    skipped,
-    skippedItems,
+    notes,
     total,
     errors: progressErrors,
     isImporting,
@@ -22,7 +21,7 @@ export default function ArchiveImporter() {
   const { startImport, isStarting } = useArchiveImportMutation();
   const [dragActive, setDragActive] = useState(false);
   const [localErrors, setLocalErrors] = useState<{ file: string; error: string }[]>([]);
-  const [showSkipped, setShowSkipped] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const uploadFile = useCallback(
@@ -77,7 +76,7 @@ export default function ArchiveImporter() {
 
       return () => clearTimeout(timer);
     }
-  }, [isComplete, skippedItems.length, clearImport]);
+  }, [isComplete, notes.length, clearImport]);
 
   // Combine local errors with progress errors
   const allErrors = [
@@ -85,32 +84,33 @@ export default function ArchiveImporter() {
     ...progressErrors.map((e) => ({ file: e.file, error: e.error })),
   ];
 
-  // Status message
+  // Status message. The counts are phrased as their own messages and joined
+  // into the `{details}` slot the `processing`/`complete` strings expose.
+  const countParts = () => {
+    const parts: string[] = [];
+
+    if (imported > 0) parts.push(t("imported", { count: imported }));
+    if (progressErrors.length > 0) parts.push(t("errors", { count: progressErrors.length }));
+
+    return parts;
+  };
+
   let status = "";
 
   if (isStarting) {
     status = t("uploadingFile");
   } else if (isImporting && total > 0) {
-    const parts = [`${current} of ${total}`];
+    const details = [t("ofTotal", { current, total }), ...countParts()].join(", ");
 
-    if (imported > 0) parts.push(`${imported} imported`);
-    if (skipped > 0) parts.push(`${skipped} skipped`);
-    if (progressErrors.length > 0) parts.push(`${progressErrors.length} errors`);
-    status = `Processing: ${parts.join(", ")}`;
+    status = t("processing", { details });
   } else if (isComplete) {
-    // Import complete - show appropriate message
-    const parts: string[] = [];
-
-    if (imported > 0) parts.push(`${imported} imported`);
-    if (skipped > 0) parts.push(`${skipped} skipped`);
-    if (progressErrors.length > 0) parts.push(`${progressErrors.length} errors`);
-    status = `Complete: ${parts.join(", ")}`;
+    status = t("complete", { details: countParts().join(", ") });
   }
 
   return (
     <div className="col-span-full">
       <div
-        aria-label="Upload a recipe archive file"
+        aria-label={t("dropzoneLabel")}
         className={[
           "mt-2 flex justify-center rounded-lg border border-dashed px-6 py-10 transition-colors",
           dragActive ? "border-accent/60 bg-accent/5" : "border-border",
@@ -150,7 +150,7 @@ export default function ArchiveImporter() {
               <input
                 key={isComplete ? "reset" : "active"}
                 ref={inputRef}
-                accept=".melarecipes,.paprikarecipes,.zip"
+                accept=".norishrecipes,.melarecipes,.paprikarecipes,.zip"
                 className="sr-only"
                 disabled={isStarting || isImporting}
                 id="archive-file-upload"
@@ -169,7 +169,7 @@ export default function ArchiveImporter() {
         {/* ProgressBar bar when importing or just completed */}
         {(isImporting || isComplete) && total > 0 && (
           <ProgressBar
-            aria-label="Import progress"
+            aria-label={t("progressLabel")}
             className="w-full"
             color={isComplete ? (progressErrors.length > 0 ? "warning" : "success") : "accent"}
             size="sm"
@@ -179,22 +179,23 @@ export default function ArchiveImporter() {
 
         {status && <div className="text-muted text-base">{status}</div>}
 
-        {/* Show skipped recipes with toggle */}
-        {isComplete && skippedItems.length > 0 && (
+        {/* Recipes that landed, minus something the archive carried */}
+        {isComplete && notes.length > 0 && (
           <div className="text-muted text-sm">
             <button
               className="hover:text-foreground underline underline-offset-2"
               type="button"
-              onClick={() => setShowSkipped(!showSkipped)}
+              onClick={() => setShowNotes(!showNotes)}
             >
-              {showSkipped ? "Hide" : "Show"} {skippedItems.length} skipped recipe
-              {skippedItems.length !== 1 ? "s" : ""}
+              {showNotes
+                ? t("hideNotes", { count: notes.length })
+                : t("showNotes", { count: notes.length })}
             </button>
-            {showSkipped && (
+            {showNotes && (
               <ul className="mt-1 list-disc pl-4">
-                {skippedItems.map((s, i) => (
+                {notes.map((entry, i) => (
                   <li key={i}>
-                    {s.file}: {s.reason}
+                    {entry.file}: {entry.note}
                   </li>
                 ))}
               </ul>

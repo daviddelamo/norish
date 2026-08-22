@@ -10,10 +10,16 @@ import type { Job } from "bullmq";
 
 import type { ImageImportJobData } from "@norish/queue/contracts/job-types";
 import type { PolicyEmitContext } from "@norish/shared-server/realtime/policy";
-import { addRecipeImages, createRecipeWithRefs, dashboardRecipe } from "@norish/db";
+import {
+  addRecipeImages,
+  createRecipeWithRefs,
+  dashboardRecipe,
+  updateRecipeDishColor,
+} from "@norish/db";
 import { requireQueueApiHandler } from "@norish/queue/api-handlers";
 import { getRecipePermissionPolicy } from "@norish/shared-server/config/server-config-loader";
 import { createLogger } from "@norish/shared-server/logger";
+import { dishColorForImageUrl } from "@norish/shared-server/media/dish-color";
 import { deleteRecipeImagesDir, saveImageBytes } from "@norish/shared-server/media/storage";
 import { emitByPolicy } from "@norish/shared-server/realtime/policy";
 import { recipeEmitter } from "@norish/shared-server/realtime/recipes";
@@ -70,6 +76,9 @@ export async function processImageImportJob(job: Job<ImageImportJobData>): Promi
       const imagePath = await saveImageBytes(imageBytes, recipeId);
 
       await addRecipeImages(createdId, [{ image: imagePath, order: 0 }]);
+      // Vision imports store their primary image only here, after the
+      // recipe row exists, so the Dish Colour is written the same way.
+      await updateRecipeDishColor(createdId, await dishColorForImageUrl(imagePath));
       log.debug({ recipeId: createdId }, "Saved first uploaded image as recipe image");
     } catch (imageError) {
       // Log but don't fail the import if image saving fails
