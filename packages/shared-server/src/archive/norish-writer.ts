@@ -3,6 +3,7 @@ import type { Archiver } from "archiver";
 import archiver from "archiver";
 
 import { FullRecipeDTO } from "@norish/shared/contracts";
+import { primaryRecipeImage } from "@norish/shared/lib/recipe-media";
 
 import {
   EXTERNAL_MEDIA_URL,
@@ -105,9 +106,13 @@ export function collectRecipeMediaRefs(recipe: FullRecipeDTO): NorishArchiveMedi
     refs.push({ webPath, archivePath });
   };
 
-  const heroBasename = localMediaBasename(recipe.image, recipe.id);
+  // The hero is the resolved primary, not the deprecated scalar: new rows
+  // no longer carry the scalar at all, and a receiving instance on an older
+  // release reads the hero for its dashboard thumbnail.
+  const hero = primaryRecipeImage(recipe);
+  const heroBasename = localMediaBasename(hero, recipe.id);
 
-  add(recipe.image, heroBasename && `${NORISH_ARCHIVE_MEDIA_DIRS.images}/${heroBasename}`);
+  add(hero, heroBasename && `${NORISH_ARCHIVE_MEDIA_DIRS.images}/${heroBasename}`);
 
   for (const galleryImage of recipe.images) {
     const basename = localMediaBasename(galleryImage.image, recipe.id);
@@ -211,7 +216,7 @@ function buildArchiveRecipe(record: NorishArchiveRecord): NorishArchiveRecipe {
         order: stepIngredient.order,
       })),
     })),
-    image: rewriteMedia(recipe.image),
+    image: rewriteMedia(primaryRecipeImage(recipe)),
     images: recipe.images.flatMap((galleryImage) => {
       const image = rewriteMedia(galleryImage.image);
 

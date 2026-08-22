@@ -164,10 +164,9 @@ export interface GeneratedImageReplacement {
  * most one Generated Image and re-runs replace their own predecessor rather
  * than accumulating toward the gallery cap.
  *
- * The legacy `recipes.image` scalar follows in the same transaction: the
- * dashboard card reads its thumbnail from that column, so a scalar left
- * behind keeps the library on the replaced picture — pointing at a file
- * this write may just have released.
+ * The deprecated `recipes.image` scalar is cleared in the same transaction:
+ * every reader resolves gallery-first, and a stale scalar would keep naming
+ * a file this write may just have released.
  *
  * Eligibility is what keeps automatic runs off stored photographs; by the
  * time this runs, the coordinator has decided the slot may be consumed.
@@ -218,7 +217,7 @@ export async function replaceRecipePrimaryImageWithGenerated(
 
     await tx
       .update(recipes)
-      .set({ image: imageUrl, updatedAt: new Date(), version: sql`${recipes.version} + 1` })
+      .set({ image: null, updatedAt: new Date(), version: sql`${recipes.version} + 1` })
       .where(eq(recipes.id, recipeId));
 
     // A file is released only when nothing on this recipe references it any

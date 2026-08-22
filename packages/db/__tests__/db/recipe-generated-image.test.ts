@@ -7,10 +7,13 @@
  * cannot prove a delete deleted anything, so this runs against the real
  * database beside the dish-colour round-trip.
  */
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { db } from "@norish/db/drizzle";
 import { replaceRecipePrimaryImageWithGenerated } from "@norish/db/repositories/recipe-enrichment";
 import { createRecipeWithRefs, getRecipeFull } from "@norish/db/repositories/recipes";
+import { recipes as recipesTable } from "@norish/db/schema";
 
 import { createTestUser } from "../helpers/db-test-helpers";
 import { RepositoryTestBase } from "../helpers/repository-test-base";
@@ -39,6 +42,11 @@ const BASE_RECIPE = {
   images: [],
   videos: [],
 };
+
+/** Plant a legacy-shaped row: scalar set the way pre-deprecation releases wrote it. */
+async function plantLegacyScalar(recipeId: string, image: string): Promise<void> {
+  await db.update(recipesTable).set({ image }).where(eq(recipesTable.id, recipeId));
+}
 
 function url(recipeId: string, name: string): string {
   return `/recipes/${recipeId}/${name}.jpg`;
@@ -179,39 +187,40 @@ describe("replaceRecipePrimaryImageWithGenerated", () => {
     expect(await replaceRecipePrimaryImageWithGenerated(missing, url(missing, "drawn"))).toBeNull();
   });
 
-  // The dashboard card reads the legacy scalar (recipe-card.tsx: "Get
-  // thumbnail from the legacy image field"), so the replacement must keep it
-  // in sync — otherwise the library keeps showing the replaced file, which
-  // no longer even exists on disk.
+  // The deprecated scalar is never written with a value; the replacement
+  // clears any legacy one so a stale fallback cannot linger behind the
+  // gallery, and releases its file when the recipe no longer references it.
   describe("the legacy thumbnail scalar", () => {
-    it("follows the Generated Image when scalar and gallery shared the old file", async () => {
-      // The URL-import shape: the same downloaded file recorded in both.
+    it("is cleared, with the shared old file released once", async () => {
+      // The URL-import-era shape: the same file once recorded in both. The
+      // scalar is planted raw, the way a pre-deprecation release wrote it.
       const recipeId = crypto.randomUUID();
       const photo = url(recipeId, "photo");
 
       await createRecipeWithRefs(recipeId, userId, {
         ...BASE_RECIPE,
-        image: photo,
         images: [{ image: photo, order: 0 }],
       });
+      await plantLegacyScalar(recipeId, photo);
 
       const result = await replaceRecipePrimaryImageWithGenerated(recipeId, url(recipeId, "drawn"));
 
-      expect((await getRecipeFull(recipeId))?.image).toBe(url(recipeId, "drawn"));
+      expect((await getRecipeFull(recipeId))?.image).toBeNull();
       expect(result?.replacedImageUrls).toEqual([photo]);
     });
 
-    it("follows the Generated Image on a legacy-only recipe, releasing the old file", async () => {
+    it("is cleared on a legacy-only recipe, its photograph moved out and released", async () => {
       const recipeId = crypto.randomUUID();
       const legacy = url(recipeId, "legacy-hero");
 
-      await createRecipeWithRefs(recipeId, userId, { ...BASE_RECIPE, image: legacy, images: [] });
+      await createRecipeWithRefs(recipeId, userId, { ...BASE_RECIPE, images: [] });
+      await plantLegacyScalar(recipeId, legacy);
 
       const result = await replaceRecipePrimaryImageWithGenerated(recipeId, url(recipeId, "drawn"));
 
       const full = await getRecipeFull(recipeId);
 
-      expect(full?.image).toBe(url(recipeId, "drawn"));
+      expect(full?.image).toBeNull();
       expect(full?.images).toEqual([
         expect.objectContaining({ image: url(recipeId, "drawn"), order: 0, generated: true }),
       ]);
@@ -220,12 +229,12 @@ describe("replaceRecipePrimaryImageWithGenerated", () => {
       expect(result?.replacedImageUrls).toEqual([legacy]);
     });
 
-    it("is set for a recipe that had no image anywhere", async () => {
+    it("stays null for a recipe that had no image anywhere", async () => {
       const recipeId = await createRecipeWithImages([]);
 
       await replaceRecipePrimaryImageWithGenerated(recipeId, url(recipeId, "drawn"));
 
-      expect((await getRecipeFull(recipeId))?.image).toBe(url(recipeId, "drawn"));
+      expect((await getRecipeFull(recipeId))?.image).toBeNull();
     });
 
     it("never hands back a file a surviving gallery row still references", async () => {
@@ -236,12 +245,12 @@ describe("replaceRecipePrimaryImageWithGenerated", () => {
 
       await createRecipeWithRefs(recipeId, userId, {
         ...BASE_RECIPE,
-        image: shared,
         images: [
           { image: shared, order: 0 },
           { image: shared, order: 1 },
         ],
       });
+      await plantLegacyScalar(recipeId, shared);
 
       const result = await replaceRecipePrimaryImageWithGenerated(recipeId, url(recipeId, "drawn"));
 

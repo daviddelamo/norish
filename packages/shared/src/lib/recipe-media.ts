@@ -5,9 +5,11 @@
  * order is the primary, and the legacy `recipes.image` scalar is only a
  * fallback for rows that predate the gallery. Every reader that shows a
  * recipe's picture resolves through this (the media carousel, the dashboard
- * projections, the realtime echo patch, the Dish Colour), which is what lets
- * the scalar column be deprecated: it stays written in sync for
- * compatibility, but nothing depends on reading it where a gallery exists.
+ * projections, the realtime echo patch, the Dish Colour), and writers never
+ * store a value in the scalar any more — the repository translates a payload
+ * scalar into the gallery and clears the column on media-touching writes.
+ * Only untouched legacy rows still carry one, which is why the fallback
+ * stays until a migration retires the column.
  *
  * The repository's SQL projections mirror this rule as a correlated
  * subquery (`PRIMARY_IMAGE_SQL` in the recipes repository); a change here

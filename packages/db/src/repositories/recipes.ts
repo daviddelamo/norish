@@ -708,7 +708,9 @@ export async function createRecipeWithRefs(
     description: payload.description ? stripHtmlTags(payload.description) : null,
     notes: payload.notes ?? null,
     url: payload.url ?? null,
-    image: payload.image ?? null,
+    // The deprecated scalar is never written: a payload image lands in the
+    // gallery below.
+    image: null,
     dishColor: payload.dishColor ?? null,
     servings: payload.servings ?? 1,
     systemUsed: payload.systemUsed,
@@ -786,10 +788,26 @@ export async function createRecipeWithRefs(
       );
     }
 
-    // Insert gallery images if provided
-    if (payload.images && payload.images.length > 0) {
+    // Insert gallery images. The gallery is the source of truth for a
+    // recipe's pictures; a legacy scalar in the payload (foreign archive
+    // imports, the public API) is translated into it rather than written to
+    // the deprecated column — appended after the gallery so it never
+    // displaces the primary the payload actually led with.
+    const galleryImages = [...(payload.images ?? [])];
+    const legacyScalar = (payload.image ?? "").trim();
+
+    if (legacyScalar !== "" && !galleryImages.some((img) => img.image === legacyScalar)) {
+      const maxOrder = galleryImages.reduce(
+        (max, img) => Math.max(max, Number(img.order ?? 0)),
+        -1
+      );
+
+      galleryImages.push({ image: legacyScalar, order: maxOrder + 1 });
+    }
+
+    if (galleryImages.length > 0) {
       await tx.insert(recipeImages).values(
-        payload.images.map((img) => ({
+        galleryImages.map((img) => ({
           recipeId: rid,
           image: img.image,
           order: String(img.order ?? 0),
@@ -1436,7 +1454,12 @@ export async function updateRecipeWithRefs(
       updateData.description = payload.description ? stripHtmlTags(payload.description) : null;
     if (payload.notes !== undefined) updateData.notes = payload.notes;
     if (payload.url !== undefined) updateData.url = payload.url;
-    if (payload.image !== undefined) updateData.image = payload.image;
+    // The deprecated scalar is never written with a value again: any update
+    // that touches media clears it, so a stale fallback cannot linger behind
+    // the gallery. An update that says nothing about media leaves legacy
+    // rows alone — stripping their only image is the migration's job, not a
+    // rename's.
+    if (payload.image !== undefined || payload.images !== undefined) updateData.image = null;
     if (payload.dishColor !== undefined) updateData.dishColor = payload.dishColor;
     if (payload.servings !== undefined) updateData.servings = payload.servings;
     if (payload.prepMinutes !== undefined) updateData.prepMinutes = payload.prepMinutes;
@@ -1562,6 +1585,25 @@ export async function updateRecipeWithRefs(
     // Replace images if provided
     if (payload.images !== undefined) {
       await syncRecipeImagesTx(tx, recipeId, payload.images);
+    }
+
+    // The legacy alias: a payload scalar lands in the gallery whenever the
+    // gallery ends up empty — a scalar-only PATCH, or an overwrite-import of
+    // a gallery-less archive whose hero travels beside `images: []`. With a
+    // gallery present it is dropped: no reader has consulted the scalar past
+    // a gallery row since the thumbnails went gallery-first.
+    const updateScalar = typeof payload.image === "string" ? payload.image.trim() : "";
+
+    if (updateScalar !== "") {
+      const existingGallery = await tx
+        .select({ id: recipeImages.id })
+        .from(recipeImages)
+        .where(eq(recipeImages.recipeId, recipeId))
+        .limit(1);
+
+      if (existingGallery.length === 0) {
+        await tx.insert(recipeImages).values({ recipeId, image: updateScalar, order: "0" });
+      }
     }
 
     // Replace videos if provided

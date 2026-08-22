@@ -326,10 +326,6 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
           version: img.version,
         }));
 
-      // Get primary image (first image by order) for legacy image field
-      const sortedImages = [...images].sort((a, b) => a.order - b.order);
-      const primaryImage = sortedImages[0]?.image || null;
-
       // Extract videos from unified media state, preserving their order
       const videos = media
         .filter((m) => m.type === "video")
@@ -346,8 +342,6 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
         description: description.trim() || null,
         notes: notes.trim() || null,
         url: url.trim() || null,
-        image: primaryImage,
-        // Legacy field - first image
         servings,
         prepMinutes: prepMinutes ?? undefined,
         cookMinutes: cookMinutes ?? undefined,

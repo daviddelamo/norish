@@ -89,7 +89,11 @@ describe("Dish Colour round-trip", () => {
     const missing = await listRecipesMissingDishColor();
     const row = missing.find((candidate) => candidate.id === recipeId);
 
-    expect(row?.image).toBe(`/recipes/${recipeId}/hero.jpg`);
+    // The create translated the payload's legacy scalar into the gallery;
+    // the backfill resolves gallery-first, exactly like every other reader.
+    expect(row?.galleryImages).toEqual([
+      expect.objectContaining({ image: `/recipes/${recipeId}/hero.jpg` }),
+    ]);
 
     await updateRecipeDishColor(recipeId, "#663311");
 

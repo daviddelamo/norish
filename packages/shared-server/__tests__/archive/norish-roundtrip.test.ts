@@ -214,7 +214,6 @@ describe("norish archive round-trip", () => {
     });
 
     const { parsed } = await roundTrip(recipe, {
-      "images/hero.jpg": "hero-bytes",
       "images/gallery-1.jpg": "gallery-bytes",
       "images/gallery-2.jpg": "gallery-2-bytes",
       "steps/step-1.jpg": "step-bytes",
@@ -222,8 +221,9 @@ describe("norish archive round-trip", () => {
       "videos/thumb-1.jpg": "thumb-bytes",
     });
 
-    // The exact bytes written on export are what the importer re-saves
-    expect(mockSaveImageBytes).toHaveBeenCalledWith(Buffer.from("hero-bytes"), MINTED_ID);
+    // The exact bytes written on export are what the importer re-saves. The
+    // hero is the resolved primary — the first gallery image — so no
+    // separate hero file travels.
     expect(mockSaveImageBytes).toHaveBeenCalledWith(Buffer.from("gallery-bytes"), MINTED_ID);
     expect(mockSaveStepImageBytes).toHaveBeenCalledWith(Buffer.from("step-bytes"), MINTED_ID);
     expect(mockSaveVideoBytes).toHaveBeenCalledWith(

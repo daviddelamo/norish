@@ -203,7 +203,6 @@ describe("norish archive writer", () => {
     });
 
     const mediaBytes: Record<string, string> = {
-      "images/hero.jpg": "hero-bytes",
       "images/gallery-1.jpg": "gallery-bytes",
       "steps/step-1.jpg": "step-bytes",
       "videos/video-1.mp4": "video-bytes",
@@ -213,11 +212,9 @@ describe("norish archive writer", () => {
     const { collectRecipeMediaRefs } = await import("@norish/shared-server/archive/norish-writer");
     const refs = collectRecipeMediaRefs(recipe);
 
+    // The hero is the resolved primary — the gallery's first image — so the
+    // legacy scalar's shadowed file is not packed at all.
     expect(refs).toEqual([
-      {
-        webPath: "/recipes/11111111-1111-4111-8111-111111111111/hero.jpg",
-        archivePath: "images/hero.jpg",
-      },
       {
         webPath: "/recipes/11111111-1111-4111-8111-111111111111/gallery-1.jpg",
         archivePath: "images/gallery-1.jpg",
@@ -259,7 +256,7 @@ describe("norish archive writer", () => {
 
     const recipeJson = await readJson(zip, `${recipe.id}/recipe.json`);
 
-    expect(recipeJson.image).toBe("images/hero.jpg");
+    expect(recipeJson.image).toBe("images/gallery-1.jpg");
     // The marking travels; a supplied image would carry no field at all.
     expect(recipeJson.images).toEqual([
       { image: "images/gallery-1.jpg", order: 0, generated: true },
@@ -270,8 +267,24 @@ describe("norish archive writer", () => {
     ]);
   });
 
-  it("keeps external media URLs unchanged and drops references without archive entries", async () => {
+  it("keeps an external primary URL unchanged", async () => {
     const recipe = buildFullRecipe({
+      image: "https://example.com/external-hero.jpg",
+      images: [],
+    });
+
+    const zip = await writeArchive({ records: [{ recipe }], exporter, exportedAt });
+
+    const recipeJson = await readJson(zip, `${recipe.id}/recipe.json`);
+
+    expect(recipeJson.image).toBe("https://example.com/external-hero.jpg");
+  });
+
+  it("drops references whose files did not make the archive, hero included", async () => {
+    const recipe = buildFullRecipe({
+      // Shadowed by the gallery: the resolved primary is the local file, and
+      // when that file is missing the hero is dropped rather than falling
+      // back to an image the source recipe never displays.
       image: "https://example.com/external-hero.jpg",
       images: [
         {
@@ -288,7 +301,7 @@ describe("norish archive writer", () => {
 
     const recipeJson = await readJson(zip, `${recipe.id}/recipe.json`);
 
-    expect(recipeJson.image).toBe("https://example.com/external-hero.jpg");
+    expect(recipeJson.image).toBeNull();
     expect(recipeJson.images).toEqual([]);
   });
 
