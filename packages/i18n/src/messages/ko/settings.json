@@ -691,6 +691,7 @@
       "endpointOptional": "선택 사항: 사용자 지정 Azure 리소스 URL",
       "apiKey": "API 키",
       "apiKeyPlaceholder": "API 키 입력...",
+      "apiKeyInherited": "AI 설정의 API 키를 사용합니다.",
       "model": "이미지 모델",
       "modelPlaceholder": "예: gpt-image-1",
       "modelDescription": "이미지를 그리는 모델입니다. 텍스트 모델이 아닌 이미지 모델이어야 합니다.",

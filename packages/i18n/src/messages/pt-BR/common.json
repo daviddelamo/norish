@@ -30,11 +30,12 @@
     "test": "Testar",
     "format": "Formatar",
     "restoreDefaults": "Restaurar padrões",
-    "saveChanges": "Salvar alterações",
-    "revealSecret": "Mostrar segredo",
-    "hideSecret": "Ocultar segredo",
-    "enterNewValue": "Insira um novo valor",
-    "cancelEditing": "Cancelar edição"
+    "saveChanges": "Salvar alterações"
+  },
+  "secret": {
+    "reveal": "Mostrar segredo",
+    "hide": "Ocultar segredo",
+    "keepsCurrent": "Deixe em branco para manter o valor salvo."
   },
   "status": {
     "loading": "Carregando...",

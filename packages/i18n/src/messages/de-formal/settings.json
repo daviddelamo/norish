@@ -691,6 +691,7 @@
       "endpointOptional": "Optional: eigene Azure-Ressourcen-URL",
       "apiKey": "API-Schlüssel",
       "apiKeyPlaceholder": "API-Schlüssel eingeben...",
+      "apiKeyInherited": "Es wird der API-Schlüssel Ihrer KI-Konfiguration verwendet.",
       "model": "Bildmodell",
       "modelPlaceholder": "z. B. gpt-image-1",
       "modelDescription": "Das Modell, das das Bild zeichnet. Es muss ein Bildmodell sein, kein Textmodell.",

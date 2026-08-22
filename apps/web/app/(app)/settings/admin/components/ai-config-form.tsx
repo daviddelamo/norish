@@ -69,6 +69,7 @@ const AUTOMATIC_ENRICHMENT_KEYS = [
   "nutritionEstimation",
   "recipeProvenance",
   "ingredientLinking",
+  "imageGeneration",
 ] as const satisfies readonly (keyof AutomaticEnrichmentConfig)[];
 export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
   const t = useTranslations("settings.admin.aiConfig");
@@ -243,9 +244,11 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
   }, [fetchConfigSecret]);
 
   /**
-   * The stored record read as the list the picker selects over. A column of six
-   * switches read as six separate decisions; which kinds are allowed to run
-   * unasked is one.
+   * The stored record read as the list the picker selects over. A column of
+   * switches read as separate decisions; which kinds are allowed to run unasked
+   * is one. Every kind belongs here — one left out of the list is not merely
+   * unreachable, it is rewritten to its default the moment any other kind is
+   * toggled, because the picker rebuilds the whole record from this list.
    */
   const selectedEnrichmentKinds = useMemo(
     () => AUTOMATIC_ENRICHMENT_KEYS.filter((key) => automaticEnrichment[key]),
@@ -318,6 +321,9 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         cuisineStrategy,
         automaticEnrichment,
       });
+      // Saved keys live on the server, not in the form: a key left in state
+      // reads as an unsaved change on every later render.
+      setApiKey("");
     } finally {
       setSaving(false);
     }

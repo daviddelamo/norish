@@ -691,6 +691,7 @@
       "endpointOptional": "Opcional: URL personalizada del recurso de Azure",
       "apiKey": "Clave API",
       "apiKeyPlaceholder": "Introduce la clave API...",
+      "apiKeyInherited": "Se usa la clave API de tu configuración de IA.",
       "model": "Modelo de imagen",
       "modelPlaceholder": "p. ej. gpt-image-1",
       "modelDescription": "El modelo que dibuja la imagen. Debe ser un modelo de imagen, no de texto.",

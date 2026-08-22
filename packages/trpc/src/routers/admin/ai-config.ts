@@ -1,7 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import type { AIConfig, VideoConfig } from "@norish/config/zod/server-config";
+import type {
+  AIConfig,
+  ImageGenerationConfig,
+  VideoConfig,
+} from "@norish/config/zod/server-config";
 import { testAIEndpoint as testAIEndpointFn } from "@norish/auth/connection-tests";
 import {
   AIConfigInputSchema,
@@ -36,6 +40,18 @@ type ListedModel = {
   name: string;
   supportsVision?: boolean;
 };
+
+/**
+ * Whether a saved provider is being replaced by a different one.
+ *
+ * A key is issued by a provider and only that provider accepts it, so a block
+ * that changes providers without a key of its own must forget the stored one
+ * rather than carry it across — carrying it is what silently blocked the
+ * fallback to the AI configuration's key.
+ */
+function providerChangedFrom(stored: string | undefined, incoming: string): boolean {
+  return stored !== undefined && stored !== incoming;
+}
 
 /** Why a list came back empty, in parts the UI can phrase in its own language. */
 type ListingRefusal = {
@@ -96,7 +112,9 @@ const updateAIConfig = adminProcedure.input(AIConfigSchema).mutation(async ({ in
   const currentConfig = await getConfig<AIConfig>(ServerConfigKeys.AI_CONFIG);
   const enabledChanged = currentConfig?.enabled !== input.enabled;
 
-  await setConfig(ServerConfigKeys.AI_CONFIG, input, ctx.user.id, true);
+  await setConfig(ServerConfigKeys.AI_CONFIG, input, ctx.user.id, true, {
+    dropSecrets: providerChangedFrom(currentConfig?.provider, input.provider) ? ["apiKey"] : [],
+  });
 
   // Broadcast permission policy update to all users if AI enabled state changed
   // This allows UI to show/hide recipe convert button
@@ -118,8 +136,14 @@ const updateVideoConfig = adminProcedure
   .mutation(async ({ input, ctx }) => {
     log.info({ userId: ctx.user.id, enabled: input.enabled }, "Updating video config");
 
+    const stored = await getConfig<VideoConfig>(ServerConfigKeys.VIDEO_CONFIG);
+
     // VideoConfig contains transcription API key, so mark as sensitive
-    await setConfig(ServerConfigKeys.VIDEO_CONFIG, input, ctx.user.id, true);
+    await setConfig(ServerConfigKeys.VIDEO_CONFIG, input, ctx.user.id, true, {
+      dropSecrets: providerChangedFrom(stored?.transcriptionProvider, input.transcriptionProvider)
+        ? ["transcriptionApiKey"]
+        : [],
+    });
 
     return { success: true };
   });
@@ -134,7 +158,11 @@ const updateImageGenerationConfig = adminProcedure
   .mutation(async ({ input, ctx }) => {
     log.info({ userId: ctx.user.id, provider: input.provider }, "Updating image generation config");
 
-    await setConfig(ServerConfigKeys.IMAGE_GENERATION_CONFIG, input, ctx.user.id, true);
+    const stored = await getConfig<ImageGenerationConfig>(ServerConfigKeys.IMAGE_GENERATION_CONFIG);
+
+    await setConfig(ServerConfigKeys.IMAGE_GENERATION_CONFIG, input, ctx.user.id, true, {
+      dropSecrets: providerChangedFrom(stored?.provider, input.provider) ? ["apiKey"] : [],
+    });
 
     return { success: true };
   });

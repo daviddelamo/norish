@@ -691,6 +691,7 @@
       "endpointOptional": "Valgfritt: egendefinert Azure-ressurs-URL",
       "apiKey": "API-nøkkel",
       "apiKeyPlaceholder": "Skriv inn API-nøkkel...",
+      "apiKeyInherited": "Bruker API-nøkkelen fra AI-konfigurasjonen din.",
       "model": "Bildemodell",
       "modelPlaceholder": "f.eks. gpt-image-1",
       "modelDescription": "Modellen som tegner bildet. Den må være en bildemodell, ikke en tekstmodell.",

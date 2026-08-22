@@ -691,6 +691,7 @@
       "endpointOptional": "Optioneel: eigen Azure resource-URL",
       "apiKey": "API-sleutel",
       "apiKeyPlaceholder": "Voer API-sleutel in...",
+      "apiKeyInherited": "Gebruikt de API-sleutel uit je AI-configuratie.",
       "model": "Afbeeldingsmodel",
       "modelPlaceholder": "bijv. gpt-image-1",
       "modelDescription": "Het model dat de afbeelding tekent. Het moet een afbeeldingsmodel zijn, geen tekstmodel.",

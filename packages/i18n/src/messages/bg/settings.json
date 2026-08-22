@@ -691,6 +691,7 @@
       "endpointOptional": "По избор: собствен URL на Azure ресурс",
       "apiKey": "API ключ",
       "apiKeyPlaceholder": "Въведете API ключ...",
+      "apiKeyInherited": "Използва се API ключът от AI конфигурацията.",
       "model": "Модел за изображения",
       "modelPlaceholder": "напр. gpt-image-1",
       "modelDescription": "Моделът, който рисува изображението. Трябва да е модел за изображения, а не текстов модел.",

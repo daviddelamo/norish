@@ -72,14 +72,18 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
   // Endpoint and key fall back to the AI configuration when the provider
   // matches, so a matching setup needs neither typed again.
   const aiProviderMatches = enabled && aiConfig?.provider === provider;
-  const isApiKeyConfigured =
-    (!!imageGenerationConfig?.apiKey && imageGenerationConfig.provider === provider) ||
-    (aiProviderMatches && !!aiConfig?.apiKey);
+  // A key of this block's own and a borrowed one are different facts, and
+  // collapsing them is what made the field claim a key it does not hold: it
+  // then offered to reveal a secret that was never stored here, and refused
+  // to be typed into because it believed it was already filled.
+  const hasOwnApiKey =
+    !!imageGenerationConfig?.apiKey && imageGenerationConfig.provider === provider;
+  const inheritsAiApiKey = !hasOwnApiKey && aiProviderMatches && !!aiConfig?.apiKey;
 
   const canFetchModels =
     enabled &&
     (isCloud
-      ? !!apiKey || isApiKeyConfigured
+      ? !!apiKey || hasOwnApiKey || inheritsAiApiKey
       : (endpoint ?? "").trim() !== "" || aiProviderMatches);
 
   const {
@@ -120,9 +124,15 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
     onDirtyChange?.(hasChanges);
   }, [hasChanges, onDirtyChange]);
 
+  // The key worth showing is the one a request would actually run with: this
+  // block's own, or the AI configuration's when that is what it borrows.
   const handleRevealApiKey = useCallback(async () => {
-    return await fetchConfigSecret(ServerConfigKeys.IMAGE_GENERATION_CONFIG, "apiKey");
-  }, [fetchConfigSecret]);
+    const own = await fetchConfigSecret(ServerConfigKeys.IMAGE_GENERATION_CONFIG, "apiKey");
+
+    if (own) return own;
+
+    return inheritsAiApiKey ? await fetchConfigSecret(ServerConfigKeys.AI_CONFIG, "apiKey") : null;
+  }, [fetchConfigSecret, inheritsAiApiKey]);
 
   const handleProviderChange = (newProvider: ImageGenerationProvider) => {
     if (newProvider === provider) return;
@@ -209,7 +219,10 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
 
       {showApiKey && (
         <SecretInput
-          isConfigured={isApiKeyConfigured}
+          description={inheritsAiApiKey ? t("apiKeyInherited") : undefined}
+          // A borrowed key is still a key in effect: the field says so and can
+          // show it, rather than reading as an unset one.
+          isConfigured={hasOwnApiKey || inheritsAiApiKey}
           label={t("apiKey")}
           placeholder={t("apiKeyPlaceholder")}
           value={apiKey}

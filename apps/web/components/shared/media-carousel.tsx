@@ -8,7 +8,7 @@ import VideoPlayer from "@/components/shared/video-player";
 import { Carousel, useCarousel } from "@/components/ui/carousel";
 import { useTranslations } from "next-intl";
 
-import { cssMediaControl } from "@norish/web/config/css-tokens";
+import { cssMediaControlBare } from "@norish/web/config/css-tokens";
 
 export interface MediaItem {
   type: "image" | "video";
@@ -327,9 +327,12 @@ export default function MediaCarousel({
           onActiveVideoControlsVisibilityChange={onActiveVideoControlsVisibilityChange}
           onImageClick={openLightboxForItem}
         />
-        <Carousel.Previous className={cssMediaControl} />
-        <Carousel.Next className={cssMediaControl} />
-        <Carousel.Dots className="absolute bottom-10 left-1/2 z-10 -translate-x-1/2 rounded-full bg-neutral-900 px-2 py-1" />
+        {/* Arrows only. The dots pill counted the media at the exact height the
+            recipe title occupies below the photo, so it read as a badge on the
+            title rather than a control on the picture — and a hero carousel
+            does not need to state how many pictures it holds. */}
+        <Carousel.Previous className={cssMediaControlBare} />
+        <Carousel.Next className={cssMediaControlBare} />
       </Carousel>
 
       <ImageLightbox

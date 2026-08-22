@@ -22,6 +22,18 @@ export const hoverInputIcon =
 // contrast instead of borrowing whatever plays underneath (ADR-0020).
 export const cssMediaControl = "bg-neutral-900 text-white hover:bg-neutral-800";
 
+// The same control where the picture is the point and a filled disc would crowd
+// it: the glyph alone, carrying its contrast in a shadow rather than a circle.
+// Still a real object over the media, not a pane of glass — there is nothing to
+// see through, because there is nothing there but the arrow.
+export const cssMediaControlBare = [
+  "border-none bg-transparent text-white shadow-none",
+  "drop-shadow-[0_1px_4px_rgb(0_0_0/0.65)]",
+  "hover:bg-transparent data-[hovered=true]:bg-transparent data-[pressed=true]:bg-transparent",
+  "hover:opacity-80 data-[hovered=true]:opacity-80",
+  "[&_svg]:size-7",
+].join(" ");
+
 // The soft accent halo behind an empty-state icon, drawn as a radial
 // gradient rather than blur compositing (ADR-0020 removed blur outright).
 export const cssEmptyStateGlow =

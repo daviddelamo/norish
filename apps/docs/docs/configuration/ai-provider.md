@@ -158,8 +158,13 @@ under **Settings => Admin => AI & Processing => Image Generation**:
 | **Image Model**    | Must be an image model, e.g. `gpt-image-1` or `imagen-4.0-generate-001`, not a text model                                                         |
 
 When the image provider is the **same** provider as your AI configuration, the
-endpoint and API key fall back to it, so you don't type a key twice. There is
-no separate timeout: the AI request timeout above governs image generation too.
+endpoint and API key fall back to it, so you don't type a key twice. The API
+key field shows the borrowed key as the one in effect and names where it comes
+from, so it is clear whether image generation is using a key of its own. Changing
+the image provider forgets a key you had saved for the previous one, since that
+key would not work anywhere else, and the fallback applies again until you enter
+a key for the new provider. There is no separate timeout: the AI request timeout
+above governs image generation too.
 The block is stored in the database like the rest of the admin settings, there
 is no environment variable for it.
 

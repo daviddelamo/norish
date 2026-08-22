@@ -246,6 +246,9 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
         transcriptionApiKey: transcriptionApiKey || undefined,
         transcriptionModel,
       });
+      // The stored key is what the field now stands for; leaving the typed one
+      // behind is what left this form claiming unsaved changes forever.
+      setTranscriptionApiKey("");
     } finally {
       setSaving(false);
     }
