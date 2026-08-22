@@ -80,6 +80,7 @@
     "placeholder": "e.g., 2 lbs chicken breast",
     "editPlaceholder": "e.g., milk every week",
     "servings": "Servings",
+    "selectedCount": "{selected} of {total} selected",
     "loadingIngredients": "Loading ingredients...",
     "noIngredients": "No ingredients.",
     "addSelectedToGroceries": "Add to groceries",

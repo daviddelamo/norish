@@ -12,6 +12,8 @@
     "apply": "Zastosuj",
     "reset": "Resetuj",
     "clear": "Wyczyść",
+    "selectAll": "Zaznacz wszystko",
+    "deselectAll": "Odznacz wszystko",
     "confirm": "Potwierdź",
     "back": "Wstecz",
     "next": "Dalej",

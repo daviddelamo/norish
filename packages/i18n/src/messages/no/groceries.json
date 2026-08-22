@@ -80,6 +80,7 @@
     "placeholder": "f.eks. 1 kg kyllingbryst",
     "editPlaceholder": "f.eks. melk hver uke",
     "servings": "Porsjoner",
+    "selectedCount": "{selected} av {total} valgt",
     "loadingIngredients": "Laster ingredienser...",
     "noIngredients": "Ingen ingredienser.",
     "addSelectedToGroceries": "Legg til i handleliste",

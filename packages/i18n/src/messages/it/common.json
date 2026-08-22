@@ -12,6 +12,8 @@
     "apply": "Applica",
     "reset": "Reimposta",
     "clear": "Cancella",
+    "selectAll": "Seleziona tutto",
+    "deselectAll": "Deseleziona tutto",
     "confirm": "Conferma",
     "back": "Indietro",
     "next": "Avanti",

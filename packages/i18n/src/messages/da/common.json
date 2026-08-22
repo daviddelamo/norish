@@ -12,6 +12,8 @@
     "apply": "Anvend",
     "reset": "Nulstil",
     "clear": "Ryd",
+    "selectAll": "Vælg alle",
+    "deselectAll": "Fravælg alle",
     "confirm": "Bekræft",
     "back": "Tilbage",
     "next": "Næste",

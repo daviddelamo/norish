@@ -12,6 +12,8 @@
     "apply": "Apply",
     "reset": "Reset",
     "clear": "Clear",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
     "confirm": "Confirm",
     "back": "Back",
     "next": "Next",

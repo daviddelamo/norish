@@ -80,6 +80,7 @@
     "placeholder": "например, 2 кг куриной грудки",
     "editPlaceholder": "например, молоко каждую неделю",
     "servings": "Порции",
+    "selectedCount": "Выбрано {selected} из {total}",
     "loadingIngredients": "Загрузка ингредиентов...",
     "noIngredients": "Нет ингредиентов.",
     "addSelectedToGroceries": "Добавить в список покупок",
