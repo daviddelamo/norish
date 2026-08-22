@@ -185,6 +185,24 @@ test("the manual action replaces the primary image and the page re-tints", async
 
   expect(await readStoredDishColor(name)).not.toBe(SUPPLIED_PHOTO_DISH_COLOR);
   expect(stack.ai.control.imageRequestCount).toBe(1);
+
+  // The library follows too: the dashboard card reads the legacy thumbnail
+  // scalar, which the replacement keeps in sync — and the drawing is a file
+  // that actually serves, while the replaced photograph is gone rather than
+  // lingering as a cached 404.
+  await page.goto("/");
+
+  const card = page.locator(`img[alt="${name}"]`).first();
+
+  await expect(card).toHaveAttribute("src", new RegExp(generated!.image.replaceAll("/", "\\/")));
+
+  const drawnResponse = await page.request.get(generated!.image);
+
+  expect(drawnResponse.status()).toBe(200);
+
+  const replacedResponse = await page.request.get(photoUrl);
+
+  expect(replacedResponse.ok()).toBe(false);
 });
 
 test.describe("the bulk sweep", () => {

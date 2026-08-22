@@ -145,10 +145,10 @@ export interface GeneratedImageReplacement {
   /** The stored URL of the Generated Image just written, at order 0. */
   imageUrl: string;
   /**
-   * URLs whose rows this write deleted. The repository holds no filesystem,
-   * so removing the files is the caller's job — and only for URLs that
-   * differ from `imageUrl`, since content-hashed storage can hand a re-run
-   * the very same path.
+   * URLs this recipe no longer references anywhere — not by a surviving
+   * gallery row, not by the legacy scalar, and not as the image just
+   * written. The repository holds no filesystem, so removing the files is
+   * the caller's job.
    */
   replacedImageUrls: string[];
 }
@@ -164,6 +164,11 @@ export interface GeneratedImageReplacement {
  * most one Generated Image and re-runs replace their own predecessor rather
  * than accumulating toward the gallery cap.
  *
+ * The legacy `recipes.image` scalar follows in the same transaction: the
+ * dashboard card reads its thumbnail from that column, so a scalar left
+ * behind keeps the library on the replaced picture — pointing at a file
+ * this write may just have released.
+ *
  * Eligibility is what keeps automatic runs off stored photographs; by the
  * time this runs, the coordinator has decided the slot may be consumed.
  *
@@ -176,7 +181,7 @@ export async function replaceRecipePrimaryImageWithGenerated(
 ): Promise<GeneratedImageReplacement | null> {
   return await db.transaction(async (tx) => {
     const [recipe] = await tx
-      .select({ id: recipes.id })
+      .select({ id: recipes.id, image: recipes.image })
       .from(recipes)
       .where(eq(recipes.id, recipeId))
       .for("update");
@@ -211,9 +216,28 @@ export async function replaceRecipePrimaryImageWithGenerated(
       .insert(recipeImages)
       .values({ recipeId, image: imageUrl, order: "0", generated: true });
 
+    await tx
+      .update(recipes)
+      .set({ image: imageUrl, updatedAt: new Date(), version: sql`${recipes.version} + 1` })
+      .where(eq(recipes.id, recipeId));
+
+    // A file is released only when nothing on this recipe references it any
+    // more: duplicate-content rows share a URL, and the legacy scalar often
+    // names the same file as the displaced primary.
+    const displacedIds = new Set(displaced.map((row) => row.id));
+    const survivingUrls = new Set(
+      rows.filter((row) => !displacedIds.has(row.id)).map((row) => row.image)
+    );
+    const previousScalar = (recipe.image ?? "").trim();
+    const candidates = new Set(displaced.map((row) => row.image));
+
+    if (previousScalar !== "") candidates.add(previousScalar);
+
     return {
       imageUrl,
-      replacedImageUrls: [...new Set(displaced.map((row) => row.image))],
+      replacedImageUrls: [...candidates].filter(
+        (candidate) => candidate !== imageUrl && !survivingUrls.has(candidate)
+      ),
     };
   });
 }

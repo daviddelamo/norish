@@ -178,6 +178,81 @@ describe("replaceRecipePrimaryImageWithGenerated", () => {
 
     expect(await replaceRecipePrimaryImageWithGenerated(missing, url(missing, "drawn"))).toBeNull();
   });
+
+  // The dashboard card reads the legacy scalar (recipe-card.tsx: "Get
+  // thumbnail from the legacy image field"), so the replacement must keep it
+  // in sync — otherwise the library keeps showing the replaced file, which
+  // no longer even exists on disk.
+  describe("the legacy thumbnail scalar", () => {
+    it("follows the Generated Image when scalar and gallery shared the old file", async () => {
+      // The URL-import shape: the same downloaded file recorded in both.
+      const recipeId = crypto.randomUUID();
+      const photo = url(recipeId, "photo");
+
+      await createRecipeWithRefs(recipeId, userId, {
+        ...BASE_RECIPE,
+        image: photo,
+        images: [{ image: photo, order: 0 }],
+      });
+
+      const result = await replaceRecipePrimaryImageWithGenerated(recipeId, url(recipeId, "drawn"));
+
+      expect((await getRecipeFull(recipeId))?.image).toBe(url(recipeId, "drawn"));
+      expect(result?.replacedImageUrls).toEqual([photo]);
+    });
+
+    it("follows the Generated Image on a legacy-only recipe, releasing the old file", async () => {
+      const recipeId = crypto.randomUUID();
+      const legacy = url(recipeId, "legacy-hero");
+
+      await createRecipeWithRefs(recipeId, userId, { ...BASE_RECIPE, image: legacy, images: [] });
+
+      const result = await replaceRecipePrimaryImageWithGenerated(recipeId, url(recipeId, "drawn"));
+
+      const full = await getRecipeFull(recipeId);
+
+      expect(full?.image).toBe(url(recipeId, "drawn"));
+      expect(full?.images).toEqual([
+        expect.objectContaining({ image: url(recipeId, "drawn"), order: 0, generated: true }),
+      ]);
+      // The photograph does not survive a deliberate replacement (ADR-0025),
+      // wherever it was recorded.
+      expect(result?.replacedImageUrls).toEqual([legacy]);
+    });
+
+    it("is set for a recipe that had no image anywhere", async () => {
+      const recipeId = await createRecipeWithImages([]);
+
+      await replaceRecipePrimaryImageWithGenerated(recipeId, url(recipeId, "drawn"));
+
+      expect((await getRecipeFull(recipeId))?.image).toBe(url(recipeId, "drawn"));
+    });
+
+    it("never hands back a file a surviving gallery row still references", async () => {
+      // Duplicate-content rows share a URL; displacing one copy must not
+      // orphan the other's file.
+      const recipeId = crypto.randomUUID();
+      const shared = url(recipeId, "shared");
+
+      await createRecipeWithRefs(recipeId, userId, {
+        ...BASE_RECIPE,
+        image: shared,
+        images: [
+          { image: shared, order: 0 },
+          { image: shared, order: 1 },
+        ],
+      });
+
+      const result = await replaceRecipePrimaryImageWithGenerated(recipeId, url(recipeId, "drawn"));
+
+      // Row at order 1 survives and still references the file.
+      expect(result?.replacedImageUrls).toEqual([]);
+      expect((await getRecipeFull(recipeId))?.images.map((img) => img.image)).toEqual([
+        url(recipeId, "drawn"),
+        shared,
+      ]);
+    });
+  });
 });
 
 describe("getImageGenerationSweepCounts", () => {
