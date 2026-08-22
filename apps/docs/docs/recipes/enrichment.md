@@ -17,7 +17,7 @@ recipe:
   region, cuisines, and a short written explanation
 - **[Step ingredients](./step-ingredients.md)**: which ingredient lines each
   step uses, for the steps you haven't linked yourself
-- **A picture of the dish**: an AI-generated photo for recipes that have no
+- **Image generation**: an AI-generated photo for recipes that have no
   image at all, so an imported recipe still fills its page. It needs its own
   [image provider](../configuration/ai-provider.md#image-generation), because
   most AI providers cannot draw

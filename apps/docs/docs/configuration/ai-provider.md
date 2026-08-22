@@ -98,8 +98,8 @@ Information you entered yourself, or that an import source stated explicitly, ou
   whole claim, so it is never mixed with a value you set yourself.
 - Ingredients are decided **per step**: a step you linked yourself is left alone, and only steps with no links at all are filled. This holds for a run you request by hand too. See
   [Step ingredients](../recipes/step-ingredients.md#letting-ai-fill-the-gaps).
-- A recipe holding **any image at all** — a gallery image or the older single
-  image field — suppresses **automatic** image generation entirely. Background
+- A recipe holding **any image at all**, a gallery image or the older single
+  image field, suppresses **automatic** image generation entirely. Background
   work never replaces a stored picture; only the manual **Generate Picture**
   action and a bulk run with **Overwrite existing data** do.
 - Empty and blank values do not count as supplied, so placeholders don't block useful enrichment.
@@ -150,23 +150,23 @@ Perplexity and Ollama expose no image model at all. So a self-hoster running a
 local text model can still point image generation somewhere else. Configure it
 under **Settings => Admin => AI & Processing => Image Generation**:
 
-| Field              | Notes                                                                                                                                              |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Image Provider** | OpenAI, Google AI, Azure OpenAI, LM Studio, or a generic OpenAI-compatible endpoint — only providers that can actually generate images are offered |
-| **Endpoint URL**   | For LM Studio and generic endpoints; optional custom resource URL for Azure                                                                        |
-| **API Key**        | For the cloud providers                                                                                                                            |
-| **Image Model**    | Must be an image model, e.g. `gpt-image-1` or `imagen-4.0-generate-001` — not a text model                                                         |
+| Field              | Notes                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Image Provider** | OpenAI, Google AI, Azure OpenAI, LM Studio, or a generic OpenAI-compatible endpoint, only providers that can actually generate images are offered |
+| **Endpoint URL**   | For LM Studio and generic endpoints; optional custom resource URL for Azure                                                                       |
+| **API Key**        | For the cloud providers                                                                                                                           |
+| **Image Model**    | Must be an image model, e.g. `gpt-image-1` or `imagen-4.0-generate-001`, not a text model                                                         |
 
 When the image provider is the **same** provider as your AI configuration, the
 endpoint and API key fall back to it, so you don't type a key twice. There is
 no separate timeout: the AI request timeout above governs image generation too.
-The block is stored in the database like the rest of the admin settings — there
+The block is stored in the database like the rest of the admin settings, there
 is no environment variable for it.
 
 The feature makes **two AI requests per picture**: a cheap text request first,
 turning the recipe into a short visual brief with your regular AI provider, and
-then the image request that draws it. Both prompts — the brief and the image
-style — are editable under **Prompts**, like every other AI feature.
+then the image request that draws it. Both prompts, the brief and the image
+style, are editable under **Prompts**, like every other AI feature.
 
 How pictures reach recipes:
 
@@ -176,7 +176,7 @@ How pictures reach recipes:
   generation changes nothing and tells nobody.
 - **On request**, from a recipe's actions menu (**Generate Picture**), on web
   and on mobile. This runs regardless of the automatic switch and **replaces
-  the recipe's primary image outright** — including a photograph — and the
+  the recipe's primary image outright**, including a photograph, and the
   replaced image is not recoverable. See
   [Recipe enrichment](../recipes/enrichment.md#running-one-yourself).
 - **In bulk**, through **Enrich All Recipes** below.
@@ -186,7 +186,7 @@ the automatic run and the sweep simply skip the kind, and the manual action is
 refused with a message that says the server has no image provider.
 
 The generated picture is stored in the recipe's gallery at 1280×720 like any
-other image — nothing in the interface marks it as generated — and it sets the
+other image, nothing in the interface marks it as generated, and it sets the
 recipe page's tint the way a photograph would. When the recipe travels in a
 [Recipe Archive](../recipes/recipe-archive.md), the receiving instance is told
 which images were generated.
@@ -204,7 +204,7 @@ The action asks for confirmation first, because it can be an expensive
 operation: with many recipes it may take a long time and, on a paid AI
 provider, use a significant amount of credits. When image generation is among
 the enabled kinds, the confirmation also states **how many images the sweep
-will generate** — image models are billed per picture, so the number is worth
+will generate**, image models are billed per picture, so the number is worth
 reading before you confirm. By default that is only the recipes with no image
 at all; with **Overwrite existing data** on it is every recipe with
 ingredients, and stored photographs are replaced and not recoverable.
