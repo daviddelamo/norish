@@ -69,8 +69,7 @@ function makeToken(
 /** Extract the `extraHTTPHeaders` passed to `browser.newContext()`. */
 function getExtraHTTPHeaders(): Record<string, string> | undefined {
   const arg = mockNewContext.mock.calls[0]?.[0] as
-    | { extraHTTPHeaders?: Record<string, string> }
-    | undefined;
+    { extraHTTPHeaders?: Record<string, string> } | undefined;
 
   return arg?.extraHTTPHeaders;
 }

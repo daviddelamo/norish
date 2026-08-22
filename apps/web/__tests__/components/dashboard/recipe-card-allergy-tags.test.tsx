@@ -1,8 +1,9 @@
-import type { RecipeDashboardDTO } from "@norish/shared/contracts";
 import { forwardRef } from "react";
 import RecipeCard from "@/components/dashboard/recipe-card";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+
+import type { RecipeDashboardDTO } from "@norish/shared/contracts";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -58,7 +59,12 @@ vi.mock("@/components/shared/swipable-row", () => ({
 
 vi.mock("@heroui/react", () => {
   const Chip = ({ children, className, color, variant }: any) => (
-    <span className={className} data-color={color ?? ""} data-testid="chip" data-variant={variant ?? ""}>
+    <span
+      className={className}
+      data-color={color ?? ""}
+      data-testid="chip"
+      data-variant={variant ?? ""}
+    >
       {children}
     </span>
   );

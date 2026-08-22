@@ -102,13 +102,11 @@ export default function StepInput({
     () =>
       chipLines
         .filter((ingredient) => !ingredient.ingredientName.trim().startsWith("#"))
-        .map(
-          (ingredient): SmartTextInputIngredientSuggestion => ({
-            key: `${ingredient.order}`,
-            label: ingredient.ingredientName,
-            ingredientOrder: ingredient.order,
-          })
-        ),
+        .map((ingredient): SmartTextInputIngredientSuggestion => ({
+          key: `${ingredient.order}`,
+          label: ingredient.ingredientName,
+          ingredientOrder: ingredient.order,
+        })),
     [chipLines]
   );
 

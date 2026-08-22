@@ -27,8 +27,7 @@ import { router } from "../../trpc";
 // --- Shared Helpers ---
 
 type ImageValidationResult =
-  | { success: true; file: UploadedFile; bytes: Buffer }
-  | { success: false; error: string };
+  { success: true; file: UploadedFile; bytes: Buffer } | { success: false; error: string };
 
 /**
  * Extract and validate image file from FormData.

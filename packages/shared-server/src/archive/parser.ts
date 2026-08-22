@@ -303,8 +303,7 @@ export type RecipeImportItem = {
  * Item that can be either a parsed recipe or a parsing error
  */
 export type RecipeImportItemOrError =
-  | RecipeImportItem
-  | { dto: undefined; fileName: string; parseError: string };
+  RecipeImportItem | { dto: undefined; fileName: string; parseError: string };
 
 /**
  * Check if an import item is a parsing error

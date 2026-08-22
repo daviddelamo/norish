@@ -230,9 +230,8 @@ export async function refreshDishColorForRecipe(recipeId: string): Promise<void>
     // the archive parsers import it in contexts that never touch the
     // database — a static repository import would drag the whole db module
     // graph (and its config) into their load path.
-    const { getRecipeMediaForDishColor, updateRecipeDishColor } = await import(
-      "@norish/db/repositories/recipes"
-    );
+    const { getRecipeMediaForDishColor, updateRecipeDishColor } =
+      await import("@norish/db/repositories/recipes");
     const media = await getRecipeMediaForDishColor(recipeId);
 
     if (!media) return;

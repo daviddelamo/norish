@@ -4,14 +4,7 @@
  */
 
 export type AdminJobState =
-  | "waiting"
-  | "active"
-  | "delayed"
-  | "completed"
-  | "failed"
-  | "paused"
-  | "prioritized"
-  | "unknown";
+  "waiting" | "active" | "delayed" | "completed" | "failed" | "paused" | "prioritized" | "unknown";
 
 export type AdminJobStepStatus = "done" | "failed" | "running" | "skipped" | "pending";
 
