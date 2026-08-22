@@ -56,7 +56,7 @@ export default function BulkEnrichmentForm() {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-muted text-sm">{t("description")}</p>
-      <div className="flex items-center justify-end gap-4">
+      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
         {enrichAllMutation.isSuccess && (
           <span className="text-success text-sm">
             {t("queued", {

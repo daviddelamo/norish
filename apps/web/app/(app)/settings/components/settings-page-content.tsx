@@ -99,13 +99,19 @@ function SettingsContent({ showAdminTab }: { showAdminTab: boolean }) {
         <Tabs.ListContainer>
           <Tabs.List aria-label={t("page.ariaLabel")}>
             {tabs.map((tab) => {
-              const Icon = currentTab === tab.id ? tab.activeIcon : tab.inactiveIcon;
+              const isCurrent = currentTab === tab.id;
+              const Icon = isCurrent ? tab.activeIcon : tab.inactiveIcon;
 
               return (
-                <Tabs.Tab key={tab.id} id={tab.id} className="h-12">
+                // Four labelled tabs are wider than a phone, which left the
+                // last one — Admin, for the readers who have it — scrolled off
+                // the end of a strip that gives no sign it scrolls. Below `sm`
+                // only the tab you are on says its name; `aria-label` keeps the
+                // others named for anyone not reading the icons.
+                <Tabs.Tab key={tab.id} aria-label={tab.label} className="h-12" id={tab.id}>
                   <div className="flex items-center gap-2">
-                    <Icon className="h-5 w-5" />
-                    <span>{tab.label}</span>
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span className={isCurrent ? undefined : "hidden sm:inline"}>{tab.label}</span>
                   </div>
                   <Tabs.Indicator />
                 </Tabs.Tab>

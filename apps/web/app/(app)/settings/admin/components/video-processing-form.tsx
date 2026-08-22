@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SwitchRow } from "@/app/(app)/settings/components/setting-row";
 import SettingsSwitch from "@/app/(app)/settings/components/settings-switch";
 import SecretInput from "@/components/shared/secret-input";
 import { useAvailableTranscriptionModelsQuery, useYtDlpVersionQuery } from "@/hooks/admin";
@@ -256,18 +257,14 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
   return (
     <div className="flex flex-col gap-4 p-2">
       {/* Video Processing Section */}
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="font-medium">{t("enableVideo")}</span>
-          <span className="text-muted text-base">{t("enableVideoDescription")}</span>
-        </div>
+      <SwitchRow description={t("enableVideoDescription")} title={t("enableVideo")}>
         <SettingsSwitch
           color="success"
           isDisabled={!isAIEnabled}
           isSelected={enabled}
           onValueChange={setEnabled}
         />
-      </div>
+      </SwitchRow>
 
       {showAiDisabledWarning && (
         <div className="text-warning bg-warning/10 rounded-lg p-3 text-base">

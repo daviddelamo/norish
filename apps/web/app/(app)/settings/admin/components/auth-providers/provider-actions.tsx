@@ -24,7 +24,7 @@ export function ProviderActions({
 }: ProviderActionsProps) {
   const tActions = useTranslations("common.actions");
   return (
-    <div className="flex items-center justify-between pt-2">
+    <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
       {hasConfig && (
         <Button onPress={onDeleteClick} variant="danger-soft">
           {<TrashIcon className="h-5 w-5" />}

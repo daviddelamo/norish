@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SettingRow, SwitchRow } from "@/app/(app)/settings/components/setting-row";
 import SettingsSwitch from "@/app/(app)/settings/components/settings-switch";
 import SecretInput from "@/components/shared/secret-input";
 import { useAvailableModelsQuery } from "@/hooks/admin";
@@ -330,13 +331,9 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
   };
   return (
     <div className="flex flex-col gap-4 p-2">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="font-medium">{t("enableAI")}</span>
-          <span className="text-muted text-base">{t("enableAIDescription")}</span>
-        </div>
+      <SwitchRow description={t("enableAIDescription")} title={t("enableAI")}>
         <SettingsSwitch color="success" isSelected={enabled} onValueChange={setEnabled} />
-      </div>
+      </SwitchRow>
 
       {showValidationWarning && (
         <div className="text-warning bg-warning/10 rounded-lg p-3 text-base">
@@ -519,28 +516,22 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         <Input variant="secondary" />
       </TextField>
 
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="font-medium">{t("alwaysUseAI")}</span>
-          <span className="text-muted text-base">{t("alwaysUseAIDescription")}</span>
-        </div>
+      <SwitchRow description={t("alwaysUseAIDescription")} title={t("alwaysUseAI")}>
         <SettingsSwitch
           color="success"
           isDisabled={!enabled}
           isSelected={alwaysUseAI}
           onValueChange={setAlwaysUseAI}
         />
-      </div>
+      </SwitchRow>
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <span className="font-medium">{t("automaticEnrichment")}</span>
-          <span className="text-muted text-base">{t("automaticEnrichmentDescription")}</span>
-        </div>
-
+      <SettingRow
+        description={t("automaticEnrichmentDescription")}
+        title={t("automaticEnrichment")}
+      >
         <Select
           aria-label={t("automaticEnrichment")}
-          className="max-w-xs"
+          className="w-full sm:w-80"
           isDisabled={!enabled}
           placeholder={t("automaticEnrichmentPlaceholder")}
           selectionMode="multiple"
@@ -550,13 +541,22 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         >
           <Label className="sr-only">{t("automaticEnrichment")}</Label>
           <Select.Trigger>
-            <Select.Value>
+            {/* A flex child will not shrink past its text without `min-w-0`,
+                which is what let the joined list push the trigger wide enough
+                to be cut off by the panel instead of clipped by the field. */}
+            <Select.Value className="min-w-0">
               {({ defaultChildren, isPlaceholder }) =>
-                isPlaceholder
-                  ? defaultChildren
-                  : selectedEnrichmentKinds
+                isPlaceholder ? (
+                  defaultChildren
+                ) : (
+                  // Seven names joined read as a paragraph inside the trigger;
+                  // one clipped line says as much and keeps the row a row.
+                  <span className="block truncate">
+                    {selectedEnrichmentKinds
                       .map((key) => t(`automaticEnrichmentKinds.${key}`))
-                      .join(", ")
+                      .join(", ")}
+                  </span>
+                )
               }
             </Select.Value>
             <Select.Indicator />
@@ -577,7 +577,7 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
             </ListBox>
           </Select.Popover>
         </Select>
-      </div>
+      </SettingRow>
 
       <Select
         variant="secondary"
@@ -664,7 +664,7 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         </div>
       )}
 
-      <div className="flex items-center justify-end gap-2 pt-2">
+      <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
         <Button isDisabled={!enabled} onPress={handleTest} variant="tertiary" isPending={testing}>
           {<BeakerIcon className="h-5 w-5" />}
           {t("testConnection")}

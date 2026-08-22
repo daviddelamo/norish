@@ -34,10 +34,10 @@ export default function AIProcessingCard() {
   return (
     <Card>
       <Card.Header>
-        <div className="flex items-center gap-2">
-          <SparklesIcon className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">{t("title")}</h2>
-        </div>
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <SparklesIcon className="h-5 w-5 shrink-0" />
+          {t("title")}
+        </h2>
       </Card.Header>
       <Card.Content>
         <p className="text-muted mb-4 text-base">{t("description")}</p>
@@ -45,8 +45,8 @@ export default function AIProcessingCard() {
           <Accordion.Item id="ai">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {t("aiConfig.title")}
                     {dirtySections.ai && <UnsavedChangesChip />}
                   </div>
@@ -65,8 +65,8 @@ export default function AIProcessingCard() {
           <Accordion.Item id="video">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {t("video.title")}
                     {dirtySections.video && <UnsavedChangesChip />}
                   </div>
@@ -85,8 +85,8 @@ export default function AIProcessingCard() {
           <Accordion.Item id="imageGeneration">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {t("imageGeneration.title")}
                     {dirtySections.imageGeneration && <UnsavedChangesChip />}
                   </div>
@@ -105,8 +105,8 @@ export default function AIProcessingCard() {
           <Accordion.Item id="prompts">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {t("prompts.title")}
                     {dirtySections.prompts && <UnsavedChangesChip />}
                   </div>
@@ -125,8 +125,8 @@ export default function AIProcessingCard() {
           <Accordion.Item id="cuisines">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">{t("cuisines.title")}</div>
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">{t("cuisines.title")}</div>
                   <span className="text-muted text-sm">{t("cuisines.subtitle")}</span>
                 </div>
                 <Accordion.Indicator />
@@ -142,8 +142,10 @@ export default function AIProcessingCard() {
           <Accordion.Item id="bulkEnrichment">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">{t("bulkEnrichment.title")}</div>
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {t("bulkEnrichment.title")}
+                  </div>
                   <span className="text-muted text-sm">{t("bulkEnrichment.subtitle")}</span>
                 </div>
                 <Accordion.Indicator />

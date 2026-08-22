@@ -261,7 +261,7 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
         </ComboBox>
       )}
 
-      <div className="flex items-center justify-end gap-2 pt-2">
+      <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
         <Button isDisabled={!hasChanges} onPress={handleSave} variant="primary" isPending={saving}>
           {<CheckIcon className="h-5 w-5" />}
           {tActions("save")}

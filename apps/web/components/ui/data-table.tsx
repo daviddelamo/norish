@@ -9,6 +9,14 @@ export interface DataTableColumn<Row> {
   /** Exactly one column should be the row header for accessibility */
   isRowHeader?: boolean;
   className?: string;
+  /**
+   * Drops the column below `sm`. A phone has room for about two columns, and
+   * a table wider than that scrolls sideways with no hint that it does — so
+   * the columns a reader scans by stay and the rest wait for a wider screen.
+   * Only for detail a row already leads to somewhere else, never the only
+   * place a fact appears.
+   */
+  hideOnNarrow?: boolean;
   render: (row: Row) => ReactNode;
 }
 
@@ -36,13 +44,25 @@ export default function DataTable<Row>({
   onRowAction,
   emptyState,
 }: DataTableProps<Row>) {
+  // Hidden by media query rather than by dropping the column, so the table
+  // does not rebuild itself around a breakpoint the server cannot know.
+  const columnClass = (column: DataTableColumn<Row>) =>
+    [column.className, column.hideOnNarrow ? "hidden sm:table-cell" : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
+
   return (
     <Table>
       <Table.ScrollContainer>
         <Table.Content aria-label={ariaLabel}>
           <Table.Header>
             {columns.map((column) => (
-              <Table.Column key={column.key} id={column.key} isRowHeader={column.isRowHeader}>
+              <Table.Column
+                key={column.key}
+                className={column.hideOnNarrow ? "hidden sm:table-cell" : undefined}
+                id={column.key}
+                isRowHeader={column.isRowHeader}
+              >
                 {column.label}
               </Table.Column>
             ))}
@@ -62,7 +82,7 @@ export default function DataTable<Row>({
                 onAction={onRowAction ? () => onRowAction(row) : undefined}
               >
                 {columns.map((column) => (
-                  <Table.Cell key={column.key} className={column.className}>
+                  <Table.Cell key={column.key} className={columnClass(column)}>
                     {column.render(row)}
                   </Table.Cell>
                 ))}

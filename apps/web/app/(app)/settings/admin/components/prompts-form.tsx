@@ -107,7 +107,7 @@ export default function PromptsForm({ onDirtyChange }: PromptsFormProps) {
         </div>
       ))}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Button isPending={restoring} variant="tertiary" onPress={handleRestoreDefaults}>
           {!restoring && <ArrowPathIcon className="h-5 w-5" />}
           {tActions("restoreDefaults")}
