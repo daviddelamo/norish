@@ -55,19 +55,22 @@ async function waitForParserHealthy(timeoutMs: number): Promise<void> {
   throw new Error(`Embedded parser did not become healthy within ${timeoutMs}ms`);
 }
 
-function resolveParserAppDir(): string {
+function resolveParserAppDir(): string | null {
   const candidates = [
     resolve(process.cwd(), "apps/parser-api"),
     resolve(process.cwd(), "../parser-api"),
   ];
 
   for (const candidate of candidates) {
-    if (existsSync(resolve(candidate, ".venv/bin/python"))) {
+    if (
+      existsSync(resolve(candidate, ".venv/bin/python")) ||
+      existsSync(resolve(candidate, ".venv/Scripts/python.exe"))
+    ) {
       return candidate;
     }
   }
 
-  throw new Error(`Embedded parser runtime was not found. Checked: ${candidates.join(", ")}`);
+  return null;
 }
 
 function streamParserLogs(child: ChildProcess): void {
@@ -114,7 +117,17 @@ export async function startEmbeddedParser(
   }
 
   const parserAppDir = resolveParserAppDir();
-  const pythonExecutable = resolve(parserAppDir, ".venv/bin/python");
+  if (!parserAppDir) {
+    log.warn(
+      { parserApiUrl: INTERNAL_PARSER_API_URL },
+      "Embedded parser virtualenv not found - running without embedded parser API"
+    );
+
+    return null;
+  }
+  const pythonExecutable = existsSync(resolve(parserAppDir, ".venv/Scripts/python.exe"))
+    ? resolve(parserAppDir, ".venv/Scripts/python.exe")
+    : resolve(parserAppDir, ".venv/bin/python");
   const args = [
     "-m",
     "uvicorn",
