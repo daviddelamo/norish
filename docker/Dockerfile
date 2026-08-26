@@ -107,7 +107,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # production internally either way; this pins the rest of the task graph.
 ENV NODE_ENV=production \
   DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" \
-  SKIP_ENV_VALIDATION=1
+  SKIP_ENV_VALIDATION=1 \
+  NODE_OPTIONS="--max-old-space-size=2048"
 
 RUN pnpm run build && \
   rm -rf apps/web/.next/cache apps/web/.next/trace \
