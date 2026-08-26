@@ -171,6 +171,13 @@ const serwist = new Serwist({
       matcher: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/api/"),
       handler: new NetworkOnly({ networkTimeoutSeconds: 10 }),
     },
+    // Cross-origin requests (e.g. Google OAuth avatars, GitHub API tags) pass
+    // straight to network so the Service Worker does not attempt to run them
+    // through defaultCache strategies that fail with no-response on CORS/opaque responses.
+    {
+      matcher: ({ sameOrigin }) => !sameOrigin,
+      handler: new NetworkOnly(),
+    },
     // Everything else keeps Serwist's Next.js-aware defaults: runtime page/RSC
     // caches for visited routes, static assets and fonts.
     ...defaultCache,

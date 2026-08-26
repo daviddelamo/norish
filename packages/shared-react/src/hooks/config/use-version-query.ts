@@ -8,7 +8,7 @@ async function fetchLatestVersion(): Promise<string | null> {
   try {
     const response = await fetch(GITHUB_TAGS_URL, {
       headers: {
-        Accept: "application/vnd.github+json",
+        Accept: "application/json",
       },
     });
 
