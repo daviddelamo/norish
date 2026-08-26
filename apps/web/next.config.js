@@ -101,7 +101,7 @@ export default withSerwist(
             },
             {
               key: "Content-Security-Policy",
-              value: "default-src 'self'; script-src 'self'",
+              value: "default-src 'self'; script-src 'self'; connect-src 'self' https:; img-src 'self' https: data: blob:",
             },
           ],
         },
