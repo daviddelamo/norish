@@ -80,6 +80,7 @@
     "placeholder": "bijv. 1 kg kipfilet",
     "editPlaceholder": "bijv. melk elke week",
     "servings": "Porties",
+    "selectedCount": "{selected} van {total} geselecteerd",
     "loadingIngredients": "Ingrediënten laden...",
     "noIngredients": "Geen ingrediënten.",
     "addSelectedToGroceries": "Voeg toe aan boodschappen",

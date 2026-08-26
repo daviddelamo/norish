@@ -38,6 +38,9 @@
     "backToRecipes": "Torna alle ricette",
     "viewOriginal": "Vedi ricetta originale",
     "ingredients": "Ingredienti",
+    "ingredientOptions": "Opzioni ingredienti",
+    "showMore": "Mostra di più",
+    "showLess": "Mostra meno",
     "steps": "Passaggi",
     "notes": "Note",
     "addToGroceries": "Aggiungi alla spesa",
@@ -51,7 +54,12 @@
     "instructions": "Istruzioni",
     "cook": "Cucina",
     "switchToDecimal": "Mostra decimali",
-    "switchToFraction": "Mostra frazioni"
+    "switchToFraction": "Mostra frazioni",
+    "servingsCount": "{count, plural, one {# porzione} other {# porzioni}}",
+    "source": "Fonte",
+    "addedBy": "Aggiunto da {name}",
+    "decreaseServings": "Meno porzioni",
+    "increaseServings": "Più porzioni"
   },
   "actions": {
     "plan": "Pianifica",
@@ -70,7 +78,15 @@
     "estimatingNutrition": "Stima valori nutrizionali...",
     "screenOn": "Schermo acceso",
     "keepScreenOn": "Mantieni schermo acceso",
-    "actionsLabel": "Azioni"
+    "actionsLabel": "Azioni",
+    "autoCategorizing": "Categorizzazione…",
+    "inferProvenance": "Deduci la provenienza",
+    "inferringProvenance": "Deduzione della provenienza…",
+    "linkIngredients": "Collega gli ingredienti ai passaggi",
+    "linkingIngredients": "Collegamento degli ingredienti…",
+    "enrichmentFailed": "Ultimo tentativo non riuscito",
+    "generateImage": "Genera immagine",
+    "generatingImage": "Generazione immagine…"
   },
   "sharePanel": {
     "title": "Condividi ricetta",
@@ -119,7 +135,8 @@
   "convert": {
     "ariaLabel": "Converti sistema di misura",
     "toMetric": "Converti in metrico",
-    "toUS": "Converti in US"
+    "toUS": "Converti in US",
+    "converting": "Conversione in corso…"
   },
   "deleteModal": {
     "title": "Elimina ricetta",
@@ -149,7 +166,7 @@
     "notesPlaceholder": "Aggiungi note di preparazione, modifiche o suggerimenti per questa ricetta...",
     "ingredientsHelp": "Digita gli ingredienti come \"2 tazze di farina\" - analizzeremo automaticamente quantità e unità.",
     "instructionsHelp": "Scrivi istruzioni chiare passo dopo passo. Premi Invio per passare al passaggio successivo.",
-    "tagsHelp": "Digita i tag e clicca i suggerimenti per aggiungerli. I tag selezionati sono blu, i nuovi tag hanno un bordo tratteggiato.",
+    "tagsHelp": "Digita i tag e clicca i suggerimenti per aggiungerli. I tag della ricetta sono pieni, i nuovi tag hanno un bordo tratteggiato.",
     "tagsAndCategories": "Tag e categorie",
     "categoriesHelp": "Seleziona le categorie di pasto per questa ricetta.",
     "category": {
@@ -162,6 +179,16 @@
     "fat": "Grassi (g)",
     "carbs": "Carboidrati (g)",
     "protein": "Proteine (g)",
+    "provenance": "Provenienza",
+    "provenanceHelp": "Da dove viene questa ricetta.",
+    "originCountry": "Paese",
+    "originCountryPlaceholder": "Nessun paese",
+    "originRegion": "Regione",
+    "originRegionPlaceholder": "es. Sicilia",
+    "cuisines": "Cucine",
+    "cuisinesHelp": "Scegli dall'elenco della tua installazione. Per un piatto fusion ne servono più d'una.",
+    "provenanceNote": "Nota",
+    "provenanceNotePlaceholder": "Qualche frase su da dove viene questo piatto…",
     "servings": "Porzioni",
     "cookingTimes": "Tempi di cottura",
     "optional": "(opzionale)",
@@ -227,6 +254,23 @@
     "stepPlaceholder": "Passaggio {number}: Descrivi il passaggio...",
     "stepPlaceholderShort": "Passaggio {number}"
   },
+  "stepIngredients": {
+    "rowLabel": "Ingredienti collegati",
+    "addLabel": "Collega ingrediente",
+    "pickerLabel": "Collega un ingrediente a questo passaggio",
+    "shareLabel": "Modifica la parte di {name}",
+    "share": {
+      "full": "Riga intera",
+      "half": "La metà",
+      "third": "Un terzo",
+      "quarter": "Un quarto",
+      "custom": "Personalizzata…",
+      "amount": "Quantità…"
+    },
+    "customShareLabel": "Parte personalizzata",
+    "customAmountLabel": "Quantità",
+    "removeLabel": "Rimuovi {name}"
+  },
   "ingredientInput": {
     "placeholder": "es. 2 tazze di farina"
   },
@@ -238,12 +282,6 @@
     "ariaLabel": "Mantieni schermo acceso"
   },
   "toasts": {
-    "processingBoth": "Elaborazione tag e allergie",
-    "processingTags": "Generazione tag",
-    "processingAllergies": "Rilevamento allergie",
-    "bothComplete": "Tag e allergie aggiornati",
-    "tagsComplete": "Tag generati",
-    "allergiesComplete": "Allergie rilevate",
     "imported": "Ricetta importata",
     "converted": "Misure convertite",
     "convertedDescription": "Ricetta convertita in unità {system}",
@@ -269,6 +307,50 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Scorri per navigare tra i passaggi",
     "swipeIngredients": "Scorri a sinistra per gli ingredienti",
-    "swipeBackToSteps": "Scorri a destra per i passaggi"
+    "swipeBackToSteps": "Scorri a destra per i passaggi",
+    "readyAt": "Pronto verso le {time}",
+    "timers": "Timer",
+    "nextStep": "Passo successivo"
+  },
+  "enrichment": {
+    "failed": "Arricchimento non riuscito",
+    "states": {
+      "queued": "In coda",
+      "processing": "In corso",
+      "succeeded": "Completato",
+      "failed": "Ultimo tentativo non riuscito"
+    },
+    "kinds": {
+      "auto-tagging": "Tag automatici",
+      "allergy-detection": "Rilevamento allergie",
+      "auto-categorization": "Categorizzazione automatica",
+      "nutrition-estimation": "Stima nutrizionale",
+      "recipe-provenance": "Provenienza della ricetta",
+      "ingredient-linking": "Collegamento degli ingredienti",
+      "image-generation": "Generazione immagini"
+    }
+  },
+  "provenance": {
+    "title": "Provenienza",
+    "region": "Regione",
+    "cuisines": "Cucine",
+    "inferring": "Sto capendo da dove viene questa ricetta…",
+    "noInfo": "Ancora nessuna informazione sulla provenienza",
+    "inferWithAI": "Deduci con l'IA"
+  },
+  "import": {
+    "alreadyExists": "Hai già questa ricetta",
+    "openExisting": "Apri"
+  },
+  "glanceBar": {
+    "totalTime": "Tempo totale",
+    "servings": "{count, plural, one {porzione} other {porzioni}}"
+  },
+  "cookingTime": {
+    "title": "Tempo di cucina",
+    "prep": "Preparazione",
+    "cook": "Cottura",
+    "other": "Altro tempo",
+    "total": "Totale"
   }
 }

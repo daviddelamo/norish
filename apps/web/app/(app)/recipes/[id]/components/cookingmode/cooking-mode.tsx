@@ -4,14 +4,21 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWakeLockContext } from "@/app/(app)/recipes/[id]/components/wake-lock-context";
 import { TimerDock } from "@/components/timer-dock";
-import { useIngredientLinkHighlight } from "@/hooks/use-ingredient-link-highlight";
+import { useRecipePageColor } from "@/context/recipe-page-color-context";
+import { useFloatingDock } from "@/hooks/use-floating-dock";
+import { dishTintStyle } from "@/lib/dish-tint";
 import { FireIcon } from "@heroicons/react/20/solid";
 import { Button, Modal } from "@heroui/react";
+import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 
-import type { CookingModeTab } from "./types";
+import { primaryRecipeImage } from "@norish/shared/lib/recipe-media";
+import { cssFloatingDockPill } from "@norish/web/config/css-tokens";
+
+import type { CookingModeView } from "./types";
 import { useRecipeContextRequired } from "../../context";
 import { resolveCookingModeSteps } from "./cooking-mode-steps";
+import { STEP_SCROLL_ATTRIBUTE } from "./cooking-step-view";
 import { DesktopCookingModeDialog } from "./desktop-cooking-mode-dialog";
 import { MobileCookingModeDialog } from "./mobile-cooking-mode-dialog";
 import { useIsDesktopCookingMode } from "./use-is-desktop-cooking-mode";
@@ -20,23 +27,53 @@ import { clampStep } from "./utils";
 type SwipePoint = {
   x: number;
   y: number;
+  /**
+   * The drag began inside a long step's own scroll region, so it is a scroll
+   * rather than a page turn. Only the vertical gesture is suppressed —
+   * reaching the ingredients sideways still works from anywhere.
+   */
+  startedInStepScroll: boolean;
 };
 
 type CookingModeProps = {
   className?: string;
   fullWidth?: boolean;
+  /**
+   * The phone's entry point: a pill floating in the bottom-left corner,
+   * mirroring the timer dock's corner across the nav pill and rising and
+   * falling with the nav exactly as it does, so the one control a cook came
+   * for is never scrolled off screen and never covers a running timer.
+   */
+  floating?: boolean;
 };
 
 const SWIPE_THRESHOLD = 56;
 
-export default function CookingMode({ className = "", fullWidth = false }: CookingModeProps) {
+export default function CookingMode({
+  className = "",
+  fullWidth = false,
+  floating = false,
+}: CookingModeProps) {
   const { adjustedIngredients, recipe } = useRecipeContextRequired();
   const { disable, enable, isActive, isSupported } = useWakeLockContext();
+  // The modal portals out of the recipe page's dish-tint scope (ADR-0023),
+  // so the backdrop re-establishes it: the wash and every tinted token
+  // inside cooking mode - the bottom bar's ground, the ingredient chips -
+  // resolve against the same dish hue as the page under it.
+  const [recipePageColor] = useRecipePageColor();
+  const tintStyle = dishTintStyle(recipePageColor === "dish" ? recipe.dishColor : null);
   const tDetail = useTranslations("recipes.detail");
   const isDesktop = useIsDesktopCookingMode();
+  // The cook pill leaves with the nav rather than shrinking with it: a reader
+  // scrolling the recipe is reading, and it is one gesture away when they stop.
+  const floatingDock = useFloatingDock({ align: "start", hideWithNav: true });
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<CookingModeTab>("steps");
+  const [activeView, setActiveView] = useState<CookingModeView>("steps");
   const [activeStep, setActiveStep] = useState(0);
+  const [areTimersOpen, setAreTimersOpen] = useState(false);
+  // Ready At is fixed when the Cooking Session begins, not on page load: it
+  // is the moment the cook started plus the recipe's total time.
+  const [readyAt, setReadyAt] = useState<Date | null>(null);
   const wakeLockOwnedRef = useRef(false);
   const swipeStartRef = useRef<SwipePoint | null>(null);
 
@@ -91,23 +128,23 @@ export default function CookingMode({ className = "", fullWidth = false }: Cooki
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowRight") {
         event.preventDefault();
-        setActiveTab("ingredients");
+        setActiveView("ingredients");
       }
 
       if (event.key === "ArrowLeft") {
         event.preventDefault();
-        setActiveTab("steps");
+        setActiveView("steps");
       }
 
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        setActiveTab("steps");
+        setActiveView("steps");
         setActiveStep((step) => clampStep(step + 1, steps.length));
       }
 
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        setActiveTab("steps");
+        setActiveView("steps");
         setActiveStep((step) => clampStep(step - 1, steps.length));
       }
     };
@@ -135,6 +172,9 @@ export default function CookingMode({ className = "", fullWidth = false }: Cooki
     swipeStartRef.current = {
       x: event.clientX,
       y: event.clientY,
+      startedInStepScroll: Boolean(
+        target instanceof Element && target.closest(`[${STEP_SCROLL_ATTRIBUTE}]`)
+      ),
     };
   }, []);
   const handlePointerUp = useCallback(
@@ -153,59 +193,95 @@ export default function CookingMode({ className = "", fullWidth = false }: Cooki
       const absY = Math.abs(deltaY);
 
       if (absX > absY && absX > SWIPE_THRESHOLD) {
-        setActiveTab(deltaX < 0 ? "ingredients" : "steps");
+        setActiveView(deltaX < 0 ? "ingredients" : "steps");
 
         return;
       }
 
-      if (activeTab === "steps" && absY > absX && absY > SWIPE_THRESHOLD) {
+      if (start.startedInStepScroll) {
+        return;
+      }
+
+      if (activeView === "steps" && absY > absX && absY > SWIPE_THRESHOLD) {
         setActiveStep((step) => clampStep(step + (deltaY < 0 ? 1 : -1), steps.length));
       }
     },
-    [activeTab, steps.length]
+    [activeView, steps.length]
   );
-  const { highlightedIngredientKey, highlightIngredient, ingredientListRef } =
-    useIngredientLinkHighlight({
-      onBeforeHighlight: () => setActiveTab("ingredients"),
-    });
-
   const dialogProps = {
     activeStep: currentStep,
-    activeTab,
+    activeView,
+    areTimersOpen,
     displayIngredients,
-    recipeId: recipe.id,
-    recipeName: recipe.name,
-    recipeServings: recipe.servings,
-    recipeSystemUsed: recipe.systemUsed ?? "metric",
+    readyAt,
+    recipe: {
+      id: recipe.id,
+      name: recipe.name,
+      image: primaryRecipeImage(recipe),
+      categories: recipe.categories ?? [],
+      totalMinutes: recipe.totalMinutes,
+      servings: recipe.servings,
+      systemUsed: recipe.systemUsed ?? "metric",
+    },
     steps,
-    highlightedIngredientKey,
-    ingredientListRef,
     onClose: close,
-    onIngredientPress: highlightIngredient,
     onPointerDown: handlePointerDown,
     onPointerUp: handlePointerUp,
     onStepChange: setActiveStep,
-    onTabChange: setActiveTab,
+    onTimersOpenChange: setAreTimersOpen,
+    onViewChange: setActiveView,
   };
+
+  const open = () => {
+    // A Cooking Session is not persisted, so opening always begins a new one:
+    // first step, fresh Ready At.
+    setActiveView("steps");
+    setActiveStep(0);
+    setAreTimersOpen(false);
+    setReadyAt(
+      recipe.totalMinutes && recipe.totalMinutes > 0
+        ? new Date(Date.now() + recipe.totalMinutes * 60_000)
+        : null
+    );
+    setIsOpen(true);
+  };
+  // A Cooking Session is never persisted, so there is never one to continue:
+  // the control reads "Cook" and only ever starts a new session.
+  const label = (
+    <>
+      <FireIcon className="size-5" />
+      {tDetail("cook")}
+    </>
+  );
 
   return (
     <>
-      <Button
-        className={className}
-        fullWidth={fullWidth}
-        variant="primary"
-        onPress={() => {
-          setActiveTab("steps");
-          setIsOpen(true);
-        }}
-      >
-        <FireIcon className="size-5" />
-        {tDetail("cook")}
-      </Button>
+      {floating ? (
+        <motion.div
+          animate={floatingDock.animate}
+          className={`${floatingDock.className} z-50`}
+          style={floatingDock.style}
+          transition={floatingDock.transition}
+        >
+          <Button
+            className={`shadow-xl ${floatingDock.pillClassName} ${cssFloatingDockPill}`}
+            variant="primary"
+            onPress={open}
+          >
+            {label}
+          </Button>
+        </motion.div>
+      ) : (
+        <Button className={className} fullWidth={fullWidth} variant="primary" onPress={open}>
+          {label}
+        </Button>
+      )}
 
       <Modal.Backdrop
         className="bg-background/75 z-[1099]"
+        data-dish-tint={tintStyle ? true : undefined}
         isOpen={isOpen}
+        style={tintStyle}
         variant="blur"
         onOpenChange={(open) => {
           if (!open) setIsOpen(false);
@@ -228,7 +304,11 @@ export default function CookingMode({ className = "", fullWidth = false }: Cooki
               ) : (
                 <MobileCookingModeDialog {...dialogProps} />
               )}
-              <TimerDock className="z-[1150]" />
+              <TimerDock
+                className="z-[1150]"
+                isExpanded={areTimersOpen}
+                onExpandedChange={setAreTimersOpen}
+              />
             </>
           </Modal.Dialog>
         </Modal.Container>

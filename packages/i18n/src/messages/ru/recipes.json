@@ -38,6 +38,9 @@
     "backToRecipes": "Назад к рецептам",
     "viewOriginal": "Открыть оригинальный рецепт",
     "ingredients": "Ингредиенты",
+    "ingredientOptions": "Настройки ингредиентов",
+    "showMore": "Показать больше",
+    "showLess": "Показать меньше",
     "steps": "Шаги",
     "notes": "Заметки",
     "addToGroceries": "Добавить в список покупок",
@@ -51,7 +54,12 @@
     "instructions": "Инструкция",
     "cook": "Готовить",
     "switchToDecimal": "Показывать десятичные",
-    "switchToFraction": "Показывать дроби"
+    "switchToFraction": "Показывать дроби",
+    "servingsCount": "{count, plural, one {# порция} few {# порции} many {# порций} other {# порции}}",
+    "source": "Источник",
+    "addedBy": "Добавил(а) {name}",
+    "decreaseServings": "Меньше порций",
+    "increaseServings": "Больше порций"
   },
   "actions": {
     "plan": "Запланировать",
@@ -70,7 +78,15 @@
     "estimatingNutrition": "Оцениваем пищевую ценность...",
     "screenOn": "Экран включён",
     "keepScreenOn": "Не выключать экран",
-    "actionsLabel": "Действия"
+    "actionsLabel": "Действия",
+    "autoCategorizing": "Категоризация…",
+    "inferProvenance": "Определить происхождение",
+    "inferringProvenance": "Определяем происхождение…",
+    "linkIngredients": "Связать ингредиенты с шагами",
+    "linkingIngredients": "Связывание ингредиентов…",
+    "enrichmentFailed": "Последняя попытка не удалась",
+    "generateImage": "Сгенерировать изображение",
+    "generatingImage": "Генерация изображения…"
   },
   "sharePanel": {
     "title": "Поделиться рецептом",
@@ -119,7 +135,8 @@
   "convert": {
     "ariaLabel": "Преобразовать систему мер",
     "toMetric": "Преобразовать в метрическую",
-    "toUS": "Преобразовать в US"
+    "toUS": "Преобразовать в US",
+    "converting": "Преобразование…"
   },
   "deleteModal": {
     "title": "Удалить рецепт",
@@ -149,7 +166,7 @@
     "notesPlaceholder": "Добавьте заметки по подготовке, корректировкам или подаче...",
     "ingredientsHelp": "Введите ингредиенты, например «2 стакана муки» — мы автоматически распознаем количество и единицы.",
     "instructionsHelp": "Пишите понятные пошаговые инструкции. Нажмите Enter, чтобы перейти к следующему шагу.",
-    "tagsHelp": "Введите теги и нажмите на подсказки, чтобы добавить. Выбранные теги выделены синим, новые теги имеют пунктирную рамку.",
+    "tagsHelp": "Введите теги и нажмите на подсказки, чтобы добавить. Теги рецепта залиты цветом, новые теги имеют пунктирную рамку.",
     "tagsAndCategories": "Теги и категории",
     "categoriesHelp": "Выберите категории приёма пищи для этого рецепта.",
     "category": {
@@ -162,6 +179,16 @@
     "fat": "Жиры (г)",
     "carbs": "Углеводы (г)",
     "protein": "Белки (г)",
+    "provenance": "Происхождение",
+    "provenanceHelp": "Откуда этот рецепт.",
+    "originCountry": "Страна",
+    "originCountryPlaceholder": "Без страны",
+    "originRegion": "Регион",
+    "originRegionPlaceholder": "напр. Сицилия",
+    "cuisines": "Кухни",
+    "cuisinesHelp": "Выберите из списка вашей установки. Несколько уместны для фьюжн-блюда.",
+    "provenanceNote": "Заметка",
+    "provenanceNotePlaceholder": "Несколько предложений о происхождении этого блюда…",
     "servings": "Порции",
     "cookingTimes": "Время приготовления",
     "optional": "(необязательно)",
@@ -227,6 +254,23 @@
     "stepPlaceholder": "Шаг {number}: Опишите действие...",
     "stepPlaceholderShort": "Шаг {number}"
   },
+  "stepIngredients": {
+    "rowLabel": "Связанные ингредиенты",
+    "addLabel": "Связать ингредиент",
+    "pickerLabel": "Привяжите ингредиент к этому шагу",
+    "shareLabel": "Изменить долю {name}",
+    "share": {
+      "full": "Вся строка",
+      "half": "Половина",
+      "third": "Треть",
+      "quarter": "Четверть",
+      "custom": "Другое…",
+      "amount": "Количество…"
+    },
+    "customShareLabel": "Своя доля",
+    "customAmountLabel": "Количество",
+    "removeLabel": "Убрать {name}"
+  },
   "ingredientInput": {
     "placeholder": "например, 2 стакана муки"
   },
@@ -238,12 +282,6 @@
     "ariaLabel": "Не выключать экран"
   },
   "toasts": {
-    "processingBoth": "Обработка тегов и аллергенов",
-    "processingTags": "Генерация тегов",
-    "processingAllergies": "Определение аллергенов",
-    "bothComplete": "Теги и аллергены обновлены",
-    "tagsComplete": "Теги сгенерированы",
-    "allergiesComplete": "Аллергены определены",
     "imported": "Рецепт импортирован",
     "converted": "Единицы измерения преобразованы",
     "convertedDescription": "Рецепт преобразован в систему {system}",
@@ -269,6 +307,50 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Проведите для навигации по шагам",
     "swipeIngredients": "Проведите влево для ингредиентов",
-    "swipeBackToSteps": "Проведите вправо для шагов"
+    "swipeBackToSteps": "Проведите вправо для шагов",
+    "readyAt": "Готово примерно в {time}",
+    "timers": "Таймеры",
+    "nextStep": "Следующий шаг"
+  },
+  "enrichment": {
+    "failed": "Не удалось выполнить обогащение",
+    "states": {
+      "queued": "В очереди",
+      "processing": "Выполняется",
+      "succeeded": "Завершено",
+      "failed": "Последняя попытка не удалась"
+    },
+    "kinds": {
+      "auto-tagging": "Автоматические теги",
+      "allergy-detection": "Определение аллергенов",
+      "auto-categorization": "Автоматическая категоризация",
+      "nutrition-estimation": "Оценка пищевой ценности",
+      "recipe-provenance": "Происхождение рецепта",
+      "ingredient-linking": "Связывание ингредиентов",
+      "image-generation": "Генерация изображений"
+    }
+  },
+  "provenance": {
+    "title": "Происхождение",
+    "region": "Регион",
+    "cuisines": "Кухни",
+    "inferring": "Определяем происхождение этого рецепта…",
+    "noInfo": "Пока нет сведений о происхождении",
+    "inferWithAI": "Определить с помощью ИИ"
+  },
+  "import": {
+    "alreadyExists": "У вас уже есть этот рецепт",
+    "openExisting": "Открыть"
+  },
+  "glanceBar": {
+    "totalTime": "Общее время",
+    "servings": "{count, plural, one {порция} few {порции} many {порций} other {порции}}"
+  },
+  "cookingTime": {
+    "title": "Время приготовления",
+    "prep": "Подготовка",
+    "cook": "Готовка",
+    "other": "Прочее время",
+    "total": "Всего"
   }
 }

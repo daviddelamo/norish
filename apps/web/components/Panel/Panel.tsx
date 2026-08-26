@@ -17,7 +17,7 @@ export interface PanelProps {
   className?: string;
   contentClassName?: string;
   panelClassName?: string;
-  backdropVariant?: "opaque" | "blur" | "transparent";
+  backdropVariant?: "opaque" | "transparent";
   title?: string;
   children: ReactNode;
   trigger?: ReactElement;
@@ -30,10 +30,38 @@ const PanelContext = createContext<{
   open: boolean;
   close: () => void;
   toggle: () => void;
-}>({ open: false, close: () => {}, toggle: () => {} });
+  /**
+   * The open panel's own element, for overlays to portal into.
+   *
+   * An overlay left to portal into `<body>` lands outside the drawer, where
+   * vaul has set `pointer-events: none` to hold the rest of the page inert —
+   * so it renders, but no click ever reaches it (#511). Null when no panel is
+   * open, which is exactly when overlays should keep the default container.
+   */
+  portalContainer: HTMLElement | null;
+}>({ open: false, close: () => {}, toggle: () => {}, portalContainer: null });
 
 export function usePanel() {
   return useContext(PanelContext);
+}
+
+/**
+ * The container an overlay opened inside a Panel must portal into.
+ *
+ * Undefined outside a Panel, which leaves the default `<body>` container in
+ * place. Verified in a real browser at a phone-sized viewport: with a Panel
+ * open, `<body>` computes `pointer-events: none` and every popover portalled
+ * there inherits it — a menu, a select and a date picker alike all render and
+ * swallow every tap (#511). Portalling into the panel puts them back under
+ * vaul's own `pointer-events: auto`.
+ *
+ * `UNSTABLE_portalContainer` is React Aria's deprecated-but-supported escape
+ * hatch. Its replacement, `UNSAFE_PortalProvider`, ships in `react-aria`, which
+ * `react-aria-components` does not share a module instance with here — so
+ * "modernising" this swaps a working prop for a silently ignored one.
+ */
+export function usePanelPortalContainer(): HTMLElement | undefined {
+  return usePanel().portalContainer ?? undefined;
 }
 
 type PanelSectionProps = {
@@ -50,7 +78,6 @@ type PanelTriggerProps = {
 const PANEL_MAX_HEIGHT_CLASS = "max-h-[80dvh]";
 
 const BACKDROP_VARIANT_CLASSES: Record<NonNullable<PanelProps["backdropVariant"]>, string> = {
-  blur: "bg-(--background)/1 backdrop-blur-sm",
   opaque: "bg-(--backdrop)",
   transparent: "bg-transparent",
 };
@@ -76,7 +103,7 @@ const PanelRoot: React.FC<PanelProps> = ({
   className = "",
   contentClassName = "",
   panelClassName = "",
-  backdropVariant = "blur",
+  backdropVariant = "opaque",
   title = "",
   nested = false,
   children,
@@ -85,6 +112,8 @@ const PanelRoot: React.FC<PanelProps> = ({
   onOpenChange,
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
+  // State, not a ref: overlays need to re-render once the panel element exists.
+  const [contentElement, setContentElement] = useState<HTMLDivElement | null>(null);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
 
@@ -156,7 +185,11 @@ const PanelRoot: React.FC<PanelProps> = ({
     <div data-panel className={className}>
       {trigger && <span className="inline-flex">{triggerElement}</span>}
 
-      <PanelContext.Provider value={{ open, close, toggle }}>
+      {/* vaul keeps the content mounted after close, so gate on `open` — a
+          closed panel must not capture overlays. */}
+      <PanelContext.Provider
+        value={{ open, close, toggle, portalContainer: open ? contentElement : null }}
+      >
         {/* repositionInputs resizes the sheet and force-scrolls the focused field to
             the top of its scroll container on iOS, which throws a scrolled panel body
             out of view; Radix's RemoveScroll still locks the page behind the sheet. */}
@@ -170,8 +203,11 @@ const PanelRoot: React.FC<PanelProps> = ({
               data-variant={backdropVariant}
             />
             <Drawer.Content
+              ref={setContentElement}
               aria-describedby={undefined}
               aria-label={title || "Panel"}
+              // Overlays portal here rather than into the scrolling body, which
+              // would clip them.
               className={twMerge(
                 "fixed inset-x-0 bottom-0 z-[1001] flex flex-col outline-none",
                 contentClasses
@@ -179,7 +215,7 @@ const PanelRoot: React.FC<PanelProps> = ({
             >
               <div
                 className={twMerge(
-                  "relative flex min-h-0 flex-col overflow-hidden rounded-t-[calc(var(--radius)*2)] bg-(--overlay) text-(--overlay-foreground) shadow-(--overlay-shadow)",
+                  "border-border relative flex min-h-0 flex-col overflow-hidden rounded-t-[calc(var(--radius)*2)] border-x border-t bg-(--overlay) text-(--overlay-foreground) shadow-(--overlay-shadow)",
                   dialogClasses
                 )}
                 data-slot="panel-dialog"

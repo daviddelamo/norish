@@ -4,11 +4,12 @@ import type { MouseEvent } from "react";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MiniCalendar, MiniGroceries } from "@/components/Panel/consumers";
+import OriginFlag from "@/components/recipes/origin-flag";
 import HeartButton from "@/components/shared/heart-button";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
 import { usePermissionsContext } from "@/context/permissions-context";
-import { useUserContext } from "@/context/user-context";
 import { useRecipePrefetch } from "@/hooks/recipes/use-recipe-prefetch";
+import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
 import { useAppStore } from "@/stores/useAppStore";
 import {
   CalendarDaysIcon,
@@ -24,11 +25,12 @@ import { Button, Card, Chip, Tooltip, useOverlayState } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import { RecipeDashboardDTO } from "@norish/shared/contracts";
-import { formatMinutesHM } from "@norish/shared/lib/helpers";
+import { RECIPE_DASHBOARD_KEYS } from "@norish/shared/contracts/zod";
 import {
-  getShowFavoritesPreference,
-  getShowRatingsPreference,
-} from "@norish/shared/lib/user-preferences";
+  formatMinutesHM,
+  isAllergenTag,
+  sortTagsWithAllergyPriority,
+} from "@norish/shared/lib/helpers";
 
 import { DeleteRecipeModal } from "../shared/delete-recipe-modal";
 import DoubleTapContainer from "../shared/double-tap-container";
@@ -67,8 +69,55 @@ function normalizeRecipeTagNames(tags: readonly RecipeTagValue[] | null | undefi
   return names;
 }
 
-function getRecipeTagsSignature(tags: RecipeDashboardDTO["tags"] | null | undefined) {
-  return normalizeRecipeTagNames(tags).join("\u0000");
+// Structural equality for card-sized values: Dates by timestamp, arrays and
+// plain objects element-wise. Only runs when the cached recipe object identity
+// changed, so the recursion cost is confined to actual cache writes.
+function dashboardFieldEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a instanceof Date || b instanceof Date) {
+    return a instanceof Date && b instanceof Date && a.getTime() === b.getTime();
+  }
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((value, index) => dashboardFieldEqual(value, b[index]))
+    );
+  }
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+
+    return (
+      keysA.length === keysB.length &&
+      keysA.every((key) =>
+        dashboardFieldEqual(
+          (a as Record<string, unknown>)[key],
+          (b as Record<string, unknown>)[key]
+        )
+      )
+    );
+  }
+
+  return false;
+}
+
+/**
+ * Whether a panel should be in the tree at all. Cards are virtualized, so one
+ * scrolls out and back in constantly — and a panel mounted before it is ever
+ * opened subscribes to its queries on every one of those mounts, refetching
+ * them each time. Nothing renders until the reader actually opens it; after
+ * that it stays, so closing still animates.
+ */
+function useMountedOnceOpened(open: boolean) {
+  const [mounted, setMounted] = useState(open);
+
+  if (open && !mounted) {
+    setMounted(true);
+  }
+
+  return mounted;
 }
 
 function RecipeCardComponent({
@@ -83,10 +132,11 @@ function RecipeCardComponent({
   const rowRef = useRef<SwipeableRowRef>(null);
   const mobileSearchOpen = useAppStore((s) => s.mobileSearchOpen);
   const { canDeleteRecipe } = usePermissionsContext();
-  const { user } = useUserContext();
   const [open, setOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [groceriesOpen, setGroceriesOpen] = useState(false);
+  const calendarMounted = useMountedOnceOpened(calendarOpen);
+  const groceriesMounted = useMountedOnceOpened(groceriesOpen);
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const {
     isOpen: isDeleteModalOpen,
@@ -94,8 +144,7 @@ function RecipeCardComponent({
     close: onDeleteModalClose,
   } = useOverlayState();
   const t = useTranslations("recipes.card");
-  const showRatings = getShowRatingsPreference(user);
-  const showFavorites = getShowFavoritesPreference(user);
+  const { showRatings, showFavorites } = useHiddenItemVisibility();
 
   // Automatically prefetch recipe when card enters viewport
   const cardRef = useRecipePrefetch(recipe.id);
@@ -115,13 +164,30 @@ function RecipeCardComponent({
   const timeLabel = formatMinutesHM(totalMinutes);
 
   const servings = recipe.servings;
-  const tagNames = useMemo(() => normalizeRecipeTagNames(recipe.tags), [recipe.tags]);
+  const allergySet = useMemo(() => new Set(allergies.map((a) => a.toLowerCase())), [allergies]);
+  // Allergen tags always sort ahead of the rest, so the two visible list-view
+  // chips (and the tooltip behind "+N") surface the warning instead of hiding
+  // it. The grid overlay applies the same priority inside RecipeTags.
+  const tagNames = useMemo(
+    () =>
+      sortTagsWithAllergyPriority(
+        normalizeRecipeTagNames(recipe.tags).map((name) => ({ name })),
+        allergies
+      ).map((t) => t.name),
+    [recipe.tags, allergies]
+  );
   const visibleTagNames = tagNames.slice(0, 2);
   const hiddenTagCount = tagNames.length - visibleTagNames.length;
+  // More allergens than visible slots: the overflow chip inherits the warning
+  // so the danger is never folded away into a neutral "+N".
+  const hiddenAllergenCount = tagNames
+    .slice(visibleTagNames.length)
+    .filter((tag) => isAllergenTag(tag, allergySet)).length;
   const allTags = useMemo(() => tagNames.map((name) => ({ name })), [tagNames]);
   const description = recipe.description?.trim() || "";
 
-  // Get thumbnail from the legacy image field
+  // The resolved primary image: the list projection serves the first gallery
+  // image, with the deprecated legacy scalar only as a fallback.
   const thumbnailImage = recipe.image;
   const showImage = thumbnailImage && failedImage !== thumbnailImage;
 
@@ -234,50 +300,71 @@ function RecipeCardComponent({
       title={tagNames.length > 0 ? tagNames.join(", ") : undefined}
     >
       {typeof averageRating === "number" && averageRating > 0 && showRatings && (
-        <Chip className="shrink-0 rounded-full px-2 text-[11px]" size="sm" variant="soft">
+        <Chip className="shrink-0 rounded-full px-2 text-[11px]" size="sm" variant="tertiary">
           <StarIcon className="text-warning h-3.5 w-3.5" />
           <Chip.Label>{Math.round(averageRating)}</Chip.Label>
         </Chip>
       )}
 
       {timeLabel && (
-        <Chip className="shrink-0 rounded-full px-2 text-[11px]" size="sm" variant="soft">
+        <Chip className="shrink-0 rounded-full px-2 text-[11px]" size="sm" variant="tertiary">
           <ClockIcon className="h-3.5 w-3.5" />
           <Chip.Label>{timeLabel}</Chip.Label>
         </Chip>
       )}
 
       {typeof servings === "number" && servings > 0 && (
-        <Chip className="shrink-0 rounded-full px-2 text-[11px]" size="sm" variant="soft">
+        <Chip className="shrink-0 rounded-full px-2 text-[11px]" size="sm" variant="tertiary">
           <UserGroupIcon className="h-3.5 w-3.5" />
           <Chip.Label>{servings}</Chip.Label>
         </Chip>
       )}
 
-      {visibleTagNames.map((tag) => (
-        <Chip
-          key={tag.toLowerCase()}
-          className="max-w-[8rem] min-w-0 rounded-full px-2 text-[11px]"
-          size="sm"
-        >
-          <Chip.Label className="truncate">{tag}</Chip.Label>
-        </Chip>
-      ))}
+      {visibleTagNames.map((tag) => {
+        const isAllergen = isAllergenTag(tag, allergySet);
+
+        return (
+          <Chip
+            key={tag.toLowerCase()}
+            className="max-w-[8rem] min-w-0 rounded-full px-2 text-[11px]"
+            color={isAllergen ? "warning" : undefined}
+            size="sm"
+            variant={isAllergen ? "primary" : "tertiary"}
+          >
+            <Chip.Label className="truncate">{tag}</Chip.Label>
+          </Chip>
+        );
+      })}
 
       {hiddenTagCount > 0 && (
         <Tooltip delay={0}>
           <Tooltip.Trigger aria-label={tagNames.join(", ")} onClick={stopParentActivation}>
-            <Chip className="shrink-0 rounded-full px-2 text-[11px]" size="sm" variant="soft">
+            <Chip
+              className="shrink-0 rounded-full px-2 text-[11px]"
+              color={hiddenAllergenCount > 0 ? "warning" : undefined}
+              size="sm"
+              variant={hiddenAllergenCount > 0 ? "primary" : "tertiary"}
+            >
               <Chip.Label>+{hiddenTagCount}</Chip.Label>
             </Chip>
           </Tooltip.Trigger>
           <Tooltip.Content className="max-w-64">
             <div className="flex flex-wrap gap-1.5 p-1">
-              {tagNames.map((tag) => (
-                <Chip key={tag.toLowerCase()} className="max-w-48 rounded-full px-2" size="sm">
-                  <Chip.Label className="truncate">{tag}</Chip.Label>
-                </Chip>
-              ))}
+              {tagNames.map((tag) => {
+                const isAllergen = isAllergenTag(tag, allergySet);
+
+                return (
+                  <Chip
+                    key={tag.toLowerCase()}
+                    className="max-w-48 rounded-full px-2"
+                    color={isAllergen ? "warning" : undefined}
+                    size="sm"
+                    variant={isAllergen ? "primary" : "tertiary"}
+                  >
+                    <Chip.Label className="truncate">{tag}</Chip.Label>
+                  </Chip>
+                );
+              })}
             </div>
           </Tooltip.Content>
         </Tooltip>
@@ -340,6 +427,7 @@ function RecipeCardComponent({
                       className={`text-foreground truncate text-base leading-5 font-semibold ${open ? "" : "group-hover/row:underline"} `}
                       title={recipe.name}
                     >
+                      <OriginFlag className="mr-1.5" originCountry={recipe.originCountry} />
                       {recipe.name}
                     </h3>
                     {description && (
@@ -415,6 +503,7 @@ function RecipeCardComponent({
                 className={`text-foreground truncate text-base font-semibold ${open ? "" : "group-hover/row:underline"} `}
                 title={recipe.name}
               >
+                <OriginFlag className="mr-1.5" originCountry={recipe.originCountry} />
                 {recipe.name}
               </h3>
 
@@ -450,16 +539,20 @@ function RecipeCardComponent({
       </SwipeableRow>
 
       {/* Calendar panel */}
-      <MiniCalendar open={calendarOpen} recipeId={recipe.id} onOpenChange={setCalendarOpen} />
+      {calendarMounted && (
+        <MiniCalendar open={calendarOpen} recipeId={recipe.id} onOpenChange={setCalendarOpen} />
+      )}
 
       {/* Groceries panel */}
-      <MiniGroceries
-        initialServings={recipe.servings || 1}
-        open={groceriesOpen}
-        originalServings={recipe.servings || 1}
-        recipeId={recipe.id}
-        onOpenChange={setGroceriesOpen}
-      />
+      {groceriesMounted && (
+        <MiniGroceries
+          initialServings={recipe.servings || 1}
+          open={groceriesOpen}
+          originalServings={recipe.servings || 1}
+          recipeId={recipe.id}
+          onOpenChange={setGroceriesOpen}
+        />
+      )}
 
       <DeleteRecipeModal
         isOpen={isDeleteModalOpen}
@@ -485,20 +578,11 @@ const RecipeCard = memo(RecipeCardComponent, (prevProps, nextProps) => {
   const prev = prevProps.recipe;
   const next = nextProps.recipe;
 
-  // Compare essential fields that would require a re-render
-  return (
-    prev.id === next.id &&
-    prev.name === next.name &&
-    prev.description === next.description &&
-    prev.image === next.image &&
-    prev.servings === next.servings &&
-    prev.prepMinutes === next.prepMinutes &&
-    prev.cookMinutes === next.cookMinutes &&
-    prev.totalMinutes === next.totalMinutes &&
-    prev.averageRating === next.averageRating &&
-    prev.updatedAt?.getTime() === next.updatedAt?.getTime() &&
-    getRecipeTagsSignature(prev.tags) === getRecipeTagsSignature(next.tags)
-  );
+  if (prev === next) return true;
+
+  // Walk the dashboard contract instead of a hand-list, so a field added to
+  // RecipeDashboardSchema re-renders automatically (originCountry was missed).
+  return RECIPE_DASHBOARD_KEYS.every((key) => dashboardFieldEqual(prev[key], next[key]));
 });
 
 RecipeCard.displayName = "RecipeCard";

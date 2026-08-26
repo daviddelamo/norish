@@ -11,7 +11,7 @@ type PlannedItemInsert = typeof plannedItems.$inferInsert;
 type PlannedItemUpdate = Partial<PlannedItemInsert>;
 type PlannedItemSlot = PlannedItem["slot"];
 
-type PlannedItemWithRecipe = PlannedItem & {
+export type PlannedItemWithRecipe = PlannedItem & {
   recipeName: string | null;
   recipeImage: string | null;
   servings: number | null;

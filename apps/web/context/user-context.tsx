@@ -2,6 +2,7 @@
 
 import { createContext, ReactNode, useCallback, useContext } from "react";
 import { useTRPC } from "@/app/providers/trpc-provider";
+import { clearOfflineStateForSignOut } from "@/lib/offline/sign-out";
 import { useQuery } from "@tanstack/react-query";
 
 import type { UserContextValue } from "@norish/shared-react/contexts";
@@ -17,8 +18,23 @@ const shared = createUserContext({
     return { user, isLoading };
   },
   useSignOut: () => {
-    return useCallback(async () => {
-      await betterAuthSignOut();
+    return useCallback(async (options?: { discardQueue?: boolean }) => {
+      // The auth sign-out completes first: if it fails (e.g. Offline),
+      // nothing local is discarded — the session, queue, and caches stay
+      // exactly as they were, equivalent to Cancel (ADR-0009).
+      try {
+        const result = await betterAuthSignOut();
+
+        if (result && typeof result === "object" && "error" in result && result.error) {
+          return;
+        }
+      } catch {
+        return;
+      }
+
+      await clearOfflineStateForSignOut({
+        discardQueue: options?.discardQueue ?? false,
+      });
       window.location.href = "/login?logout=true";
     }, []);
   },

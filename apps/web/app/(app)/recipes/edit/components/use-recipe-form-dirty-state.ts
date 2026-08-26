@@ -10,6 +10,8 @@ import type { FullRecipeDTO, MeasurementSystem, RecipeCategory } from "@norish/s
 import { useDirtyState } from "@norish/shared-react/hooks";
 import { formatUnit } from "@norish/shared/lib/unit-localization";
 
+import type { ProvenanceFormValue } from "./provenance-fields";
+
 interface RecipeFormState {
   name: string;
   description: string;
@@ -29,6 +31,7 @@ interface RecipeFormState {
   fat: number | null;
   carbs: number | null;
   protein: number | null;
+  provenance: ProvenanceFormValue;
 }
 
 interface UseRecipeFormDirtyStateOptions {
@@ -118,6 +121,7 @@ export function useRecipeFormDirtyState({
         systemUsed: step.systemUsed,
         version: step.version,
         images: step.images || [],
+        stepIngredients: step.stepIngredients || [],
       })),
       systemUsed: initialData?.systemUsed ?? "metric",
       media: buildInitialMedia(initialData),
@@ -125,6 +129,13 @@ export function useRecipeFormDirtyState({
       fat: initialData?.fat != null ? Number(initialData.fat) : null,
       carbs: initialData?.carbs != null ? Number(initialData.carbs) : null,
       protein: initialData?.protein != null ? Number(initialData.protein) : null,
+      provenance: {
+        originCountry: initialData?.originCountry ?? null,
+        originCountryName: initialData?.originCountryName ?? null,
+        originRegion: initialData?.originRegion ?? "",
+        provenanceNote: initialData?.provenanceNote ?? "",
+        cuisineIds: initialData?.cuisines.map((cuisine) => cuisine.id) ?? [],
+      },
     };
   }, [initialData, locale, mode, units]);
 

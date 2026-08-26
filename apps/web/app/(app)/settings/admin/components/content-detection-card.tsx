@@ -57,8 +57,8 @@ export default function ContentDetectionCard() {
           <Accordion.Item id="timer-keywords">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {t("timerKeywords.title")}
                     {dirtySections.timerKeywords && <UnsavedChangesChip />}
                   </div>
@@ -87,8 +87,8 @@ export default function ContentDetectionCard() {
           <Accordion.Item id="content-indicators">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {t("contentIndicators.title")}
                     {dirtySections.contentIndicators && <UnsavedChangesChip />}
                   </div>
@@ -117,8 +117,8 @@ export default function ContentDetectionCard() {
           <Accordion.Item id="units">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {t("units.title")}
                     {dirtySections.units && <UnsavedChangesChip />}
                   </div>
@@ -145,8 +145,8 @@ export default function ContentDetectionCard() {
           <Accordion.Item id="recurrence">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {t("recurrence.title")}
                     {dirtySections.recurrence && <UnsavedChangesChip />}
                   </div>

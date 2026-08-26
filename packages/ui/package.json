@@ -1,11 +1,12 @@
 {
   "name": "@norish/ui",
-  "version": "0.19.1-beta",
+  "version": "0.21.0-beta",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./star-rating": "./src/star-rating.tsx"
+    "./star-rating": "./src/star-rating.tsx",
+    "./mark": "./src/mark.tsx"
   },
   "scripts": {
     "build": "rm -rf dist && pnpm exec tsc -p tsconfig.json --noCheck",

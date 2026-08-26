@@ -100,10 +100,20 @@ describe("server config normalization", () => {
       model: "gpt-4.1-mini",
       temperature: 0.4,
       maxTokens: 1024,
+      timeoutMs: 300000,
       apiKey: "secret-key",
-      autoTagAllergies: true,
       alwaysUseAI: false,
-      autoTaggingMode: "disabled",
+      tagStrategy: "predefined",
+      cuisineStrategy: "existing",
+      automaticEnrichment: {
+        autoTagging: false,
+        allergyDetection: true,
+        autoCategorization: false,
+        nutritionEstimation: false,
+        recipeProvenance: false,
+        ingredientLinking: false,
+        imageGeneration: false,
+      },
     });
 
     const persisted = await db.query.serverConfig.findFirst({
@@ -116,10 +126,20 @@ describe("server config normalization", () => {
       model: "gpt-4.1-mini",
       temperature: 0.4,
       maxTokens: 1024,
+      timeoutMs: 300000,
       apiKey: "••••••••",
-      autoTagAllergies: true,
       alwaysUseAI: false,
-      autoTaggingMode: "disabled",
+      tagStrategy: "predefined",
+      cuisineStrategy: "existing",
+      automaticEnrichment: {
+        autoTagging: false,
+        allergyDetection: true,
+        autoCategorization: false,
+        nutritionEstimation: false,
+        recipeProvenance: false,
+        ingredientLinking: false,
+        imageGeneration: false,
+      },
     });
     expect(JSON.parse(decrypt(persisted!.valueEnc!))).toEqual(result);
   });

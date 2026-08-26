@@ -27,7 +27,11 @@ import {
   UnitsConfigSchema,
   UnitsMapSchema,
 } from "@norish/db/zodSchemas/server-config";
-import { loadDefaultPrompts } from "@norish/shared-server/ai/prompts/loader";
+import {
+  loadDefaultPrompts,
+  loadRetiredDefaultPrompts,
+} from "@norish/shared-server/ai/prompts/loader";
+import { pruneToOverrides } from "@norish/shared-server/ai/prompts/overrides";
 import {
   buildLocaleConfigFromEnv,
   DEFAULT_LOCALE_CONFIG,
@@ -127,7 +131,6 @@ const REQUIRED_CONFIGS: ConfigDefinition[] = [
       enabled: SERVER_CONFIG.VIDEO_PARSING_ENABLED,
       maxLengthSeconds: SERVER_CONFIG.VIDEO_MAX_LENGTH_SECONDS,
       maxVideoFileSize: SERVER_CONFIG.MAX_VIDEO_FILE_SIZE,
-      ytDlpVersion: SERVER_CONFIG.YT_DLP_VERSION,
       ytDlpProxy: SERVER_CONFIG.YT_DLP_PROXY || undefined,
       transcriptionProvider: SERVER_CONFIG.TRANSCRIPTION_PROVIDER,
       transcriptionEndpoint: SERVER_CONFIG.TRANSCRIPTION_ENDPOINT || undefined,
@@ -145,9 +148,11 @@ const REQUIRED_CONFIGS: ConfigDefinition[] = [
   },
   {
     key: ServerConfigKeys.PROMPTS,
-    getDefaultValue: () => ({ ...loadDefaultPrompts(), isOverridden: false }),
+    // Overrides only: defaults live in the shipped prompt files and are
+    // merged at read time, so new releases' prompts arrive without a write.
+    getDefaultValue: () => ({}),
     sensitive: false,
-    description: "AI prompts for recipe extraction and unit conversion",
+    description: "AI prompt overrides (empty: all prompts follow shipped defaults)",
   },
   {
     key: ServerConfigKeys.LOCALE_CONFIG,
@@ -468,6 +473,16 @@ async function syncGoogleProvider(): Promise<void> {
   }
 }
 
+/**
+ * Reduce the stored prompts row to genuine administrator overrides.
+ *
+ * Rows written before 0.20 carried full copies of the then-current default
+ * texts (plus a row-level isOverridden flag that froze all of them after any
+ * save). Dropping every field that matches a shipped default — current or
+ * retired — releases those copies, so the release's prompts reach the admin
+ * surface and the model, while texts an administrator actually wrote are
+ * exactly the fields that survive.
+ */
 async function syncPrompts(): Promise<void> {
   const existing = await getConfig<PromptsConfig>(ServerConfigKeys.PROMPTS);
 
@@ -477,27 +492,19 @@ async function syncPrompts(): Promise<void> {
     return;
   }
 
-  if (existing.isOverridden) {
-    serverLogger.debug("Prompts are overridden by admin, skipping file sync");
+  const { overrides, changed } = pruneToOverrides(
+    existing,
+    loadDefaultPrompts(),
+    loadRetiredDefaultPrompts()
+  );
 
-    return;
-  }
+  if (changed) {
+    await setConfig(ServerConfigKeys.PROMPTS, overrides, null, false);
 
-  const defaultPrompts = loadDefaultPrompts();
-  const storedComparable = {
-    recipeExtraction: existing.recipeExtraction,
-    unitConversion: existing.unitConversion,
-  };
-
-  if (configsDiffer(storedComparable, defaultPrompts)) {
-    await setConfig(
-      ServerConfigKeys.PROMPTS,
-      { ...defaultPrompts, isOverridden: false },
-      null,
-      false
+    serverLogger.info(
+      { overriddenFields: Object.keys(overrides) },
+      "Pruned stored prompts to administrator overrides"
     );
-
-    serverLogger.info("Updated prompts from default files (content changed)");
   }
 }
 
@@ -632,8 +639,8 @@ async function syncLocales(): Promise<void> {
     if (!existing.locales[locale]) {
       newLocales.push(locale);
       // If ENABLED_LOCALES env is set, only enable if locale is in that list
-      // Otherwise use the default enabled state
-      const enabled = hasEnvFilter ? envEnabledLocales.includes(locale) : entry.enabled;
+      // Otherwise default to false for newly added languages so the admin can review them
+      const enabled = hasEnvFilter ? envEnabledLocales.includes(locale) : false;
 
       existing.locales[locale] = { ...entry, enabled };
     }
@@ -642,54 +649,5 @@ async function syncLocales(): Promise<void> {
   if (newLocales.length > 0) {
     await setConfig(ServerConfigKeys.LOCALE_CONFIG, existing, null, false);
     serverLogger.info({ locales: newLocales }, "Added new locales to config");
-  }
-}
-
-/**
- * Load default values from .default.json files
- * Used for "Restore to defaults" functionality
- */
-export function getDefaultConfigValue(key: ServerConfigKey): unknown {
-  switch (key) {
-    case ServerConfigKeys.REGISTRATION_ENABLED:
-      return true;
-    case ServerConfigKeys.UNITS:
-      return { units: defaultUnits, isOverridden: false };
-    case ServerConfigKeys.CONTENT_INDICATORS:
-      return defaultContentIndicators;
-    case ServerConfigKeys.RECURRENCE_CONFIG:
-      return defaultRecurrenceConfig;
-    case ServerConfigKeys.SCHEDULER_CLEANUP_MONTHS:
-      return 3;
-    case ServerConfigKeys.JOB_RETENTION:
-      return DEFAULT_JOB_RETENTION;
-    case ServerConfigKeys.AI_CONFIG:
-      return {
-        enabled: false,
-        provider: "openai",
-        model: "gpt-5-mini",
-        temperature: 1.0,
-        maxTokens: 10000,
-        timeoutMs: 300000,
-      };
-    case ServerConfigKeys.VIDEO_CONFIG:
-      return {
-        enabled: false,
-        maxLengthSeconds: 120,
-        maxVideoFileSize: SERVER_CONFIG.MAX_VIDEO_FILE_SIZE,
-        ytDlpVersion: "2026.07.04",
-        transcriptionProvider: "disabled",
-        transcriptionModel: "whisper-1",
-      };
-    case ServerConfigKeys.RECIPE_PERMISSION_POLICY:
-      return DEFAULT_RECIPE_PERMISSION_POLICY;
-    case ServerConfigKeys.PROMPTS:
-      return { ...loadDefaultPrompts(), isOverridden: false };
-    case ServerConfigKeys.LOCALE_CONFIG:
-      return DEFAULT_LOCALE_CONFIG;
-    case ServerConfigKeys.TIMER_KEYWORDS:
-      return { ...defaultTimerKeywords, isOverridden: false };
-    default:
-      return null;
   }
 }

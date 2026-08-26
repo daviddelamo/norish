@@ -1,7 +1,6 @@
 {
   "page": {
     "title": "Impostazioni",
-    "loading": "Caricamento...",
     "ariaLabel": "Schede impostazioni"
   },
   "tabs": {
@@ -62,7 +61,12 @@
     },
     "archiveImport": {
       "title": "Importa archivio ricette",
-      "description": "Importa ricette da esportazioni Mela (.melarecipes), Paprika (.paprikarecipes) o Mealie/Tandoor (.zip)"
+      "description": "Importa ricette da esportazioni Norish (.norishrecipes), Mela (.melarecipes), Paprika (.paprikarecipes) o Mealie/Tandoor (.zip)"
+    },
+    "archiveExport": {
+      "title": "Esporta archivio ricette",
+      "description": "Scarica tutte le ricette che puoi vedere.",
+      "button": "Esporta"
     },
     "siteAuthTokens": {
       "title": "Token di autenticazione siti",
@@ -111,21 +115,19 @@
         "title": "Lingua",
         "description": "Scegli la tua lingua preferita"
       },
-      "timers": {
-        "title": "Abilita timer ricette",
-        "description": "Mostra timer interattivi nelle istruzioni delle ricette"
-      },
-      "conversion": {
-        "title": "Mostra pulsante conversione ingredienti",
-        "description": "Visualizza un pulsante nelle pagine delle ricette per convertire tra sistemi di misura"
-      },
-      "ratings": {
-        "title": "Mostra valutazioni",
-        "description": "Visualizza le valutazioni a stelle sulle schede ricette e nelle pagine di dettaglio"
-      },
-      "favorites": {
-        "title": "Mostra preferiti",
-        "description": "Visualizza le icone preferiti/cuore sulle schede ricette e nelle pagine di dettaglio"
+      "hidden": {
+        "title": "Elementi nascosti",
+        "description": "Scegli cosa preferisci non vedere. Per impostazione predefinita viene mostrato tutto e questo cambia solo la tua visualizzazione.",
+        "placeholder": "Niente nascosto",
+        "options": {
+          "provenance": "Provenienza",
+          "nutrition": "Valori nutrizionali",
+          "notes": "Note",
+          "rating": "Valutazioni",
+          "favorites": "Preferiti",
+          "conversion": "Conversione ingredienti",
+          "timers": "Timer delle ricette"
+        }
       },
       "todaySection": {
         "title": "Sezione Oggi",
@@ -134,6 +136,14 @@
           "always": "Sempre visibile",
           "planned": "Solo pasti pianificati",
           "hidden": "Nascosta"
+        }
+      },
+      "recipePageColor": {
+        "title": "Colore delle pagine delle ricette",
+        "description": "Tingi ogni pagina di ricetta con i colori della sua foto, oppure mantieni i colori del tema su questo dispositivo",
+        "options": {
+          "dish": "Dalla foto del piatto",
+          "theme": "Colori del tema"
         }
       },
       "applyError": "Applicazione della preferenza non riuscita"
@@ -354,7 +364,12 @@
       "saveLocales": "Salva impostazioni lingua",
       "localesSaved": "Impostazioni lingua salvate",
       "localesError": "Salvataggio impostazioni lingua non riuscito",
-      "atLeastOneLocale": "Almeno una lingua deve essere abilitata"
+      "atLeastOneLocale": "Almeno una lingua deve essere abilitata",
+      "export": {
+        "title": "Archivio ricette",
+        "description": "Scarica tutte le ricette di questo server.",
+        "button": "Esporta archivio ricette"
+      }
     },
     "registration": {
       "title": "Registrazione",
@@ -517,18 +532,35 @@
         "title": "Elaborazione video",
         "subtitle": "Estrazione video social media e trascrizione"
       },
+      "imageGeneration": {
+        "title": "Generazione Immagini",
+        "subtitle": "Disegna una foto del piatto per le ricette senza immagine"
+      },
       "prompts": {
         "title": "Prompt",
         "subtitle": "Personalizza le istruzioni IA per l'elaborazione delle ricette"
       },
-      "bulkCategorization": {
-        "title": "Categorizzazione in blocco",
-        "subtitle": "Categorizza le ricette non categorizzate usando l'IA",
-        "description": "Metti in coda tutte le ricette non categorizzate per il rilevamento automatico delle categorie tramite IA. Le categorie includono Colazione, Pranzo, Cena e Spuntino.",
-        "button": "Categorizza tutte le ricette",
-        "queued": "{count, plural, =0 {Nessuna ricetta da categorizzare} one {# ricetta in coda} other {# ricette in coda}}",
-        "success": "Categorizzazione avviata",
-        "error": "Avvio della categorizzazione non riuscito"
+      "cuisines": {
+        "title": "Cucine",
+        "subtitle": "Il vocabolario da cui scelgono le ricette e l'IA"
+      },
+      "bulkEnrichment": {
+        "title": "Arricchimento in blocco",
+        "subtitle": "Esegui l'arricchimento abilitato su tutte le ricette",
+        "description": "Accoda, per tutte le ricette di questo server, ogni tipo di arricchimento il cui interruttore automatico è attivo. Per impostazione predefinita vengono colmate solo le lacune; la conferma propone di sovrascrivere ciò che è già presente.",
+        "button": "Arricchisci tutte le ricette",
+        "confirmTitle": "Eseguire l'arricchimento su tutte le ricette?",
+        "confirmMessage": "Questo mette in coda lavoro di IA per ogni ricetta di questo server. Ogni tipo di arricchimento il cui interruttore automatico è abilitato viene eseguito dove mancano dati.",
+        "replaceExisting": "Sovrascrivere i dati esistenti",
+        "replaceExistingDescription": "Rifare categorie, valori nutrizionali, provenienza e ingredienti dei passaggi anche quando la ricetta li ha già. Tag e indicazioni sulle allergie vengono solo aggiunti.",
+        "replaceWarning": "L'operazione non può essere annullata. Vengono sostituiti anche i dati inseriti da te, compresi gli ingredienti dei passaggi collegati a mano: non è registrato quali valori provengano dall'IA.",
+        "costWarning": "Può essere un'operazione costosa: con molte ricette può richiedere molto tempo e, con un provider di IA a pagamento, consumare una quantità significativa di crediti.",
+        "confirmButton": "Esegui su tutte le ricette",
+        "confirmButtonReplace": "Sovrascrivi tutte le ricette",
+        "queued": "{queued, plural, =0 {Nessuna esecuzione in coda} one {# esecuzione in coda} other {# esecuzioni in coda}} per {recipes, plural, one {# ricetta} other {# ricette}}",
+        "aiDisabled": "L'IA è disabilitata su questo server. Abilita prima l'IA.",
+        "error": "Avvio dell'arricchimento in blocco non riuscito",
+        "imageCount": "{count, plural, =0 {Non verrà generata nessuna immagine.} one {Verrà generata # immagine.} other {Verranno generate # immagini.}}"
       }
     },
     "aiConfig": {
@@ -561,25 +593,52 @@
       "temperatureHint": "Più bassa = più focalizzata, Più alta = più creativa",
       "maxTokens": "Token massimi",
       "requestTimeout": "Timeout richiesta (ms)",
-      "autoTagAllergies": "Rileva automaticamente tag allergie",
-      "autoTagAllergiesDescription": "Aggiungi automaticamente tag relativi alle allergie durante l'importazione delle ricette",
       "alwaysUseAI": "Usa sempre importazione IA",
       "alwaysUseAIDescription": "Salta i parser strutturati ed estrai le ricette usando solo l'IA",
-      "autoTaggingMode": "Modalità tag automatici",
-      "autoTaggingModeDescription": "Assegna automaticamente tag/parole chiave alle ricette importate usando l'IA",
-      "autoTaggingModes": {
-        "disabled": "Disabilitato",
+      "connectionSuccess": "Connessione riuscita",
+      "testConnection": "Testa connessione",
+      "vision": "visione",
+      "automaticEnrichment": "Arricchimento automatico delle ricette",
+      "automaticEnrichmentDescription": "Scegli quale arricchimento AI viene eseguito automaticamente per le nuove ricette. I membri possono comunque eseguirne ciascuno manualmente quando l'AI è attiva.",
+      "automaticEnrichmentPlaceholder": "Non viene eseguito nulla automaticamente",
+      "automaticEnrichmentKinds": {
+        "autoTagging": "Tag automatici",
+        "autoTaggingDescription": "Aggiunge tag suggeriti dall'AI alle nuove ricette senza rimuovere quelli esistenti",
+        "allergyDetection": "Rilevamento allergie",
+        "allergyDetectionDescription": "Aggiungi automaticamente tag relativi alle allergie durante l'importazione delle ricette",
+        "autoCategorization": "Categorizzazione automatica",
+        "autoCategorizationDescription": "Assegna categorie di pasto alle nuove ricette che non ne hanno",
+        "nutritionEstimation": "Stima nutrizionale",
+        "nutritionEstimationDescription": "Stima calorie, grassi, carboidrati e proteine per le nuove ricette senza valori indicati",
+        "recipeProvenance": "Provenienza della ricetta",
+        "recipeProvenanceDescription": "Dedurre paese, regione, cucine e una breve nota per le nuove ricette, viene compilato solo ciò che manca, ciò che hai indicato resta invariato",
+        "ingredientLinking": "Collegamento degli ingredienti",
+        "ingredientLinkingDescription": "Collega ogni passaggio alle righe di ingredienti che usa, per i passaggi senza collegamenti",
+        "imageGeneration": "Generazione Immagini",
+        "imageGenerationDescription": "Disegna una foto del piatto per le nuove ricette che non hanno alcuna immagine"
+      },
+      "tagStrategy": "Strategia dei tag",
+      "tagStrategyDescription": "Quali tag può usare il tagging automatico, sia che venga eseguito automaticamente o manualmente",
+      "tagStrategies": {
         "predefined": "Solo tag predefiniti",
         "predefinedDb": "Tag predefiniti + esistenti",
         "freeform": "L'IA può creare nuovi tag"
       },
-      "connectionSuccess": "Connessione riuscita",
-      "testConnection": "Testa connessione",
-      "vision": "visione"
+      "cuisineStrategy": "Strategia delle cucine",
+      "cuisineStrategyDescription": "Se la deduzione della provenienza può aggiungere cucine al tuo vocabolario o solo sceglierne",
+      "cuisineStrategies": {
+        "existing": "Solo cucine esistenti",
+        "extend": "L'IA può creare nuove cucine"
+      }
+    },
+    "modelListing": {
+      "empty": "Nessun modello ricevuto. Controlla la chiave API o l'endpoint, oppure digita il nome di un modello.",
+      "refused": "{provider} ha rifiutato la richiesta ({status}). Controlla la chiave API.",
+      "unreachable": "Impossibile raggiungere {provider}. Controlla l'endpoint."
     },
     "videoConfig": {
       "enableVideo": "Abilita analisi video",
-      "enableVideoDescription": "Estrai ricette da TikTok, Instagram, YouTube Shorts o Facebook",
+      "enableVideoDescription": "Estrai ricette da TikTok, Instagram, YouTube Shorts, Facebook, Pinterest e altro",
       "configureWarning": "Configura un provider di trascrizione qui sotto per abilitare l'elaborazione video.",
       "aiDisabledWarning": "Abilita la configurazione IA prima di attivare l'elaborazione video.",
       "maxLength": "Durata massima video (secondi)",
@@ -587,7 +646,10 @@
       "maxFileSize": "Dimensione massima file video",
       "maxFileSizeDescription": "Dimensione massima per i file video scaricati",
       "ytDlpVersion": "Versione yt-dlp",
-      "ytDlpVersionDescription": "Versione di yt-dlp da usare per il download dei video",
+      "ytDlpVersionDescription": "Versione di yt-dlp in esecuzione su questo server. Non modificabile qui.",
+      "ytDlpVersionMissing": "Nessun binario yt-dlp trovato",
+      "ytDlpVersionUnknown": "Impossibile verificare",
+      "ytDlpVersionLoading": "Verifica in corso …",
       "ytDlpProxy": "Proxy yt-dlp",
       "ytDlpProxyDescription": "Proxy HTTP/SOCKS5 per yt-dlp",
       "transcription": "Trascrizione",
@@ -614,10 +676,34 @@
       "transcriptionApiKeyOptionalDescription": "La maggior parte dei server Whisper locali non richiede una chiave API",
       "transcriptionApiKeyOptionalPlaceholder": "Lascia vuoto per i server locali"
     },
+    "imageGenerationConfig": {
+      "description": "La generazione di immagini usa un proprio provider, perché la maggior parte dei provider IA non sa disegnare. Le immagini vengono generate con questo provider; il provider IA sopra gestisce tutto il resto.",
+      "provider": "Provider immagini",
+      "providers": {
+        "disabled": "Disattivato",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "Compatibile OpenAI generico"
+      },
+      "endpoint": "URL endpoint",
+      "endpointOptional": "Facoltativo: URL personalizzato della risorsa Azure",
+      "apiKey": "Chiave API",
+      "apiKeyPlaceholder": "Inserisci la chiave API...",
+      "apiKeyInherited": "Viene usata la chiave API della configurazione IA.",
+      "model": "Modello immagine",
+      "modelPlaceholder": "es. gpt-image-1",
+      "modelDescription": "Il modello che disegna l'immagine. Deve essere un modello di immagini, non di testo.",
+      "fallbackHint": "Stesso provider della configurazione IA: endpoint e chiave API vengono ripresi da lì se non li imposti qui."
+    },
     "promptsConfig": {
       "recipeExtraction": "Prompt estrazione ricette",
       "recipeExtractionDescription": "Questo prompt viene utilizzato durante l'estrazione dei dati delle ricette da pagine web o trascrizioni video.",
       "recipeExtractionPlaceholder": "Inserisci il prompt di estrazione ricette...",
+      "imageExtraction": "Prompt estrazione da immagini",
+      "imageExtractionDescription": "Questo prompt viene usato per estrarre i dati delle ricette da immagini caricate, come foto di un libro di cucina o di una scheda ricetta.",
+      "imageExtractionPlaceholder": "Inserisci il prompt per l'estrazione da immagini...",
       "unitConversion": "Prompt conversione unità",
       "unitConversionDescription": "Questo prompt viene utilizzato durante la conversione delle misure delle ricette tra sistemi metrico e US. Variabili disponibili: sourceSystem, targetSystem, units",
       "unitConversionPlaceholder": "Inserisci il prompt di conversione unità...",
@@ -626,7 +712,25 @@
       "nutritionEstimationPlaceholder": "Inserisci il prompt di stima valori nutrizionali...",
       "autoTagging": "Prompt tag automatici",
       "autoTaggingDescription": "Questo prompt viene utilizzato per generare tag per le ricette importate. Definisci le regole di tagging e la lista dei tag predefiniti.",
-      "autoTaggingPlaceholder": "Inserisci il prompt per i tag automatici..."
+      "autoTaggingPlaceholder": "Inserisci il prompt per i tag automatici...",
+      "autoCategorization": "Prompt categorizzazione automatica",
+      "autoCategorizationDescription": "Questo prompt viene usato per ordinare le ricette nelle categorie dei pasti (colazione, pranzo, cena, spuntino).",
+      "autoCategorizationPlaceholder": "Inserisci il prompt per la categorizzazione automatica...",
+      "allergyDetection": "Prompt rilevamento allergeni",
+      "allergyDetectionDescription": "Questo prompt viene usato per rilevare gli allergeni configurati della famiglia negli ingredienti di una ricetta.",
+      "allergyDetectionPlaceholder": "Inserisci il prompt per il rilevamento degli allergeni...",
+      "recipeProvenance": "Prompt per la provenienza della ricetta",
+      "recipeProvenanceDescription": "Questo prompt deduce da dove proviene una ricetta. La nota prodotta è scritta nella lingua della ricetta stessa. Variabili disponibili: recipeName, description, ingredients",
+      "recipeProvenancePlaceholder": "Inserisci il prompt per la provenienza della ricetta...",
+      "ingredientLinking": "Prompt di collegamento degli ingredienti",
+      "ingredientLinkingDescription": "Usato per collegare ogni passaggio alle righe di ingredienti che utilizza",
+      "ingredientLinkingPlaceholder": "Prompt per collegare gli ingredienti ai passaggi...",
+      "imageGenerationBrief": "Prompt descrizione visiva",
+      "imageGenerationBriefDescription": "Usato per trasformare una ricetta in una breve descrizione visiva prima di generare l'immagine. La ricetta viene aggiunta dopo il prompt.",
+      "imageGenerationBriefPlaceholder": "Prompt per la descrizione visiva...",
+      "imageGenerationStyle": "Prompt stile immagine",
+      "imageGenerationStyleDescription": "Inviato al modello di immagini, con la descrizione visiva aggiunta dopo. Definisce l'aspetto condiviso da tutte le immagini generate.",
+      "imageGenerationStylePlaceholder": "Prompt per lo stile immagine..."
     },
     "unsavedChanges": "Modifiche non salvate",
     "jsonEditor": {
@@ -684,8 +788,11 @@
         "auto-tagging": "Auto-tagging",
         "auto-categorization": "Auto-categorization",
         "allergy-detection": "Allergy detection",
+        "recipe-provenance": "Provenienza della ricetta",
+        "ingredient-linking": "Collegamento degli ingredienti",
         "caldav-sync": "CalDAV sync",
-        "scheduled-tasks": "Scheduled tasks"
+        "scheduled-tasks": "Scheduled tasks",
+        "image-generation": "Generazione immagini"
       },
       "summary": {
         "failed": "{count} failed"
@@ -740,6 +847,26 @@
         "description": "How many finished jobs to keep per queue for monitoring. Changes require a server restart."
       },
       "pagination": "Page {current} of {total}"
+    },
+    "cuisineVocabulary": {
+      "description": "Le cucine sono un vocabolario curato che gestisci tu. I nomi vengono mostrati esattamente come scritti qui, in ogni lingua.",
+      "namePlaceholder": "Nome della cucina",
+      "addLabel": "Aggiungi una cucina",
+      "renameLabel": "Rinomina {name}",
+      "deleteLabel": "Elimina {name}",
+      "deleteConfirm": "Eliminare \"{name}\"? Le ricette che la usano la perderanno.",
+      "empty": "Ancora nessuna cucina.",
+      "duplicate": "Esiste già una cucina con quel nome.",
+      "saveFailed": "Impossibile salvare quella cucina."
+    }
+  },
+  "archiveExport": {
+    "progress": "Esportazione… {size}",
+    "errors": {
+      "failedTitle": "Esportazione non riuscita",
+      "failedDescription": "Non è stato possibile scaricare l'archivio ricette. Riprova.",
+      "signedOut": "La tua sessione è scaduta. Accedi di nuovo per esportare.",
+      "notAllowed": "Non hai il permesso di esportare questo contenuto."
     }
   }
 }

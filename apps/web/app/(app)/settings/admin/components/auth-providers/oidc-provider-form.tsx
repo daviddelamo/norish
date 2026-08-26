@@ -156,6 +156,8 @@ export function OIDCProviderForm({ config, onDirtyChange }: OIDCProviderFormProp
           householdPrefix: claimMapping.householdPrefix,
         },
       });
+      // Saved secrets live on the server, not in the form.
+      setClientSecret("");
     } finally {
       setSaving(false);
     }

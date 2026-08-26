@@ -38,6 +38,9 @@
     "backToRecipes": "Zurück zu Rezepten",
     "viewOriginal": "Originalrezept anzeigen",
     "ingredients": "Zutaten",
+    "ingredientOptions": "Zutaten-Optionen",
+    "showMore": "Mehr anzeigen",
+    "showLess": "Weniger anzeigen",
     "steps": "Schritte",
     "notes": "Notizen",
     "addToGroceries": "Zur Einkaufsliste hinzufügen",
@@ -51,7 +54,12 @@
     "instructions": "Anleitung",
     "cook": "Kochen",
     "switchToDecimal": "Dezimalzahlen anzeigen",
-    "switchToFraction": "Brüche anzeigen"
+    "switchToFraction": "Brüche anzeigen",
+    "servingsCount": "{count, plural, one {# Portion} other {# Portionen}}",
+    "source": "Quelle",
+    "addedBy": "Hinzugefügt von {name}",
+    "decreaseServings": "Weniger Portionen",
+    "increaseServings": "Mehr Portionen"
   },
   "actions": {
     "plan": "Planen",
@@ -70,7 +78,15 @@
     "estimatingNutrition": "Schätze Nährwerte...",
     "screenOn": "Bildschirm an",
     "keepScreenOn": "Bildschirm an",
-    "actionsLabel": "Aktionen"
+    "actionsLabel": "Aktionen",
+    "autoCategorizing": "Kategorisierung läuft…",
+    "inferProvenance": "Herkunft ermitteln",
+    "inferringProvenance": "Herkunft wird ermittelt …",
+    "linkIngredients": "Zutaten mit Schritten verknüpfen",
+    "linkingIngredients": "Zutaten werden verknüpft…",
+    "enrichmentFailed": "Letzter Versuch fehlgeschlagen",
+    "generateImage": "Bild generieren",
+    "generatingImage": "Bild wird generiert…"
   },
   "sharePanel": {
     "title": "Rezept teilen",
@@ -119,7 +135,8 @@
   "convert": {
     "ariaLabel": "Maßeinheit umwandeln",
     "toMetric": "In metrisch umwandeln",
-    "toUS": "In US umwandeln"
+    "toUS": "In US umwandeln",
+    "converting": "Wird umgerechnet…"
   },
   "deleteModal": {
     "title": "Rezept löschen",
@@ -149,7 +166,7 @@
     "notesPlaceholder": "Füge Hinweise zur Vorbereitung, Anpassungen oder Serviervorschläge für dieses Rezept hinzu...",
     "ingredientsHelp": "Gib Zutaten wie \"2 Tassen Mehl\" ein - wir analysieren die Mengen und Einheiten automatisch.",
     "instructionsHelp": "Schreibe klare Schritt-für-Schritt-Anleitungen. Drücke Enter, um zum nächsten Schritt zu gehen.",
-    "tagsHelp": "Gib Tags ein und klicke auf Vorschläge zum Hinzufügen. Ausgewählte Tags sind blau, neue Tags haben einen gestrichelten Rahmen.",
+    "tagsHelp": "Gib Tags ein und klicke auf Vorschläge zum Hinzufügen. Tags am Rezept sind ausgefüllt, neue Tags haben einen gestrichelten Rahmen.",
     "tagsAndCategories": "Tags & Kategorien",
     "categoriesHelp": "Wähle Mahlzeitkategorien für dieses Rezept.",
     "category": {
@@ -162,6 +179,16 @@
     "fat": "Fett (g)",
     "carbs": "Kohlenhydrate (g)",
     "protein": "Protein (g)",
+    "provenance": "Herkunft",
+    "provenanceHelp": "Woher dieses Rezept stammt.",
+    "originCountry": "Land",
+    "originCountryPlaceholder": "Kein Land",
+    "originRegion": "Region",
+    "originRegionPlaceholder": "z. B. Sizilien",
+    "cuisines": "Küchen",
+    "cuisinesHelp": "Wähle aus der Liste deiner Installation. Bei einem Fusionsgericht sind mehrere sinnvoll.",
+    "provenanceNote": "Notiz",
+    "provenanceNotePlaceholder": "Ein paar Sätze dazu, woher dieses Gericht stammt …",
     "servings": "Portionen",
     "cookingTimes": "Garzeiten",
     "optional": "(optional)",
@@ -227,6 +254,23 @@
     "stepPlaceholder": "Schritt {number}: Beschreibe den Schritt...",
     "stepPlaceholderShort": "Schritt {number}"
   },
+  "stepIngredients": {
+    "rowLabel": "Verknüpfte Zutaten",
+    "addLabel": "Zutat verknüpfen",
+    "pickerLabel": "Verknüpfe eine Zutat mit diesem Schritt",
+    "shareLabel": "Anteil von {name} ändern",
+    "share": {
+      "full": "Ganze Zeile",
+      "half": "Die Hälfte",
+      "third": "Ein Drittel",
+      "quarter": "Ein Viertel",
+      "custom": "Benutzerdefiniert…",
+      "amount": "Menge…"
+    },
+    "customShareLabel": "Benutzerdefinierter Anteil",
+    "customAmountLabel": "Menge",
+    "removeLabel": "{name} entfernen"
+  },
   "ingredientInput": {
     "placeholder": "z.B. 2 Tassen Mehl"
   },
@@ -238,12 +282,6 @@
     "ariaLabel": "Bildschirm aktiv halten"
   },
   "toasts": {
-    "processingBoth": "Tags & Allergene werden verarbeitet",
-    "processingTags": "Tags werden generiert",
-    "processingAllergies": "Allergene werden erkannt",
-    "bothComplete": "Tags & Allergene aktualisiert",
-    "tagsComplete": "Tags generiert",
-    "allergiesComplete": "Allergene erkannt",
     "imported": "Rezept importiert",
     "converted": "Maße umgerechnet",
     "convertedDescription": "Rezept in {system}-Einheiten umgerechnet",
@@ -269,6 +307,50 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Wische, um durch die Schritte zu navigieren",
     "swipeIngredients": "Nach links wischen für Zutaten",
-    "swipeBackToSteps": "Nach rechts wischen für Schritte"
+    "swipeBackToSteps": "Nach rechts wischen für Schritte",
+    "readyAt": "Fertig gegen {time}",
+    "timers": "Timer",
+    "nextStep": "Nächster Schritt"
+  },
+  "enrichment": {
+    "failed": "Anreicherung fehlgeschlagen",
+    "states": {
+      "queued": "In Warteschlange",
+      "processing": "In Bearbeitung",
+      "succeeded": "Abgeschlossen",
+      "failed": "Letzter Versuch fehlgeschlagen"
+    },
+    "kinds": {
+      "auto-tagging": "Automatische Tags",
+      "allergy-detection": "Allergieerkennung",
+      "auto-categorization": "Automatische Kategorisierung",
+      "nutrition-estimation": "Nährwertschätzung",
+      "recipe-provenance": "Rezept-Herkunft",
+      "ingredient-linking": "Zutatenverknüpfung",
+      "image-generation": "Bildgenerierung"
+    }
+  },
+  "provenance": {
+    "title": "Herkunft",
+    "region": "Region",
+    "cuisines": "Küchen",
+    "inferring": "Die Herkunft dieses Rezepts wird ermittelt …",
+    "noInfo": "Noch keine Herkunftsangaben",
+    "inferWithAI": "Mit KI ermitteln"
+  },
+  "import": {
+    "alreadyExists": "Du hast dieses Rezept bereits",
+    "openExisting": "Öffnen"
+  },
+  "glanceBar": {
+    "totalTime": "Gesamtzeit",
+    "servings": "{count, plural, one {Portion} other {Portionen}}"
+  },
+  "cookingTime": {
+    "title": "Zubereitungszeit",
+    "prep": "Vorbereitung",
+    "cook": "Kochen",
+    "other": "Sonstige Zeit",
+    "total": "Gesamt"
   }
 }

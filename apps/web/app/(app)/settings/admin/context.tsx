@@ -14,6 +14,7 @@ import type {
   AuthProviderOIDCInput,
   ContentIndicatorsConfig,
   I18nLocaleConfig,
+  ImageGenerationConfig,
   PromptsConfig,
   PromptsConfigInput,
   RecipePermissionPolicy,
@@ -39,6 +40,7 @@ interface AdminSettingsContextValue {
   recurrenceConfig: RecurrenceConfig | undefined;
   aiConfig: AIConfig | undefined;
   videoConfig: VideoConfig | undefined;
+  imageGenerationConfig: ImageGenerationConfig | undefined;
   schedulerCleanupMonths: number | undefined;
   recipePermissionPolicy: RecipePermissionPolicy | undefined;
   prompts: PromptsConfig | undefined;
@@ -71,6 +73,9 @@ interface AdminSettingsContextValue {
   updateRecurrenceConfig: (json: string) => Promise<{ success: boolean; error?: string }>;
   updateAIConfig: (config: AIConfig) => Promise<{ success: boolean; error?: string }>;
   updateVideoConfig: (config: VideoConfig) => Promise<{ success: boolean; error?: string }>;
+  updateImageGenerationConfig: (
+    config: ImageGenerationConfig
+  ) => Promise<{ success: boolean; error?: string }>;
   updatePrompts: (config: PromptsConfigInput) => Promise<{ success: boolean; error?: string }>;
   updateTimerKeywords: (
     config: TimerKeywordsInput
@@ -106,36 +111,29 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
   // Extract typed config values
   const registrationEnabled = configs[ServerConfigKeys.REGISTRATION_ENABLED] as boolean | undefined;
   const passwordAuthEnabled = configs[ServerConfigKeys.PASSWORD_AUTH_ENABLED] as
-    | boolean
-    | undefined;
+    boolean | undefined;
   const localeConfig = configs[ServerConfigKeys.LOCALE_CONFIG] as I18nLocaleConfig | undefined;
   const authProviderOIDC = configs[ServerConfigKeys.AUTH_PROVIDER_OIDC] as
-    | AuthProviderOIDC
-    | undefined;
+    AuthProviderOIDC | undefined;
   const authProviderGitHub = configs[ServerConfigKeys.AUTH_PROVIDER_GITHUB] as
-    | AuthProviderGitHub
-    | undefined;
+    AuthProviderGitHub | undefined;
   const authProviderGoogle = configs[ServerConfigKeys.AUTH_PROVIDER_GOOGLE] as
-    | AuthProviderGoogle
-    | undefined;
+    AuthProviderGoogle | undefined;
   const contentIndicators = configs[ServerConfigKeys.CONTENT_INDICATORS] as
-    | ContentIndicatorsConfig
-    | undefined;
+    ContentIndicatorsConfig | undefined;
   const unitsConfig = configs[ServerConfigKeys.UNITS] as
-    | { units: UnitsMap; isOverridden: boolean }
-    | undefined;
+    { units: UnitsMap; isOverridden: boolean } | undefined;
   const units = unitsConfig?.units;
   const recurrenceConfig = configs[ServerConfigKeys.RECURRENCE_CONFIG] as
-    | RecurrenceConfig
-    | undefined;
+    RecurrenceConfig | undefined;
   const aiConfig = configs[ServerConfigKeys.AI_CONFIG] as AIConfig | undefined;
   const videoConfig = configs[ServerConfigKeys.VIDEO_CONFIG] as VideoConfig | undefined;
+  const imageGenerationConfig = configs[ServerConfigKeys.IMAGE_GENERATION_CONFIG] as
+    ImageGenerationConfig | undefined;
   const schedulerCleanupMonths = configs[ServerConfigKeys.SCHEDULER_CLEANUP_MONTHS] as
-    | number
-    | undefined;
+    number | undefined;
   const recipePermissionPolicy = configs[ServerConfigKeys.RECIPE_PERMISSION_POLICY] as
-    | RecipePermissionPolicy
-    | undefined;
+    RecipePermissionPolicy | undefined;
   const prompts = configs[ServerConfigKeys.PROMPTS] as PromptsConfig | undefined;
   const timerKeywords = configs[ServerConfigKeys.TIMER_KEYWORDS] as TimerKeywordsConfig | undefined;
 
@@ -224,6 +222,13 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
     [mutations]
   );
 
+  const updateImageGeneration = useCallback(
+    async (config: ImageGenerationConfig) => {
+      return mutations.updateImageGenerationConfig(config);
+    },
+    [mutations]
+  );
+
   const updatePromptsConfig = useCallback(
     async (config: PromptsConfigInput) => {
       return mutations.updatePrompts(config);
@@ -300,6 +305,7 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
     recurrenceConfig,
     aiConfig,
     videoConfig,
+    imageGenerationConfig,
     schedulerCleanupMonths,
     recipePermissionPolicy,
     prompts,
@@ -317,6 +323,7 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
     updateRecurrenceConfig: updateRecurrence,
     updateAIConfig: updateAI,
     updateVideoConfig: updateVideo,
+    updateImageGenerationConfig: updateImageGeneration,
     updatePrompts: updatePromptsConfig,
     updateTimerKeywords: updateTimerKeywordsConfig,
     updateSchedulerMonths: updateScheduler,

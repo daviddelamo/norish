@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { GroceryCheckbox } from "@/components/groceries/grocery-checkbox";
 import Panel from "@/components/Panel/Panel";
 import {
   ActionButton,
@@ -12,7 +13,7 @@ import {
   useLinkedRecipeIngredients,
   useRecipeIngredients,
 } from "@/hooks/recipes/use-recipe-ingredients";
-import { Checkbox, Input, Separator, toast } from "@heroui/react";
+import { Button, Input, Separator, toast } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import { formatServings, useServingsScaler } from "@norish/shared-react/hooks";
@@ -186,8 +187,19 @@ export default function MiniGroceries({
       setSelectedIds((prev) => Array.from(new Set([...prev, ...newIds])));
     }
   }, [scaledIngredients]);
+  /* Count the visible rows that are selected rather than `selectedIds.length`,
+     so an id left behind by an ingredient that has since disappeared cannot
+     make the list look fully selected. */
+  const selectedCount = useMemo(
+    () => scaledIngredients.filter((item) => selectedIds.includes(item.id)).length,
+    [scaledIngredients, selectedIds]
+  );
+  const allSelected = scaledIngredients.length > 0 && selectedCount === scaledIngredients.length;
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? [] : scaledIngredients.map((item) => item.id));
   };
   const handleEditStart = (id: string) => {
     const item = scaledIngredients.find((i) => i.id === id);
@@ -280,68 +292,89 @@ export default function MiniGroceries({
                 {t("noIngredients")}
               </div>
             ) : (
-              <div className="divide-border/40 flex min-h-0 flex-1 flex-col divide-y overflow-y-auto">
-                {scaledIngredients.map((item) => {
-                  const isEditing = editingId === item.id;
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex cursor-pointer items-start px-2 py-2"
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => !isEditing && !isCheckboxEvent(e) && handleEditStart(item.id)}
-                      onKeyDown={(e) => {
-                        if ((e.key === "Enter" || e.key === " ") && !isEditing && !isCheckboxEvent(e)) {
-                          e.preventDefault();
-                          handleEditStart(item.id);
+              <>
+                <div className="mb-1 flex items-center justify-between px-2">
+                  <span className="text-muted text-xs font-medium">
+                    {t("selectedCount", {
+                      selected: selectedCount,
+                      total: scaledIngredients.length,
+                    })}
+                  </span>
+                  <Button
+                    className="bg-surface-secondary"
+                    size="sm"
+                    variant="tertiary"
+                    onPress={toggleSelectAll}
+                  >
+                    {allSelected ? tActions("deselectAll") : tActions("selectAll")}
+                  </Button>
+                </div>
+                <div className="divide-border/40 flex min-h-0 flex-1 flex-col divide-y overflow-y-auto">
+                  {scaledIngredients.map((item) => {
+                    const isEditing = editingId === item.id;
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex cursor-pointer items-start px-2 py-2"
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) =>
+                          !isEditing && !isCheckboxEvent(e) && handleEditStart(item.id)
                         }
-                      }}
-                    >
-                      <Checkbox
-                        aria-label={item.ingredientName}
-                        className="mt-[-4px] [&_[data-slot='checkbox-default-indicator--checkmark']]:size-3"
-                        isSelected={selectedIds.includes(item.id)}
-                        onChange={() => toggleSelect(item.id)}
+                        onKeyDown={(e) => {
+                          if (
+                            (e.key === "Enter" || e.key === " ") &&
+                            !isEditing &&
+                            !isCheckboxEvent(e)
+                          ) {
+                            e.preventDefault();
+                            handleEditStart(item.id);
+                          }
+                        }}
                       >
-                        <Checkbox.Control className="data-[selected=true]:border-accent data-[selected=true]:bg-accent size-5 rounded-full before:rounded-full">
-                          <Checkbox.Indicator className="text-accent-foreground" />
-                        </Checkbox.Control>
-                      </Checkbox>
-                      <div className="ml-2 flex min-w-0 flex-1 flex-col">
-                        {isEditing ? (
-                          <Input
-                            className="text-base"
-                            size="sm"
-                            style={{
-                              fontSize: "16px",
-                            }}
-                            value={editValue}
-                            variant="underlined"
-                            onBlur={handleEditSubmit}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleEditSubmit();
-                              if (e.key === "Escape") setEditingId(null);
-                            }}
-                          />
-                        ) : (
-                          <>
-                            <span className="truncate text-base font-semibold">
-                              {editedIngredients[item.id]?.name ?? item.ingredientName}
-                            </span>
-                            {(editedIngredients[item.id]?.amount ?? item.amount) ? (
-                              <span className="text-accent mt-[-3px] text-xs font-medium">
-                                {editedIngredients[item.id]?.amount ?? item.amount}{" "}
-                                {editedIngredients[item.id]?.unit ?? item.unit ?? ""}
+                        <GroceryCheckbox
+                          aria-label={item.ingredientName}
+                          className="mt-[-4px]"
+                          isSelected={selectedIds.includes(item.id)}
+                          size="md"
+                          onChange={() => toggleSelect(item.id)}
+                        />
+                        <div className="ml-2 flex min-w-0 flex-1 flex-col">
+                          {isEditing ? (
+                            <Input
+                              className="text-base"
+                              size="sm"
+                              style={{
+                                fontSize: "16px",
+                              }}
+                              value={editValue}
+                              variant="underlined"
+                              onBlur={handleEditSubmit}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleEditSubmit();
+                                if (e.key === "Escape") setEditingId(null);
+                              }}
+                            />
+                          ) : (
+                            <>
+                              <span className="truncate text-base font-semibold">
+                                {editedIngredients[item.id]?.name ?? item.ingredientName}
                               </span>
-                            ) : null}
-                          </>
-                        )}
+                              {(editedIngredients[item.id]?.amount ?? item.amount) ? (
+                                <span className="text-accent mt-[-3px] text-xs font-medium">
+                                  {editedIngredients[item.id]?.amount ?? item.amount}{" "}
+                                  {editedIngredients[item.id]?.unit ?? item.unit ?? ""}
+                                </span>
+                              ) : null}
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         ) : null}
@@ -350,7 +383,7 @@ export default function MiniGroceries({
       {open && !isLoading && scaledIngredients.length > 0 && (
         <Panel.Footer>
           <ActionButtonGroup>
-            <ActionButton action="add" onPress={handleConfirm}>
+            <ActionButton action="add" isDisabled={selectedCount === 0} onPress={handleConfirm}>
               {tActions("add")}
             </ActionButton>
           </ActionButtonGroup>

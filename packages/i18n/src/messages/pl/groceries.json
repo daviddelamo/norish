@@ -80,6 +80,7 @@
     "placeholder": "np. 1 kg pierś z kurczaka",
     "editPlaceholder": "np. mleko co tydzień",
     "servings": "Porcje",
+    "selectedCount": "Zaznaczono {selected} z {total}",
     "loadingIngredients": "Ładowanie składników...",
     "noIngredients": "Brak składników.",
     "addSelectedToGroceries": "Dodaj do zakupów",

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, like, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, like, lte, or, sql } from "drizzle-orm";
 import z from "zod";
 
 import type { RecipePermissionPolicy } from "@norish/config/zod/server-config";
@@ -23,10 +23,12 @@ import {
 import { db } from "@norish/db/drizzle";
 import { dbLogger } from "@norish/db/logger";
 import { stripHtmlTags } from "@norish/shared/lib/helpers";
+import { normalizeOriginCountry } from "@norish/shared/lib/recipe-enrichment";
 import { normalizeUnit } from "@norish/shared/lib/unit-localization";
 
 import type { MutationOutcome } from "./mutation-outcomes";
 import {
+  householdUsers,
   ingredients,
   recipeImages,
   recipeIngredients,
@@ -43,6 +45,7 @@ import {
   FullRecipeUpdateSchema,
   RecipeDashboardSchema,
 } from "../zodSchemas";
+import { replaceRecipeCuisinesTx } from "./cuisines";
 import {
   attachIngredientsToRecipeByInputTx,
   getOrCreateManyIngredientsTx,
@@ -50,7 +53,11 @@ import {
 } from "./ingredients";
 import { appliedOutcome, staleOutcome } from "./mutation-outcomes";
 import { getConfig } from "./server-config";
-import { createManyRecipeStepsTx } from "./steps";
+import {
+  createManyRecipeStepsTx,
+  loadIngredientLineIdsByOrderTx,
+  syncStepIngredientsTx,
+} from "./steps";
 import { attachTagsToRecipeByInputTx } from "./tags";
 
 type RecipeViewPolicy = RecipePermissionPolicy["view"];
@@ -271,6 +278,41 @@ async function buildViewPolicyCondition(ctx: RecipeListContext) {
   }
 }
 
+/**
+ * Every recipe id the viewer can see under the deployment's view policy.
+ */
+export async function listVisibleRecipeIds(ctx: RecipeListContext): Promise<string[]> {
+  const policyCondition = await buildViewPolicyCondition(ctx);
+
+  const rows = await db
+    .select({ id: recipes.id })
+    .from(recipes)
+    .where(policyCondition)
+    .orderBy(asc(recipes.createdAt));
+
+  return rows.map((row) => row.id);
+}
+
+/**
+ * SQL twin of `primaryRecipeImage` (@norish/shared/lib/recipe-media): the
+ * first gallery image by order, falling back to the legacy `recipes.image`
+ * scalar. Every list-shaped projection serves its `image` through this, so
+ * nothing reads the deprecated scalar directly; a change here must move
+ * with the shared helper.
+ *
+ * The outer references are spelled `"recipes"."id"`/`"recipes"."image"` by
+ * hand: interpolating the drizzle columns renders them unqualified in plain
+ * selects, and inside the subquery an unqualified `"id"` resolves to the
+ * gallery's own column — silently matching nothing.
+ */
+const PRIMARY_IMAGE_SQL = sql<string | null>`COALESCE(
+  (SELECT gallery.image FROM ${recipeImages} AS gallery
+    WHERE gallery.recipe_id = "recipes"."id"
+    ORDER BY COALESCE(gallery."order", 0) ASC, gallery.created_at ASC
+    LIMIT 1),
+  "recipes"."image"
+)`;
+
 export async function listRecipes(
   ctx: RecipeListContext,
   limit: number,
@@ -458,16 +500,22 @@ export async function listRecipes(
         description: true,
         notes: true,
         url: true,
-        image: true,
         servings: true,
         prepMinutes: true,
         cookMinutes: true,
         totalMinutes: true,
         calories: true,
+        // Only the country: the dashboard flies its flag, and the rest of the
+        // provenance group has nothing to show at that size.
+        originCountry: true,
         categories: true,
         createdAt: true,
         updatedAt: true,
         version: true,
+      },
+      extras: {
+        // The resolved primary, not the deprecated scalar.
+        image: PRIMARY_IMAGE_SQL.as("image"),
       },
       with: {
         recipeTags: {
@@ -509,6 +557,7 @@ export async function listRecipes(
       cookMinutes: r.cookMinutes ?? null,
       totalMinutes: r.totalMinutes ?? null,
       calories: r.calories ?? null,
+      originCountry: r.originCountry ?? null,
       categories: r.categories ?? [],
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
@@ -553,16 +602,22 @@ export async function dashboardRecipe(id: string): Promise<RecipeDashboardDTO | 
       description: true,
       notes: true,
       url: true,
-      image: true,
       servings: true,
       prepMinutes: true,
       cookMinutes: true,
       totalMinutes: true,
       calories: true,
+      // Only the country: the dashboard flies its flag, and the rest of the
+      // provenance group has nothing to show at that size.
+      originCountry: true,
       categories: true,
       createdAt: true,
       updatedAt: true,
       version: true,
+    },
+    extras: {
+      // The resolved primary, not the deprecated scalar.
+      image: PRIMARY_IMAGE_SQL.as("image"),
     },
     with: {
       recipeTags: {
@@ -603,6 +658,7 @@ export async function dashboardRecipe(id: string): Promise<RecipeDashboardDTO | 
     cookMinutes: r.cookMinutes ?? null,
     totalMinutes: r.totalMinutes ?? null,
     calories: r.calories ?? null,
+    originCountry: r.originCountry ?? null,
     categories: r.categories ?? [],
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
@@ -620,11 +676,22 @@ export async function dashboardRecipe(id: string): Promise<RecipeDashboardDTO | 
   return parsed.success ? parsed.data : null;
 }
 
+/**
+ * Outcome of a recipe creation attempt.
+ *
+ * `inserted` distinguishes a genuinely new recipe from a URL that already
+ * resolved to one. Only a new insert becomes a usable recipe for the first
+ * time, and only that may enroll Automatic Recipe Enrichment — an ambiguous
+ * identifier alone cannot tell the caller which happened.
+ */
+export type CreateRecipeResult =
+  { status: "inserted"; recipeId: string } | { status: "existing"; recipeId: string };
+
 export async function createRecipeWithRefs(
   recipeId: string,
   userId: string | null | undefined,
   input: FullRecipeInsertDTO
-): Promise<string | null> {
+): Promise<CreateRecipeResult | null> {
   const parsed = FullRecipeInsertSchema.safeParse(input);
 
   dbLogger.debug({ parsed }, "Parsed full recipe insert");
@@ -641,7 +708,10 @@ export async function createRecipeWithRefs(
     description: payload.description ? stripHtmlTags(payload.description) : null,
     notes: payload.notes ?? null,
     url: payload.url ?? null,
-    image: payload.image ?? null,
+    // The deprecated scalar is never written: a payload image lands in the
+    // gallery below.
+    image: null,
+    dishColor: payload.dishColor ?? null,
     servings: payload.servings ?? 1,
     systemUsed: payload.systemUsed,
     prepMinutes: payload.prepMinutes ?? null,
@@ -651,10 +721,19 @@ export async function createRecipeWithRefs(
     fat: payload.fat ?? null,
     carbs: payload.carbs ?? null,
     protein: payload.protein ?? null,
+    originCountry: normalizeOriginCountry(payload.originCountry),
+    // The written name is the code's companion: without a code there is no
+    // country to name, so a name supplied alone is dropped with it.
+    originCountryName:
+      normalizeOriginCountry(payload.originCountry) && payload.originCountryName
+        ? stripHtmlTags(payload.originCountryName)
+        : null,
+    originRegion: payload.originRegion ? stripHtmlTags(payload.originRegion) : null,
+    provenanceNote: payload.provenanceNote ? stripHtmlTags(payload.provenanceNote) : null,
     categories: payload.categories ?? [],
   };
 
-  const finalRecipeId = await db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx): Promise<CreateRecipeResult> => {
     const [inserted] = await tx
       .insert(recipes)
       .values(toInsert)
@@ -671,7 +750,7 @@ export async function createRecipeWithRefs(
         throw new Error("Failed to save recipe");
       }
 
-      return existing.id;
+      return { status: "existing", recipeId: existing.id };
     }
 
     const rid = inserted.id;
@@ -682,6 +761,10 @@ export async function createRecipeWithRefs(
         rid,
         payload.tags.map((t) => t.name)
       );
+    }
+
+    if (payload.cuisines.length) {
+      await replaceRecipeCuisinesTx(tx, rid, payload.cuisines);
     }
 
     if (payload.recipeIngredients.length) {
@@ -705,13 +788,30 @@ export async function createRecipeWithRefs(
       );
     }
 
-    // Insert gallery images if provided
-    if (payload.images && payload.images.length > 0) {
+    // Insert gallery images. The gallery is the source of truth for a
+    // recipe's pictures; a legacy scalar in the payload (foreign archive
+    // imports, the public API) is translated into it rather than written to
+    // the deprecated column — appended after the gallery so it never
+    // displaces the primary the payload actually led with.
+    const galleryImages = [...(payload.images ?? [])];
+    const legacyScalar = (payload.image ?? "").trim();
+
+    if (legacyScalar !== "" && !galleryImages.some((img) => img.image === legacyScalar)) {
+      const maxOrder = galleryImages.reduce(
+        (max, img) => Math.max(max, Number(img.order ?? 0)),
+        -1
+      );
+
+      galleryImages.push({ image: legacyScalar, order: maxOrder + 1 });
+    }
+
+    if (galleryImages.length > 0) {
       await tx.insert(recipeImages).values(
-        payload.images.map((img) => ({
+        galleryImages.map((img) => ({
           recipeId: rid,
           image: img.image,
           order: String(img.order ?? 0),
+          generated: img.generated === true,
         }))
       );
     }
@@ -729,10 +829,10 @@ export async function createRecipeWithRefs(
       );
     }
 
-    return rid;
+    return { status: "inserted", recipeId: rid };
   });
 
-  return finalRecipeId;
+  return result;
 }
 
 export async function setActiveSystemForRecipe(
@@ -783,13 +883,64 @@ export async function updateRecipeCategories(
   return appliedOutcome(undefined);
 }
 
-export async function getRecipesWithoutCategories(): Promise<{ id: string; name: string }[]> {
+/**
+ * Every recipe on the server, with the context Recipe Enrichment enrollment
+ * needs: the owning user and that user's household. Both are null when the
+ * owner's account has been deleted. The schema permits a user in several
+ * households; DISTINCT ON keeps one row per recipe, because enrollment needs
+ * a household for the recipe, not all of them.
+ */
+export async function getAllRecipesForEnrichment(): Promise<
+  { recipeId: string; userId: string | null; householdId: string | null }[]
+> {
   const rows = await db
-    .select({ id: recipes.id, name: recipes.name })
+    .selectDistinctOn([recipes.id], {
+      recipeId: recipes.id,
+      userId: recipes.userId,
+      householdId: householdUsers.householdId,
+    })
     .from(recipes)
-    .where(sql`cardinality(${recipes.categories}) = 0`);
+    .leftJoin(householdUsers, eq(householdUsers.userId, recipes.userId))
+    .orderBy(recipes.id);
 
   return rows;
+}
+
+/**
+ * How many images an Enrich All Recipes sweep would generate (ADR-0025): the
+ * one kind whose cost is per recipe and lands on a bill, so the confirmation
+ * names the number before it starts. A per-request read, never stored.
+ *
+ * Mirrors the coordinator's eligibility exactly: a recipe with no ingredient
+ * rows is insufficient input for the kind, and "missing" means no image at
+ * all — no gallery row, and a null or blank legacy scalar. Do not loosen
+ * either side to make the count easier; the default sweep must stay
+ * incapable of touching a stored image.
+ */
+export async function getImageGenerationSweepCounts(): Promise<{
+  /** Recipes the overwrite sweep would draw for: everything with ingredients. */
+  eligible: number;
+  /** The default sweep's subset: eligible recipes holding no image at all. */
+  missingImage: number;
+}> {
+  const hasIngredients = sql`EXISTS (
+    SELECT 1 FROM ${recipeIngredients} WHERE ${recipeIngredients.recipeId} = ${recipes.id}
+  )`;
+  const hasNoImage = sql`NOT EXISTS (
+    SELECT 1 FROM ${recipeImages} WHERE ${recipeImages.recipeId} = ${recipes.id}
+  ) AND (${recipes.image} IS NULL OR btrim(${recipes.image}) = '')`;
+
+  const [row] = await db
+    .select({
+      eligible: sql<number>`COUNT(*) FILTER (WHERE ${hasIngredients})`,
+      missingImage: sql<number>`COUNT(*) FILTER (WHERE ${hasIngredients} AND ${hasNoImage})`,
+    })
+    .from(recipes);
+
+  return {
+    eligible: Number(row?.eligible ?? 0),
+    missingImage: Number(row?.missingImage ?? 0),
+  };
 }
 
 export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
@@ -803,6 +954,7 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
       notes: true,
       url: true,
       image: true,
+      dishColor: true,
       servings: true,
       prepMinutes: true,
       cookMinutes: true,
@@ -812,6 +964,10 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
       fat: true,
       carbs: true,
       protein: true,
+      originCountry: true,
+      originCountryName: true,
+      originRegion: true,
+      provenanceNote: true,
       categories: true,
       createdAt: true,
       updatedAt: true,
@@ -822,6 +978,11 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
         columns: {},
         with: { tag: { columns: { id: true, name: true, version: true } } },
         orderBy: (rt, { asc }) => [asc(rt.order)],
+      },
+      recipeCuisines: {
+        columns: {},
+        with: { cuisine: { columns: { id: true, name: true, version: true } } },
+        orderBy: (rc, { asc }) => [asc(rc.order)],
       },
       ingredients: {
         columns: {
@@ -843,11 +1004,18 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
             columns: { id: true, image: true, order: true, version: true },
             orderBy: (images, { asc }) => [asc(images.order)],
           },
+          stepIngredients: {
+            columns: { share: true, order: true },
+            // The reference resolves by the line's order within the step's
+            // system; the join carries just enough to say which line.
+            with: { recipeIngredient: { columns: { order: true } } },
+            orderBy: (stepIngredients, { asc }) => [asc(stepIngredients.order)],
+          },
         },
         orderBy: (steps, { asc }) => [asc(steps.order)],
       },
       images: {
-        columns: { id: true, image: true, order: true, version: true },
+        columns: { id: true, image: true, order: true, generated: true, version: true },
         orderBy: (images, { asc }) => [asc(images.order)],
       },
       videos: {
@@ -868,8 +1036,7 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
 
   // fetch author if exists
   let author:
-    | { id: string; name: string | null; image: string | null; version: number }
-    | undefined;
+    { id: string; name: string | null; image: string | null; version: number } | undefined;
 
   if (full.userId) {
     const { getUserAuthorInfo } = await import("./users");
@@ -888,6 +1055,7 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
     notes: full.notes ?? null,
     url: full.url ?? null,
     image: full.image ?? null,
+    dishColor: full.dishColor ?? null,
     servings: full.servings ?? 1,
     prepMinutes: full.prepMinutes ?? null,
     cookMinutes: full.cookMinutes ?? null,
@@ -897,6 +1065,10 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
     fat: full.fat ?? null,
     carbs: full.carbs ?? null,
     protein: full.protein ?? null,
+    originCountry: full.originCountry ?? null,
+    originCountryName: full.originCountryName ?? null,
+    originRegion: full.originRegion ?? null,
+    provenanceNote: full.provenanceNote ?? null,
     categories: full.categories ?? [],
     steps: (full.steps ?? []).map((s: any) => ({
       step: s.step,
@@ -909,6 +1081,17 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
         order: Number(img.order) || 0,
         version: img.version,
       })),
+      stepIngredients: (s.stepIngredients ?? []).flatMap((ref: any) =>
+        ref.recipeIngredient
+          ? [
+              {
+                ingredientOrder: Number(ref.recipeIngredient.order) || 0,
+                share: Number(ref.share) || 1,
+                order: Number(ref.order) || 0,
+              },
+            ]
+          : []
+      ),
     })),
     createdAt: full.createdAt,
     updatedAt: full.updatedAt,
@@ -917,6 +1100,14 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
       .map((rt: any) => rt.tag)
       .filter((tag: { name?: string; version?: number } | null | undefined) => tag?.name)
       .map((tag: { name: string; version: number }) => ({ name: tag.name, version: tag.version })),
+    cuisines: (full.recipeCuisines ?? [])
+      .map((rc: any) => rc.cuisine)
+      .filter((cuisine: { name?: string } | null | undefined) => cuisine?.name)
+      .map((cuisine: { id: string; name: string; version: number }) => ({
+        id: cuisine.id,
+        name: cuisine.name,
+        version: cuisine.version,
+      })),
     recipeIngredients: (full.ingredients ?? []).map((ri: any) => ({
       id: ri.id,
       ingredientId: ri.ingredientId,
@@ -932,6 +1123,7 @@ export async function getRecipeFull(id: string): Promise<FullRecipeDTO | null> {
       id: img.id,
       image: img.image,
       order: Number(img.order) || 0,
+      generated: img.generated === true,
       version: img.version,
     })),
     videos: (full.videos ?? []).map((vid: any) => ({
@@ -967,12 +1159,14 @@ export async function addStepsAndIngredientsToRecipeByInput(
     let createdSteps: StepDto[] = [];
     let createdIngredients: RecipeIngredientsDto[] = [];
 
-    if (steps?.length) {
-      createdSteps = await createManyRecipeStepsTx(tx, steps);
-    }
-
+    // Ingredients before steps, so step payloads that carry Step Ingredient
+    // references can land them on the lines this same call creates.
     if (ingredients?.length) {
       createdIngredients = await attachIngredientsToRecipeByInputTx(tx, ingredients);
+    }
+
+    if (steps?.length) {
+      createdSteps = await createManyRecipeStepsTx(tx, steps);
     }
 
     return {
@@ -1112,6 +1306,10 @@ async function syncRecipeStepsTx(
     .from(stepsTable)
     .where(and(eq(stepsTable.recipeId, recipeId), eq(stepsTable.systemUsed, systemUsed)))
     .orderBy(asc(stepsTable.order));
+  // The ingredient sync has already run (updateRecipeWithRefs orders it
+  // first), so the payload's by-order Step Ingredient references resolve
+  // against the lines exactly as this save left them.
+  const lineIdByOrder = await loadIngredientLineIdsByOrderTx(tx, recipeId, systemUsed);
 
   for (const [index, step] of normalized.entries()) {
     const existingStep = existing[index];
@@ -1128,6 +1326,7 @@ async function syncRecipeStepsTx(
         .set({ ...values, version: sql`${stepsTable.version} + 1` })
         .where(eq(stepsTable.id, existingStep.id));
       await syncStepImagesTx(tx, existingStep.id, step.images ?? []);
+      await syncStepIngredientsTx(tx, existingStep.id, step.stepIngredients ?? [], lineIdByOrder);
       continue;
     }
 
@@ -1138,6 +1337,7 @@ async function syncRecipeStepsTx(
 
     if (insertedStep) {
       await syncStepImagesTx(tx, insertedStep.id, step.images ?? []);
+      await syncStepIngredientsTx(tx, insertedStep.id, step.stepIngredients ?? [], lineIdByOrder);
     }
   }
 
@@ -1164,6 +1364,9 @@ async function syncRecipeImagesTx(
     const values = {
       image: image.image,
       order: String(image.order ?? index),
+      // An absent field carries no intent: an edit-form save must not clear
+      // a stored marking, so only an explicit value is written on update.
+      ...(image.generated !== undefined ? { generated: image.generated } : {}),
     };
 
     if (image.id && existingById.has(image.id)) {
@@ -1175,7 +1378,7 @@ async function syncRecipeImagesTx(
       continue;
     }
 
-    await tx.insert(recipeImages).values({ recipeId, ...values });
+    await tx.insert(recipeImages).values({ recipeId, generated: false, ...values });
   }
 
   const idsToDelete = existing
@@ -1251,7 +1454,13 @@ export async function updateRecipeWithRefs(
       updateData.description = payload.description ? stripHtmlTags(payload.description) : null;
     if (payload.notes !== undefined) updateData.notes = payload.notes;
     if (payload.url !== undefined) updateData.url = payload.url;
-    if (payload.image !== undefined) updateData.image = payload.image;
+    // The deprecated scalar is never written with a value again: any update
+    // that touches media clears it, so a stale fallback cannot linger behind
+    // the gallery. An update that says nothing about media leaves legacy
+    // rows alone — stripping their only image is the migration's job, not a
+    // rename's.
+    if (payload.image !== undefined || payload.images !== undefined) updateData.image = null;
+    if (payload.dishColor !== undefined) updateData.dishColor = payload.dishColor;
     if (payload.servings !== undefined) updateData.servings = payload.servings;
     if (payload.prepMinutes !== undefined) updateData.prepMinutes = payload.prepMinutes;
     if (payload.cookMinutes !== undefined) updateData.cookMinutes = payload.cookMinutes;
@@ -1263,6 +1472,21 @@ export async function updateRecipeWithRefs(
     if (payload.fat !== undefined) updateData.fat = payload.fat;
     if (payload.carbs !== undefined) updateData.carbs = payload.carbs;
     if (payload.protein !== undefined) updateData.protein = payload.protein;
+    if (payload.originCountry !== undefined)
+      updateData.originCountry = normalizeOriginCountry(payload.originCountry);
+    if (payload.originCountryName !== undefined || payload.originCountry !== undefined)
+      // The written name accompanies the code: clearing or changing the code
+      // without a fresh name clears the stale name with it.
+      updateData.originCountryName =
+        normalizeOriginCountry(payload.originCountry) && payload.originCountryName
+          ? stripHtmlTags(payload.originCountryName)
+          : null;
+    if (payload.originRegion !== undefined)
+      updateData.originRegion = payload.originRegion ? stripHtmlTags(payload.originRegion) : null;
+    if (payload.provenanceNote !== undefined)
+      updateData.provenanceNote = payload.provenanceNote
+        ? stripHtmlTags(payload.provenanceNote)
+        : null;
 
     updateData.updatedAt = new Date();
 
@@ -1280,6 +1504,12 @@ export async function updateRecipeWithRefs(
 
     if (!updatedRecipeRow && version) {
       return staleOutcome();
+    }
+
+    // Replace Cuisines if provided. An empty array is an editor clearing them,
+    // which is deliberately distinct from an enrichment run writing nothing.
+    if (payload.cuisines !== undefined) {
+      await replaceRecipeCuisinesTx(tx, recipeId, payload.cuisines);
     }
 
     // Replace tags if provided
@@ -1357,6 +1587,25 @@ export async function updateRecipeWithRefs(
       await syncRecipeImagesTx(tx, recipeId, payload.images);
     }
 
+    // The legacy alias: a payload scalar lands in the gallery whenever the
+    // gallery ends up empty — a scalar-only PATCH, or an overwrite-import of
+    // a gallery-less archive whose hero travels beside `images: []`. With a
+    // gallery present it is dropped: no reader has consulted the scalar past
+    // a gallery row since the thumbnails went gallery-first.
+    const updateScalar = typeof payload.image === "string" ? payload.image.trim() : "";
+
+    if (updateScalar !== "") {
+      const existingGallery = await tx
+        .select({ id: recipeImages.id })
+        .from(recipeImages)
+        .where(eq(recipeImages.recipeId, recipeId))
+        .limit(1);
+
+      if (existingGallery.length === 0) {
+        await tx.insert(recipeImages).values({ recipeId, image: updateScalar, order: "0" });
+      }
+    }
+
     // Replace videos if provided
     if (payload.videos !== undefined) {
       await syncRecipeVideosTx(tx, recipeId, payload.videos);
@@ -1399,7 +1648,7 @@ export async function getRandomRecipeCandidates(
     .select({
       id: recipes.id,
       name: recipes.name,
-      image: recipes.image,
+      image: PRIMARY_IMAGE_SQL,
       categories: recipes.categories,
     })
     .from(recipes)
@@ -1471,7 +1720,7 @@ export async function searchRecipesByName(
   whereConditions.push(ilike(recipes.name, `%${query}%`));
   const whereClause = whereConditions.length ? and(...whereConditions) : undefined;
   const rows = await db
-    .select({ id: recipes.id, name: recipes.name, image: recipes.image })
+    .select({ id: recipes.id, name: recipes.name, image: PRIMARY_IMAGE_SQL })
     .from(recipes)
     .where(whereClause)
     .orderBy(asc(recipes.name))
@@ -1912,4 +2161,80 @@ export async function listGalleryImagesWithLegacyUrls(): Promise<
 
 export async function updateGalleryImageUrl(imageId: string, imageUrl: string): Promise<void> {
   await db.update(recipeImages).set({ image: imageUrl }).where(eq(recipeImages.id, imageId));
+}
+
+/**
+ * Dish Colour helpers (ADR-0023). The listing feeds the startup backfill:
+ * rows stored before the colour existed, with whatever media could supply
+ * one. Rows whose extraction fails stay null and are simply offered again
+ * next startup — null is the defined "no colour" outcome, not an error state.
+ */
+export async function listRecipesMissingDishColor(): Promise<
+  { id: string; image: string | null; galleryImages: { image: string; order: number | null }[] }[]
+> {
+  const [missing, galleryImages] = await Promise.all([
+    db
+      .select({ id: recipes.id, image: recipes.image })
+      .from(recipes)
+      .where(isNull(recipes.dishColor)),
+    db
+      .select({
+        recipeId: recipeImages.recipeId,
+        image: recipeImages.image,
+        order: recipeImages.order,
+      })
+      .from(recipeImages),
+  ]);
+
+  const galleryByRecipe = new Map<string, { image: string; order: number | null }[]>();
+
+  for (const galleryImage of galleryImages) {
+    const list = galleryByRecipe.get(galleryImage.recipeId) ?? [];
+
+    // `order` is a numeric column, so the driver hands it back as a string.
+    list.push({
+      image: galleryImage.image,
+      order: galleryImage.order === null ? null : Number(galleryImage.order),
+    });
+    galleryByRecipe.set(galleryImage.recipeId, list);
+  }
+
+  return missing.map((recipe) => ({
+    ...recipe,
+    galleryImages: galleryByRecipe.get(recipe.id) ?? [],
+  }));
+}
+
+export async function updateRecipeDishColor(
+  recipeId: string,
+  dishColor: string | null
+): Promise<void> {
+  await db.update(recipes).set({ dishColor }).where(eq(recipes.id, recipeId));
+}
+
+/**
+ * The media a recipe's Dish Colour is derived from, for recomputing after a
+ * direct gallery mutation. Null when the recipe does not exist.
+ */
+export async function getRecipeMediaForDishColor(recipeId: string): Promise<{
+  image: string | null;
+  galleryImages: { image: string; order: number | null }[];
+} | null> {
+  const [recipe] = await db
+    .select({ image: recipes.image })
+    .from(recipes)
+    .where(eq(recipes.id, recipeId))
+    .limit(1);
+
+  if (!recipe) return null;
+
+  const galleryImages = await getRecipeImages(recipeId);
+
+  return {
+    image: recipe.image,
+    galleryImages: galleryImages.map((galleryImage) => ({
+      image: galleryImage.image,
+      order: galleryImage.order,
+    })),
+  };
 }

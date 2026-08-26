@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SwitchRow } from "@/app/(app)/settings/components/setting-row";
 import SettingsSwitch from "@/app/(app)/settings/components/settings-switch";
 import SecretInput from "@/components/shared/secret-input";
-import { useAvailableTranscriptionModelsQuery } from "@/hooks/admin";
+import { useAvailableTranscriptionModelsQuery, useYtDlpVersionQuery } from "@/hooks/admin";
 import { CheckIcon } from "@heroicons/react/16/solid";
 import {
   Button,
@@ -15,7 +16,6 @@ import {
   ListBox,
   Select,
   Separator,
-  Spinner,
   TextField,
 } from "@heroui/react";
 import { useTranslations } from "next-intl";
@@ -29,6 +29,7 @@ import {
 } from "@norish/config/zod/server-config";
 
 import { useAdminSettingsContext } from "../context";
+import ModelListingEmptyState from "./model-listing-empty-state";
 
 interface VideoProcessingFormProps {
   onDirtyChange?: (isDirty: boolean) => void;
@@ -60,7 +61,6 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
   const [maxVideoFileSizeMB, setMaxVideoFileSizeMB] = useState(
     videoConfig ? Math.round(videoConfig.maxVideoFileSize / (1024 * 1024)) : 100
   );
-  const [ytDlpVersion, setYtDlpVersion] = useState(videoConfig?.ytDlpVersion ?? "2025.11.12");
   const [ytDlpProxy, setYtDlpProxy] = useState(videoConfig?.ytDlpProxy ?? "");
   const [transcriptionProvider, setTranscriptionProvider] = useState<TranscriptionProvider>(
     videoConfig?.transcriptionProvider ?? "disabled"
@@ -78,7 +78,6 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
       setEnabled(videoConfig.enabled);
       setMaxLengthSeconds(videoConfig.maxLengthSeconds);
       setMaxVideoFileSizeMB(Math.round(videoConfig.maxVideoFileSize / (1024 * 1024)));
-      setYtDlpVersion(videoConfig.ytDlpVersion);
       setYtDlpProxy(videoConfig.ytDlpProxy ?? "");
       setTranscriptionProvider(videoConfig.transcriptionProvider);
       setTranscriptionEndpoint(videoConfig.transcriptionEndpoint ?? "");
@@ -106,22 +105,42 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
   const isAIApiKeyConfigured = !!aiConfig?.apiKey && aiConfig.apiKey !== "";
   const isAIEnabled = aiConfig?.enabled ?? false;
 
-  // Determine if we can fetch transcription models
-  // Cloud providers need API key, local providers need endpoint
+  // What a provider authenticates its model list with, which is not always a key
+  // of its own: cloud providers may borrow the AI configuration's key, and local
+  // ones answer to an endpoint with no key at all. One predicate, because gating
+  // the fetch and the picker on different answers is what left the picker greyed
+  // out on the very path the API key field recommends.
+  const hasTranscriptionCredentials = needsTranscriptionApiKey
+    ? !!transcriptionApiKey || isTranscriptionApiKeyConfigured || isAIApiKeyConfigured
+    : !needsTranscriptionEndpoint || !!transcriptionEndpoint;
   const canFetchTranscriptionModels =
-    enabled &&
-    transcriptionEnabled &&
-    supportsModelListing &&
-    (needsTranscriptionApiKey
-      ? transcriptionApiKey || isTranscriptionApiKeyConfigured || isAIApiKeyConfigured
-      : transcriptionEndpoint);
-  const { models: availableTranscriptionModels, isLoading: isLoadingTranscriptionModels } =
-    useAvailableTranscriptionModelsQuery({
-      provider: transcriptionProvider,
-      endpoint: transcriptionEndpoint || undefined,
-      apiKey: transcriptionApiKey || undefined,
-      enabled: !!canFetchTranscriptionModels,
-    });
+    enabled && transcriptionEnabled && supportsModelListing && hasTranscriptionCredentials;
+  // A report of the binary this server runs, not something the form saves — and
+  // worth reading precisely when video processing is off because imports broke,
+  // so it is not gated on the switches above.
+  const {
+    version: ytDlpVersion,
+    error: ytDlpVersionError,
+    isLoading: isLoadingYtDlpVersion,
+  } = useYtDlpVersionQuery();
+  // A question that went unanswered is not the same as an absent binary, and
+  // saying "no binary" for a failed round trip is the kind of confident wrong
+  // answer this field was rewritten to stop giving.
+  const ytDlpVersionLabel = isLoadingYtDlpVersion
+    ? t("ytDlpVersionLoading")
+    : ytDlpVersionError
+      ? t("ytDlpVersionUnknown")
+      : (ytDlpVersion ?? t("ytDlpVersionMissing"));
+  const {
+    models: availableTranscriptionModels,
+    refusal: transcriptionRefusal,
+    isLoading: isLoadingTranscriptionModels,
+  } = useAvailableTranscriptionModelsQuery({
+    provider: transcriptionProvider,
+    endpoint: transcriptionEndpoint || undefined,
+    apiKey: transcriptionApiKey || undefined,
+    enabled: !!canFetchTranscriptionModels,
+  });
 
   // Create transcription model options for autocomplete
   const transcriptionModelOptions = useMemo(() => {
@@ -190,7 +209,6 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
       enabled !== videoConfig.enabled ||
       maxLengthSeconds !== videoConfig.maxLengthSeconds ||
       maxVideoFileSizeMB !== Math.round(videoConfig.maxVideoFileSize / (1024 * 1024)) ||
-      ytDlpVersion !== videoConfig.ytDlpVersion ||
       ytDlpProxy !== (videoConfig.ytDlpProxy ?? "") ||
       transcriptionProvider !== videoConfig.transcriptionProvider ||
       transcriptionEndpoint !== (videoConfig.transcriptionEndpoint ?? "") ||
@@ -202,7 +220,6 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
     enabled,
     maxLengthSeconds,
     maxVideoFileSizeMB,
-    ytDlpVersion,
     ytDlpProxy,
     transcriptionProvider,
     transcriptionEndpoint,
@@ -224,13 +241,15 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
         maxLengthSeconds,
         maxVideoFileSize: maxVideoFileSizeMB * 1024 * 1024,
         // Convert MB to bytes
-        ytDlpVersion,
         ytDlpProxy: ytDlpProxy || undefined,
         transcriptionProvider,
         transcriptionEndpoint: transcriptionEndpoint || undefined,
         transcriptionApiKey: transcriptionApiKey || undefined,
         transcriptionModel,
       });
+      // The stored key is what the field now stands for; leaving the typed one
+      // behind is what left this form claiming unsaved changes forever.
+      setTranscriptionApiKey("");
     } finally {
       setSaving(false);
     }
@@ -238,18 +257,14 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
   return (
     <div className="flex flex-col gap-4 p-2">
       {/* Video Processing Section */}
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="font-medium">{t("enableVideo")}</span>
-          <span className="text-muted text-base">{t("enableVideoDescription")}</span>
-        </div>
+      <SwitchRow description={t("enableVideoDescription")} title={t("enableVideo")}>
         <SettingsSwitch
           color="success"
           isDisabled={!isAIEnabled}
           isSelected={enabled}
           onValueChange={setEnabled}
         />
-      </div>
+      </SwitchRow>
 
       {showAiDisabledWarning && (
         <div className="text-warning bg-warning/10 rounded-lg p-3 text-base">
@@ -290,7 +305,7 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
         <Description>{t("maxFileSizeDescription")}</Description>
       </TextField>
 
-      <TextField isDisabled={isVideoUiDisabled} value={ytDlpVersion} onChange={setYtDlpVersion}>
+      <TextField isReadOnly value={ytDlpVersionLabel}>
         <Label>{t("ytDlpVersion")}</Label>
         <Input variant="secondary" />
         <Description>{t("ytDlpVersionDescription")}</Description>
@@ -398,9 +413,7 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
             <ComboBox
               allowsCustomValue
               inputValue={transcriptionModel}
-              isDisabled={
-                isVideoUiDisabled || (!transcriptionApiKey && !isTranscriptionApiKeyConfigured)
-              }
+              isDisabled={isVideoUiDisabled || !hasTranscriptionCredentials}
               onInputChange={setTranscriptionModel}
               onSelectionChange={(key) => key && setTranscriptionModel(key as string)}
             >
@@ -412,13 +425,12 @@ export default function VideoProcessingForm({ onDirtyChange }: VideoProcessingFo
               <Description>{t("transcriptionModelDescription")}</Description>
               <ComboBox.Popover>
                 <ListBox
-                  renderEmptyState={() =>
-                    isLoadingTranscriptionModels ? (
-                      <div className="flex justify-center py-2">
-                        <Spinner size="sm" />
-                      </div>
-                    ) : null
-                  }
+                  renderEmptyState={() => (
+                    <ModelListingEmptyState
+                      isLoading={isLoadingTranscriptionModels}
+                      refusal={transcriptionRefusal}
+                    />
+                  )}
                 >
                   {transcriptionModelOptions.map((item) => (
                     <ListBox.Item key={item.value} id={item.value} textValue={item.label}>

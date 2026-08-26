@@ -2,8 +2,9 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAutoHide } from "@/hooks/auto-hide";
 import { useTimersEnabledQuery } from "@/hooks/config";
+import { useDockedTimers } from "@/hooks/use-docked-timers";
+import { useFloatingDock } from "@/hooks/use-floating-dock";
 import { useNotificationPermission } from "@/hooks/use-notification-permission";
 import { useTimerStore } from "@/stores/timers";
 import {
@@ -22,6 +23,7 @@ import useSound from "use-sound";
 
 import { formatTimerMs } from "@norish/shared/lib/helpers";
 import { createClientLogger } from "@norish/shared/lib/logger";
+import { cssFloatingDockPill } from "@norish/web/config/css-tokens";
 
 const logger = createClientLogger("timer-dock");
 
@@ -44,38 +46,48 @@ export function TimerTicker() {
   }, [tick, hasRunningTimers]);
   return null;
 }
-export function TimerDock({ className = "" }: { className?: string }) {
+export function TimerDock({
+  className = "",
+  isExpanded: expandedProp,
+  onExpandedChange,
+}: {
+  className?: string;
+  /** Controlled where something else owns the dock, e.g. cooking mode's bottom bar. */
+  isExpanded?: boolean;
+  onExpandedChange?: (isExpanded: boolean) => void;
+}) {
   const { timersEnabled } = useTimersEnabledQuery();
   const timers = useTimerStore((state) => state.timers);
   const clearAll = useTimerStore((state) => state.clearAll);
-  const runningTimers = timers.filter((t) => t.status === "running");
-  const pausedTimers = timers.filter((t) => t.status === "paused");
-  const completedTimers = timers.filter((t) => t.status === "completed");
-  const allActiveOrPaused = [...runningTimers, ...pausedTimers, ...completedTimers];
+  // What the dock shows, and — read by anything else that floats above the
+  // nav — whether the dock is in its corner at all.
+  const dockedTimers = useDockedTimers();
+  const completedTimers = dockedTimers.filter((timer) => timer.status === "completed");
   const t = useTranslations("common");
   const router = useRouter();
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [uncontrolledExpanded, setUncontrolledExpanded] = useState(false);
+  const isExpanded = expandedProp ?? uncontrolledExpanded;
+  const setIsExpanded = (next: boolean) => {
+    if (onExpandedChange) {
+      onExpandedChange(next);
+
+      return;
+    }
+
+    setUncontrolledExpanded(next);
+  };
   // Track whether dock has been expanded before — distinguishes a collapse
   // transition (needs crossfade) from a fresh appearance (outer container handles fade)
   const hasExpandedRef = useRef(false);
   const { isDenied: notificationsDenied, isSupported: notificationsSupported } =
     useNotificationPermission();
 
-  // Auto-hide with nav (disabled when expanded to keep it visible)
-  const { isVisible } = useAutoHide({
+  // Keeps station above the nav pill and shrinks with it; held at full size
+  // while expanded, because a summary the cook opened must not shrink away.
+  const floatingDock = useFloatingDock({
+    align: "end",
     disabled: isExpanded,
   });
-
-  // Hydration fix and mobile detection
-  useEffect(() => {
-    setIsClient(true);
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   // Clear all timers when feature is disabled
   useEffect(() => {
@@ -111,51 +123,40 @@ export function TimerDock({ className = "" }: { className?: string }) {
       stop();
     };
   }, [stop]);
-  const hasTimers = allActiveOrPaused.length > 0;
+  const hasTimers = dockedTimers.length > 0;
 
   // Reset to collapsed when all timers are removed
   useEffect(() => {
     if (!hasTimers) {
-      setIsExpanded(false);
+      setUncontrolledExpanded(false);
+      onExpandedChange?.(false);
       hasExpandedRef.current = false;
     }
-  }, [hasTimers]);
-  if (!isClient || !timersEnabled) return null;
+  }, [hasTimers, onExpandedChange]);
+  if (!timersEnabled) return null;
 
   // Sort: completed first (to alert), then active by remaining time
-  const sortedTimers = [...allActiveOrPaused].sort((a, b) => {
+  const sortedTimers = [...dockedTimers].sort((a, b) => {
     if (a.status === "completed" && b.status !== "completed") return -1;
     if (b.status === "completed" && a.status !== "completed") return 1;
     return a.remainingMs - b.remainingMs;
   });
   const topTimer = sortedTimers[0];
-  const timerCount = allActiveOrPaused.length;
+  const timerCount = dockedTimers.length;
 
-  // Position values matching groceries button pattern (mobile only)
-  const bottomWhenNavVisible = "calc(max(env(safe-area-inset-bottom), 1rem) + 4.5rem)";
-  const bottomWhenNavHidden = "calc(max(env(safe-area-inset-bottom), 1rem) + 1rem)";
-  const desktopBottom = "1rem";
   return (
     <>
       <TimerTicker />
       <AnimatePresence>
         {hasTimers && (
           <motion.div
-            animate={
-              isMobile
-                ? {
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                    bottom: isVisible ? bottomWhenNavVisible : bottomWhenNavHidden,
-                  }
-                : {
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                  }
-            }
-            className={`fixed right-4 flex flex-col items-end space-y-2 ${className || "z-50"}`}
+            animate={{
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              ...floatingDock.animate,
+            }}
+            className={`${floatingDock.className} ${className || "z-50"}`}
             exit={{
               opacity: 0,
               y: 8,
@@ -165,18 +166,13 @@ export function TimerDock({ className = "" }: { className?: string }) {
               opacity: 0,
               y: 16,
             }}
-            style={{
-              bottom: isMobile ? bottomWhenNavVisible : desktopBottom,
-            }}
-            transition={{
-              duration: 0.3,
-              ease: [0.25, 0.1, 0.25, 1],
-            }}
+            style={floatingDock.style}
+            transition={floatingDock.transition}
           >
             {/* Morphing Container */}
             <motion.div
               layout
-              className={`overflow-hidden shadow-xl ring-1 ring-black/5 backdrop-blur-sm ${isExpanded ? "bg-surface w-80 rounded-2xl dark:ring-white/10" : "bg-surface/90 rounded-full dark:ring-white/10"}`}
+              className={`border-border bg-surface overflow-hidden border shadow-xl ${floatingDock.pillClassName} ${isExpanded ? "w-80 rounded-2xl" : "rounded-full"}`}
               transition={{
                 duration: 0.25,
                 ease: [0.4, 0, 0.2, 1],
@@ -235,11 +231,14 @@ export function TimerDock({ className = "" }: { className?: string }) {
                   )}
                 </motion.div>
               ) : (
+                // One row at the cook pill's own height: the two float at
+                // opposite ends of the same nav pill, so a taller dock reads
+                // as a mismatched pair rather than as a pair.
                 <motion.button
                   animate={{
                     opacity: 1,
                   }}
-                  className={`group text-foreground flex items-center gap-3 px-4 py-3 transition-all hover:shadow-xl`}
+                  className={`group text-foreground flex items-center gap-2 transition-all hover:shadow-xl ${cssFloatingDockPill}`}
                   initial={
                     hasExpandedRef.current
                       ? {
@@ -263,20 +262,19 @@ export function TimerDock({ className = "" }: { className?: string }) {
                     setIsExpanded(true);
                   }}
                 >
-                  <div className="flex flex-col items-start">
-                    <span className="mb-1 max-w-[120px] truncate text-xs leading-none font-medium opacity-75">
-                      {timerCount === 1
-                        ? topTimer.label
-                        : t("timer.label_other", {
-                            count: timerCount,
-                          })}
-                    </span>
-                    <span
-                      className={`font-mono text-lg leading-none font-bold tabular-nums ${topTimer.status === "completed" ? "text-danger" : ""}`}
-                    >
-                      {formatTimerMs(topTimer.remainingMs)}
-                    </span>
-                  </div>
+                  <span className="max-w-[7rem] truncate text-xs font-medium opacity-75">
+                    {timerCount === 1
+                      ? topTimer.label
+                      : t("timer.label_other", {
+                          count: timerCount,
+                        })}
+                  </span>
+
+                  <span
+                    className={`font-mono text-sm font-bold tabular-nums ${topTimer.status === "completed" ? "text-danger" : ""}`}
+                  >
+                    {formatTimerMs(topTimer.remainingMs)}
+                  </span>
 
                   <ChevronUpIcon className="h-4 w-4 opacity-50 transition-opacity group-hover:opacity-100" />
                 </motion.button>

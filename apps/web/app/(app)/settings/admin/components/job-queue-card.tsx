@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import DataTable from "@/components/ui/data-table";
 import {
   useAdminConfigsQuery,
   useJobListQuery,
   useJobQueueMutations,
   useQueueSummaryQuery,
 } from "@/hooks/admin";
-import DataTable from "@/components/ui/data-table";
 import {
   CheckIcon,
   ChevronLeftIcon,
@@ -32,11 +32,11 @@ import type { JobRetentionConfig } from "@norish/config/zod/server-config";
 import type { AdminJobRowDTO } from "@norish/shared/contracts";
 import { DEFAULT_JOB_RETENTION, ServerConfigKeys } from "@norish/config/zod/server-config";
 
+import JobDetailModal from "./jobs/job-detail-modal";
+import { formatDuration, formatStep } from "./jobs/job-format";
+import JobStatusChip from "./jobs/job-status-chip";
 import { RestartRequiredChip } from "./restart-required-chip";
 import { UnsavedChangesChip } from "./unsaved-changes-chip";
-import JobDetailModal from "./jobs/job-detail-modal";
-import JobStatusChip from "./jobs/job-status-chip";
-import { formatDuration, formatStep } from "./jobs/job-format";
 
 const QUEUE_OPTIONS = [
   "recipe-import",
@@ -46,6 +46,9 @@ const QUEUE_OPTIONS = [
   "auto-tagging",
   "auto-categorization",
   "allergy-detection",
+  "recipe-provenance",
+  "ingredient-linking",
+  "image-generation",
   "caldav-sync",
   "scheduled-tasks",
 ] as const;
@@ -165,13 +168,13 @@ export default function JobQueueCard() {
   return (
     <Card>
       <Card.Header>
-        <div className="flex w-full items-center justify-between gap-2">
+        <div className="flex w-full flex-wrap items-center gap-x-2 gap-y-1">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <QueueListIcon className="h-5 w-5" />
+            <QueueListIcon className="h-5 w-5 shrink-0" />
             {t("title")}
           </h2>
           {totals.failed > 0 ? (
-            <Chip color="danger" size="sm" variant="soft">
+            <Chip className="sm:ms-auto" color="danger" size="sm" variant="soft">
               {t("summary.failed", { count: totals.failed })}
             </Chip>
           ) : null}
@@ -180,7 +183,7 @@ export default function JobQueueCard() {
       <Card.Content className="gap-6">
         {/* Retention settings */}
         <div className="flex flex-col gap-4">
-          <h3 className="flex items-center gap-2 font-medium">
+          <h3 className="flex flex-wrap items-center gap-2 font-medium">
             {t("retention.title")}
             <RestartRequiredChip />
             {hasRetentionChanges && <UnsavedChangesChip />}
@@ -190,9 +193,10 @@ export default function JobQueueCard() {
             {retentionField("keepFailed", t("retention.keepFailed"), 10, 5000)}
             {retentionField("maxAgeDays", t("retention.maxAgeDays"), 1, 90)}
           </div>
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <p className="text-muted text-xs">{t("retention.description")}</p>
             <Button
+              className="self-end sm:self-auto"
               isDisabled={!hasRetentionChanges}
               isPending={isUpdatingRetention}
               variant="primary"
@@ -262,7 +266,10 @@ export default function JobQueueCard() {
                       {t.has(`queues.${job.queue}`) ? t(`queues.${job.queue}`) : job.queue}
                     </span>
                     {job.target ? (
-                      <span className="text-muted max-w-64 truncate text-xs" title={job.target}>
+                      <span
+                        className="text-muted max-w-28 truncate text-xs min-[400px]:max-w-40 sm:max-w-64"
+                        title={job.target}
+                      >
                         {job.target}
                       </span>
                     ) : null}
@@ -278,6 +285,7 @@ export default function JobQueueCard() {
               },
               {
                 key: "step",
+                hideOnNarrow: true,
                 label: t("table.step"),
                 className: "text-sm",
                 render: (job: AdminJobRowDTO) =>
@@ -285,6 +293,7 @@ export default function JobQueueCard() {
               },
               {
                 key: "duration",
+                hideOnNarrow: true,
                 label: t("table.duration"),
                 className: "text-sm",
                 render: (job: AdminJobRowDTO) =>
@@ -296,6 +305,7 @@ export default function JobQueueCard() {
               },
               {
                 key: "created",
+                hideOnNarrow: true,
                 label: t("table.created"),
                 className: "text-muted text-xs",
                 render: (job: AdminJobRowDTO) =>
@@ -313,8 +323,8 @@ export default function JobQueueCard() {
           {totalPages > 1 ? (
             <div className="flex justify-center">
               {/* Pagination is a "dumb" compound component (Root/Previous/
-                  Summary/Next) with no built-in state, unlike HeroUI Pro's
-                  flat page/total/onChange API — wire it up manually. */}
+                  Summary/Next) with no built-in state — no flat
+                  page/total/onChange API, so wire it up manually. */}
               <Pagination aria-label={t("title")} size="sm">
                 <Pagination.Content>
                   <Pagination.Item>

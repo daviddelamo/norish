@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SettingRow, SwitchRow } from "@/app/(app)/settings/components/setting-row";
 import SettingsSwitch from "@/app/(app)/settings/components/settings-switch";
 import SecretInput from "@/components/shared/secret-input";
 import { useAvailableModelsQuery } from "@/hooks/admin";
@@ -14,15 +15,25 @@ import {
   ListBox,
   Select,
   Slider,
-  Spinner,
   TextField,
 } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
-import type { AIConfig, AutoTaggingMode } from "@norish/config/zod/server-config";
-import { ServerConfigKeys } from "@norish/config/zod/server-config";
+import type {
+  AIConfig,
+  AutomaticEnrichmentConfig,
+  CuisineStrategy,
+  TagStrategy,
+} from "@norish/config/zod/server-config";
+import {
+  DEFAULT_AUTOMATIC_ENRICHMENT,
+  DEFAULT_CUISINE_STRATEGY,
+  DEFAULT_TAG_STRATEGY,
+  ServerConfigKeys,
+} from "@norish/config/zod/server-config";
 
 import { useAdminSettingsContext } from "../context";
+import ModelListingEmptyState from "./model-listing-empty-state";
 
 interface AIConfigFormProps {
   onDirtyChange?: (isDirty: boolean) => void;
@@ -48,12 +59,19 @@ const PROVIDER_OPTIONS: Array<AIConfig["provider"]> = [
   "lm-studio",
   "generic-openai",
 ];
-const AUTO_TAGGING_MODE_OPTIONS: AutoTaggingMode[] = [
-  "disabled",
-  "predefined",
-  "predefined_db",
-  "freeform",
-];
+const TAG_STRATEGY_OPTIONS: TagStrategy[] = ["predefined", "predefined_db", "freeform"];
+const CUISINE_STRATEGY_OPTIONS: CuisineStrategy[] = ["existing", "extend"];
+
+/** One switch per Recipe Enrichment kind, in the order the docs describe them. */
+const AUTOMATIC_ENRICHMENT_KEYS = [
+  "autoTagging",
+  "allergyDetection",
+  "autoCategorization",
+  "nutritionEstimation",
+  "recipeProvenance",
+  "ingredientLinking",
+  "imageGeneration",
+] as const satisfies readonly (keyof AutomaticEnrichmentConfig)[];
 export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
   const t = useTranslations("settings.admin.aiConfig");
   const tActions = useTranslations("common.actions");
@@ -67,10 +85,15 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
   const [temperature, setTemperature] = useState(aiConfig?.temperature ?? 0);
   const [maxTokens, setMaxTokens] = useState(aiConfig?.maxTokens ?? 10000);
   const [timeoutMs, setTimeoutMs] = useState(aiConfig?.timeoutMs ?? 300000);
-  const [autoTagAllergies, setAutoTagAllergies] = useState(aiConfig?.autoTagAllergies ?? true);
   const [alwaysUseAI, setAlwaysUseAI] = useState(aiConfig?.alwaysUseAI ?? false);
-  const [autoTaggingMode, setAutoTaggingMode] = useState<AutoTaggingMode>(
-    aiConfig?.autoTaggingMode ?? "disabled"
+  const [tagStrategy, setTagStrategy] = useState<TagStrategy>(
+    aiConfig?.tagStrategy ?? DEFAULT_TAG_STRATEGY
+  );
+  const [cuisineStrategy, setCuisineStrategy] = useState<CuisineStrategy>(
+    aiConfig?.cuisineStrategy ?? DEFAULT_CUISINE_STRATEGY
+  );
+  const [automaticEnrichment, setAutomaticEnrichment] = useState<AutomaticEnrichmentConfig>(
+    aiConfig?.automaticEnrichment ?? DEFAULT_AUTOMATIC_ENRICHMENT
   );
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
@@ -109,7 +132,11 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         ? endpoint
         : endpoint); // generic-openai needs endpoint
 
-  const { models: availableModels, isLoading: isLoadingModels } = useAvailableModelsQuery({
+  const {
+    models: availableModels,
+    refusal: modelRefusal,
+    isLoading: isLoadingModels,
+  } = useAvailableModelsQuery({
     provider: provider as AIConfig["provider"],
     endpoint: endpoint || undefined,
     apiKey: apiKey || undefined,
@@ -159,9 +186,10 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
       setTemperature(aiConfig.temperature);
       setMaxTokens(aiConfig.maxTokens);
       setTimeoutMs(aiConfig.timeoutMs ?? 300000);
-      setAutoTagAllergies(aiConfig.autoTagAllergies ?? true);
       setAlwaysUseAI(aiConfig.alwaysUseAI ?? false);
-      setAutoTaggingMode(aiConfig.autoTaggingMode ?? "disabled");
+      setTagStrategy(aiConfig.tagStrategy ?? DEFAULT_TAG_STRATEGY);
+      setCuisineStrategy(aiConfig.cuisineStrategy ?? DEFAULT_CUISINE_STRATEGY);
+      setAutomaticEnrichment(aiConfig.automaticEnrichment ?? DEFAULT_AUTOMATIC_ENRICHMENT);
     }
   }, [aiConfig]);
 
@@ -183,9 +211,14 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
       temperature !== aiConfig.temperature ||
       maxTokens !== aiConfig.maxTokens ||
       timeoutMs !== (aiConfig.timeoutMs ?? 300000) ||
-      autoTagAllergies !== (aiConfig.autoTagAllergies ?? true) ||
       alwaysUseAI !== (aiConfig.alwaysUseAI ?? false) ||
-      autoTaggingMode !== (aiConfig.autoTaggingMode ?? "disabled") ||
+      tagStrategy !== (aiConfig.tagStrategy ?? DEFAULT_TAG_STRATEGY) ||
+      cuisineStrategy !== (aiConfig.cuisineStrategy ?? DEFAULT_CUISINE_STRATEGY) ||
+      AUTOMATIC_ENRICHMENT_KEYS.some(
+        (key) =>
+          automaticEnrichment[key] !==
+          (aiConfig.automaticEnrichment?.[key] ?? DEFAULT_AUTOMATIC_ENRICHMENT[key])
+      ) ||
       apiKey.trim() !== ""
     );
   }, [
@@ -198,9 +231,10 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
     temperature,
     maxTokens,
     timeoutMs,
-    autoTagAllergies,
     alwaysUseAI,
-    autoTaggingMode,
+    tagStrategy,
+    cuisineStrategy,
+    automaticEnrichment,
     apiKey,
   ]);
   useEffect(() => {
@@ -209,6 +243,27 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
   const handleRevealApiKey = useCallback(async () => {
     return await fetchConfigSecret(ServerConfigKeys.AI_CONFIG, "apiKey");
   }, [fetchConfigSecret]);
+
+  /**
+   * The stored record read as the list the picker selects over. A column of
+   * switches read as separate decisions; which kinds are allowed to run unasked
+   * is one. Every kind belongs here — one left out of the list is not merely
+   * unreachable, it is rewritten to its default the moment any other kind is
+   * toggled, because the picker rebuilds the whole record from this list.
+   */
+  const selectedEnrichmentKinds = useMemo(
+    () => AUTOMATIC_ENRICHMENT_KEYS.filter((key) => automaticEnrichment[key]),
+    [automaticEnrichment]
+  );
+  const handleEnrichmentKindsChange = useCallback((chosen: string[]) => {
+    const selected = new Set(chosen);
+
+    setAutomaticEnrichment(
+      Object.fromEntries(
+        AUTOMATIC_ENRICHMENT_KEYS.map((key) => [key, selected.has(key)])
+      ) as AutomaticEnrichmentConfig
+    );
+  }, []);
 
   // Clear model fields when provider changes to avoid invalid model selection
   const handleProviderChange = (newProvider: AIConfig["provider"]) => {
@@ -262,23 +317,23 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         temperature,
         maxTokens,
         timeoutMs,
-        autoTagAllergies,
         alwaysUseAI,
-        autoTaggingMode: autoTaggingMode as AIConfig["autoTaggingMode"],
+        tagStrategy,
+        cuisineStrategy,
+        automaticEnrichment,
       });
+      // Saved keys live on the server, not in the form: a key left in state
+      // reads as an unsaved change on every later render.
+      setApiKey("");
     } finally {
       setSaving(false);
     }
   };
   return (
     <div className="flex flex-col gap-4 p-2">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="font-medium">{t("enableAI")}</span>
-          <span className="text-muted text-base">{t("enableAIDescription")}</span>
-        </div>
+      <SwitchRow description={t("enableAIDescription")} title={t("enableAI")}>
         <SettingsSwitch color="success" isSelected={enabled} onValueChange={setEnabled} />
-      </div>
+      </SwitchRow>
 
       {showValidationWarning && (
         <div className="text-warning bg-warning/10 rounded-lg p-3 text-base">
@@ -366,13 +421,9 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         </ComboBox.InputGroup>
         <ComboBox.Popover>
           <ListBox
-            renderEmptyState={() =>
-              isLoadingModels ? (
-                <div className="flex justify-center py-2">
-                  <Spinner size="sm" />
-                </div>
-              ) : null
-            }
+            renderEmptyState={() => (
+              <ModelListingEmptyState isLoading={isLoadingModels} refusal={modelRefusal} />
+            )}
           >
             {modelOptions.map((item) => (
               <ListBox.Item key={item.value} id={item.value} textValue={item.value}>
@@ -403,13 +454,9 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         <Description>{t("visionModelDescription")}</Description>
         <ComboBox.Popover>
           <ListBox
-            renderEmptyState={() =>
-              isLoadingModels ? (
-                <div className="flex justify-center py-2">
-                  <Spinner size="sm" />
-                </div>
-              ) : null
-            }
+            renderEmptyState={() => (
+              <ModelListingEmptyState isLoading={isLoadingModels} refusal={modelRefusal} />
+            )}
           >
             {visionModelOptions.map((item) => (
               <ListBox.Item key={item.value} id={item.value} textValue={item.value}>
@@ -440,7 +487,12 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
           step={0.1}
           value={temperature}
           onChange={(v) => setTemperature(v as number)}
-        />
+        >
+          <Slider.Track>
+            <Slider.Fill />
+            <Slider.Thumb />
+          </Slider.Track>
+        </Slider>
         <span className="text-muted text-xs">{t("temperatureHint")}</span>
       </div>
 
@@ -464,56 +516,125 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         <Input variant="secondary" />
       </TextField>
 
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="font-medium">{t("autoTagAllergies")}</span>
-          <span className="text-muted text-base">{t("autoTagAllergiesDescription")}</span>
-        </div>
-        <SettingsSwitch
-          color="success"
-          isDisabled={!enabled}
-          isSelected={autoTagAllergies}
-          onValueChange={setAutoTagAllergies}
-        />
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="font-medium">{t("alwaysUseAI")}</span>
-          <span className="text-muted text-base">{t("alwaysUseAIDescription")}</span>
-        </div>
+      <SwitchRow description={t("alwaysUseAIDescription")} title={t("alwaysUseAI")}>
         <SettingsSwitch
           color="success"
           isDisabled={!enabled}
           isSelected={alwaysUseAI}
           onValueChange={setAlwaysUseAI}
         />
-      </div>
+      </SwitchRow>
+
+      <SettingRow
+        description={t("automaticEnrichmentDescription")}
+        title={t("automaticEnrichment")}
+      >
+        <Select
+          aria-label={t("automaticEnrichment")}
+          className="w-full sm:w-80"
+          isDisabled={!enabled}
+          placeholder={t("automaticEnrichmentPlaceholder")}
+          selectionMode="multiple"
+          value={selectedEnrichmentKinds}
+          variant="secondary"
+          onChange={(selected) => handleEnrichmentKindsChange(selected.map(String))}
+        >
+          <Label className="sr-only">{t("automaticEnrichment")}</Label>
+          <Select.Trigger>
+            {/* A flex child will not shrink past its text without `min-w-0`,
+                which is what let the joined list push the trigger wide enough
+                to be cut off by the panel instead of clipped by the field. */}
+            <Select.Value className="min-w-0">
+              {({ defaultChildren, isPlaceholder }) =>
+                isPlaceholder ? (
+                  defaultChildren
+                ) : (
+                  // Seven names joined read as a paragraph inside the trigger;
+                  // one clipped line says as much and keeps the row a row.
+                  <span className="block truncate">
+                    {selectedEnrichmentKinds
+                      .map((key) => t(`automaticEnrichmentKinds.${key}`))
+                      .join(", ")}
+                  </span>
+                )
+              }
+            </Select.Value>
+            <Select.Indicator />
+          </Select.Trigger>
+          <Select.Popover>
+            <ListBox selectionMode="multiple">
+              {AUTOMATIC_ENRICHMENT_KEYS.map((key) => (
+                <ListBox.Item key={key} id={key} textValue={t(`automaticEnrichmentKinds.${key}`)}>
+                  <div className="flex flex-col">
+                    <span>{t(`automaticEnrichmentKinds.${key}`)}</span>
+                    <span className="text-muted text-xs">
+                      {t(`automaticEnrichmentKinds.${key}Description`)}
+                    </span>
+                  </div>
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+              ))}
+            </ListBox>
+          </Select.Popover>
+        </Select>
+      </SettingRow>
 
       <Select
         variant="secondary"
         isDisabled={!enabled}
-        placeholder={t("autoTaggingMode")}
-        value={autoTaggingMode}
+        placeholder={t("tagStrategy")}
+        value={tagStrategy}
         onChange={(selected) => {
           if (typeof selected === "string") {
-            setAutoTaggingMode(selected as AutoTaggingMode);
+            setTagStrategy(selected as TagStrategy);
           }
         }}
       >
-        <Label>{t("autoTaggingMode")}</Label>
+        <Label>{t("tagStrategy")}</Label>
         <Select.Trigger>
           <Select.Value />
           <Select.Indicator />
         </Select.Trigger>
-        <span className="text-muted px-1 text-xs">{t("autoTaggingModeDescription")}</span>
+        <span className="text-muted px-1 text-xs">{t("tagStrategyDescription")}</span>
         <Select.Popover>
           <ListBox>
-            {AUTO_TAGGING_MODE_OPTIONS.map((option) => {
+            {TAG_STRATEGY_OPTIONS.map((option) => {
               const label =
                 option === "predefined_db"
-                  ? t("autoTaggingModes.predefinedDb")
-                  : t(`autoTaggingModes.${option}` as Parameters<typeof t>[0]);
+                  ? t("tagStrategies.predefinedDb")
+                  : t(`tagStrategies.${option}` as Parameters<typeof t>[0]);
+
+              return (
+                <ListBox.Item key={option} id={option} textValue={label}>
+                  {label}
+                </ListBox.Item>
+              );
+            })}
+          </ListBox>
+        </Select.Popover>
+      </Select>
+
+      <Select
+        variant="secondary"
+        isDisabled={!enabled}
+        placeholder={t("cuisineStrategy")}
+        value={cuisineStrategy}
+        onChange={(selected) => {
+          if (typeof selected === "string") {
+            setCuisineStrategy(selected as CuisineStrategy);
+          }
+        }}
+      >
+        <Label>{t("cuisineStrategy")}</Label>
+        <Select.Trigger>
+          <Select.Value />
+          <Select.Indicator />
+        </Select.Trigger>
+        <span className="text-muted px-1 text-xs">{t("cuisineStrategyDescription")}</span>
+        <Select.Popover>
+          <ListBox>
+            {CUISINE_STRATEGY_OPTIONS.map((option) => {
+              const label = t(`cuisineStrategies.${option}`);
 
               return (
                 <ListBox.Item key={option} id={option} textValue={label}>
@@ -543,7 +664,7 @@ export default function AIConfigForm({ onDirtyChange }: AIConfigFormProps) {
         </div>
       )}
 
-      <div className="flex items-center justify-end gap-2 pt-2">
+      <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
         <Button isDisabled={!enabled} onPress={handleTest} variant="tertiary" isPending={testing}>
           {<BeakerIcon className="h-5 w-5" />}
           {t("testConnection")}

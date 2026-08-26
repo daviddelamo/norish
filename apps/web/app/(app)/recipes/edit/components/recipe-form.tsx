@@ -27,6 +27,8 @@ import { parseIngredientWithDefaults } from "@norish/shared/lib/helpers";
 import { createClientLogger } from "@norish/shared/lib/logger";
 import { formatUnit } from "@norish/shared/lib/unit-localization";
 
+import type { ProvenanceFormValue } from "./provenance-fields";
+import ProvenanceFields, { EMPTY_PROVENANCE_FORM_VALUE } from "./provenance-fields";
 import { useRecipeFormDirtyState } from "./use-recipe-form-dirty-state";
 
 const log = createClientLogger("RecipeForm");
@@ -129,6 +131,18 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
   const [protein, setProtein] = useState<number | null>(
     initialData?.protein != null ? Number(initialData.protein) : null
   );
+  // Recipe Provenance is one atomic group, so the form holds it as one value.
+  const [provenance, setProvenance] = useState<ProvenanceFormValue>(() =>
+    initialData
+      ? {
+          originCountry: initialData.originCountry ?? null,
+          originCountryName: initialData.originCountryName ?? null,
+          originRegion: initialData.originRegion ?? "",
+          provenanceNote: initialData.provenanceNote ?? "",
+          cuisineIds: initialData.cuisines.map((cuisine) => cuisine.id),
+        }
+      : { ...EMPTY_PROVENANCE_FORM_VALUE }
+  );
   const currentFormState = useMemo(
     () => ({
       name,
@@ -149,6 +163,7 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
       fat,
       carbs,
       protein,
+      provenance,
     }),
     [
       name,
@@ -169,6 +184,7 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
       fat,
       carbs,
       protein,
+      provenance,
     ]
   );
   const hasUnsavedChanges = useRecipeFormDirtyState({
@@ -234,6 +250,7 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
       systemUsed: s.systemUsed,
       version: s.version,
       images: s.images || [],
+      stepIngredients: s.stepIngredients || [],
     }));
     setSteps(initSteps);
     initializedRecipeIdRef.current = initialData.id;
@@ -309,10 +326,6 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
           version: img.version,
         }));
 
-      // Get primary image (first image by order) for legacy image field
-      const sortedImages = [...images].sort((a, b) => a.order - b.order);
-      const primaryImage = sortedImages[0]?.image || null;
-
       // Extract videos from unified media state, preserving their order
       const videos = media
         .filter((m) => m.type === "video")
@@ -329,8 +342,6 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
         description: description.trim() || null,
         notes: notes.trim() || null,
         url: url.trim() || null,
-        image: primaryImage,
-        // Legacy field - first image
         servings,
         prepMinutes: prepMinutes ?? undefined,
         cookMinutes: cookMinutes ?? undefined,
@@ -339,6 +350,11 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
         fat: fat != null ? fat.toString() : null,
         carbs: carbs != null ? carbs.toString() : null,
         protein: protein != null ? protein.toString() : null,
+        originCountry: provenance.originCountry,
+        originCountryName: provenance.originCountryName,
+        originRegion: provenance.originRegion.trim() || null,
+        provenanceNote: provenance.provenanceNote.trim() || null,
+        cuisines: provenance.cuisineIds,
         systemUsed,
         tags: tags.map((t) => ({
           name: t,
@@ -360,6 +376,7 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
           systemUsed: s.systemUsed,
           version: s.version,
           images: s.images || [],
+          stepIngredients: s.stepIngredients || [],
         })),
         // Images array field
         images,
@@ -422,6 +439,7 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
     fat,
     carbs,
     protein,
+    provenance,
     notes,
     allowNavigation,
     disallowNavigation,
@@ -551,7 +569,7 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
           <div className="ml-0 md:ml-9">
             <p className="text-muted mb-3 flex items-center gap-1 text-base">
               {t("instructionsHelp")}
-              <SmartInputHelp />
+              <SmartInputHelp showIngredientMention />
             </p>
             <StepInput
               ingredients={ingredients}
@@ -587,10 +605,10 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
                       key={category}
                       as="button"
                       aria-pressed={active}
-                      className="h-8 cursor-pointer rounded-full px-3 text-sm"
+                      className="chip--on-ground h-8 cursor-pointer rounded-full px-3 text-sm"
                       color={active ? "accent" : "default"}
                       type="button"
-                      variant={active ? "primary" : "soft"}
+                      variant={active ? "primary" : "tertiary"}
                       onClick={() => toggleCategory(category)}
                     >
                       {t(`category.${category.toLowerCase()}`)}
@@ -653,11 +671,24 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
           </div>
         </section>
 
-        {/* 7. Details */}
+        {/* 7. Provenance */}
         <section>
           <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold">
             <span className="bg-accent text-accent-foreground flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold">
               7
+            </span>
+            {t("provenance")}
+          </h2>
+          <div className="ml-0 md:ml-9">
+            <ProvenanceFields value={provenance} onChange={setProvenance} />
+          </div>
+        </section>
+
+        {/* 8. Details */}
+        <section>
+          <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold">
+            <span className="bg-accent text-accent-foreground flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold">
+              8
             </span>
             {t("details")}
           </h2>
@@ -692,11 +723,11 @@ export default function RecipeForm({ mode, initialData }: RecipeFormProps) {
           </div>
         </section>
 
-        {/* 8. Additional Information */}
+        {/* 9. Additional Information */}
         <section>
           <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold">
             <span className="bg-accent text-accent-foreground flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold">
-              8
+              9
             </span>
             {t("additionalInfo")}
           </h2>

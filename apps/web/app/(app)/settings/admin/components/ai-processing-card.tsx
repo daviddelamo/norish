@@ -6,14 +6,21 @@ import { Accordion, Card } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import AIConfigForm from "./ai-config-form";
-import BulkCategorizationForm from "./bulk-categorization-form";
+import BulkEnrichmentForm from "./bulk-enrichment-form";
+import CuisineVocabularyForm from "./cuisine-vocabulary-form";
+import ImageGenerationForm from "./image-generation-form";
 import PromptsForm from "./prompts-form";
 import { UnsavedChangesChip } from "./unsaved-changes-chip";
 import VideoProcessingForm from "./video-processing-form";
 
 export default function AIProcessingCard() {
   const t = useTranslations("settings.admin.aiProcessing");
-  const [dirtySections, setDirtySections] = useState({ ai: false, video: false, prompts: false });
+  const [dirtySections, setDirtySections] = useState({
+    ai: false,
+    video: false,
+    imageGeneration: false,
+    prompts: false,
+  });
 
   const updateDirtySection = useCallback(
     (section: keyof typeof dirtySections) => (isDirty: boolean) => {
@@ -27,10 +34,10 @@ export default function AIProcessingCard() {
   return (
     <Card>
       <Card.Header>
-        <div className="flex items-center gap-2">
-          <SparklesIcon className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">{t("title")}</h2>
-        </div>
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <SparklesIcon className="h-5 w-5 shrink-0" />
+          {t("title")}
+        </h2>
       </Card.Header>
       <Card.Content>
         <p className="text-muted mb-4 text-base">{t("description")}</p>
@@ -38,8 +45,8 @@ export default function AIProcessingCard() {
           <Accordion.Item id="ai">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {t("aiConfig.title")}
                     {dirtySections.ai && <UnsavedChangesChip />}
                   </div>
@@ -58,8 +65,8 @@ export default function AIProcessingCard() {
           <Accordion.Item id="video">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {t("video.title")}
                     {dirtySections.video && <UnsavedChangesChip />}
                   </div>
@@ -75,11 +82,31 @@ export default function AIProcessingCard() {
             </Accordion.Panel>
           </Accordion.Item>
 
+          <Accordion.Item id="imageGeneration">
+            <Accordion.Heading>
+              <Accordion.Trigger>
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {t("imageGeneration.title")}
+                    {dirtySections.imageGeneration && <UnsavedChangesChip />}
+                  </div>
+                  <span className="text-muted text-sm">{t("imageGeneration.subtitle")}</span>
+                </div>
+                <Accordion.Indicator />
+              </Accordion.Trigger>
+            </Accordion.Heading>
+            <Accordion.Panel>
+              <Accordion.Body>
+                <ImageGenerationForm onDirtyChange={updateDirtySection("imageGeneration")} />
+              </Accordion.Body>
+            </Accordion.Panel>
+          </Accordion.Item>
+
           <Accordion.Item id="prompts">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {t("prompts.title")}
                     {dirtySections.prompts && <UnsavedChangesChip />}
                   </div>
@@ -95,19 +122,38 @@ export default function AIProcessingCard() {
             </Accordion.Panel>
           </Accordion.Item>
 
-          <Accordion.Item id="bulkCategorization">
+          <Accordion.Item id="cuisines">
             <Accordion.Heading>
               <Accordion.Trigger>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">{t("bulkCategorization.title")}</div>
-                  <span className="text-muted text-sm">{t("bulkCategorization.subtitle")}</span>
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">{t("cuisines.title")}</div>
+                  <span className="text-muted text-sm">{t("cuisines.subtitle")}</span>
                 </div>
                 <Accordion.Indicator />
               </Accordion.Trigger>
             </Accordion.Heading>
             <Accordion.Panel>
               <Accordion.Body>
-                <BulkCategorizationForm />
+                <CuisineVocabularyForm />
+              </Accordion.Body>
+            </Accordion.Panel>
+          </Accordion.Item>
+
+          <Accordion.Item id="bulkEnrichment">
+            <Accordion.Heading>
+              <Accordion.Trigger>
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {t("bulkEnrichment.title")}
+                  </div>
+                  <span className="text-muted text-sm">{t("bulkEnrichment.subtitle")}</span>
+                </div>
+                <Accordion.Indicator />
+              </Accordion.Trigger>
+            </Accordion.Heading>
+            <Accordion.Panel>
+              <Accordion.Body>
+                <BulkEnrichmentForm />
               </Accordion.Body>
             </Accordion.Panel>
           </Accordion.Item>

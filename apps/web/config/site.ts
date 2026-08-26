@@ -2,7 +2,7 @@ export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
   name: "Norish",
-  description: "Nourish every meal.",
+  description: "Any recipe, any source.",
   navItems: [
     {
       label: "Home",

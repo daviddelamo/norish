@@ -1,7 +1,6 @@
 {
   "page": {
     "title": "Ustawienia",
-    "loading": "Ładowanie...",
     "ariaLabel": "Karty ustawień"
   },
   "tabs": {
@@ -62,7 +61,12 @@
     },
     "archiveImport": {
       "title": "Import archiwum przepisów",
-      "description": "Importuj przepisy z eksportów Mela (.melarecipes), Paprika (.paprikarecipes) lub Mealie/Tandoor (.zip)"
+      "description": "Importuj przepisy z eksportów Norish (.norishrecipes), Mela (.melarecipes), Paprika (.paprikarecipes) lub Mealie/Tandoor (.zip)"
+    },
+    "archiveExport": {
+      "title": "Eksportuj archiwum przepisów",
+      "description": "Pobierz wszystkie widoczne dla Ciebie przepisy.",
+      "button": "Eksportuj"
     },
     "siteAuthTokens": {
       "title": "Tokeny uwierzytelniania stron",
@@ -111,21 +115,19 @@
         "title": "Język",
         "description": "Wybierz preferowany język"
       },
-      "timers": {
-        "title": "Włącz timery w przepisach",
-        "description": "Pokazuj interaktywne timery w instrukcjach przepisu"
-      },
-      "conversion": {
-        "title": "Pokaż przycisk konwersji składników",
-        "description": "Wyświetlaj przycisk na stronach przepisów do konwersji między systemami miar"
-      },
-      "ratings": {
-        "title": "Pokaż oceny",
-        "description": "Wyświetlaj oceny w postaci gwiazdek na kartach przepisów i stronach szczegółów"
-      },
-      "favorites": {
-        "title": "Pokaż ulubione",
-        "description": "Wyświetlaj ikony ulubionych/serca na kartach przepisów i stronach szczegółów"
+      "hidden": {
+        "title": "Ukryte elementy",
+        "description": "Wybierz, czego wolisz nie oglądać. Domyślnie wyświetlane jest wszystko, a to zmienia tylko Twój własny widok.",
+        "placeholder": "Nic nie ukryto",
+        "options": {
+          "provenance": "Pochodzenie",
+          "nutrition": "Wartości odżywcze",
+          "notes": "Notatki",
+          "rating": "Oceny",
+          "favorites": "Ulubione",
+          "conversion": "Konwersja składników",
+          "timers": "Minutniki przepisów"
+        }
       },
       "todaySection": {
         "title": "Sekcja Dzisiaj",
@@ -134,6 +136,14 @@
           "always": "Zawsze widoczna",
           "planned": "Tylko zaplanowane posiłki",
           "hidden": "Ukryta"
+        }
+      },
+      "recipePageColor": {
+        "title": "Kolor stron przepisów",
+        "description": "Zabarw każdą stronę przepisu kolorami jej własnego zdjęcia lub zachowaj kolory motywu na tym urządzeniu",
+        "options": {
+          "dish": "Ze zdjęcia potrawy",
+          "theme": "Kolory motywu"
         }
       },
       "applyError": "Nie udało się zastosować preferencji"
@@ -354,7 +364,12 @@
       "saveLocales": "Zapisz ustawienia językowe",
       "localesSaved": "Zapisano ustawienia językowe",
       "localesError": "Nie udało się zapisać ustawień językowych",
-      "atLeastOneLocale": "Musi być włączony co najmniej jeden język"
+      "atLeastOneLocale": "Musi być włączony co najmniej jeden język",
+      "export": {
+        "title": "Archiwum przepisów",
+        "description": "Pobierz każdy przepis na tym serwerze.",
+        "button": "Eksportuj archiwum przepisów"
+      }
     },
     "registration": {
       "title": "Rejestracja",
@@ -517,18 +532,35 @@
         "title": "Przetwarzanie wideo",
         "subtitle": "Ekstrakcja i transkrypcja wideo z mediów społecznościowych"
       },
+      "imageGeneration": {
+        "title": "Generowanie Obrazów",
+        "subtitle": "Narysuj zdjęcie potrawy dla przepisów bez obrazu"
+      },
       "prompts": {
         "title": "Prompty",
         "subtitle": "Dostosuj instrukcje AI do przetwarzania przepisów"
       },
-      "bulkCategorization": {
-        "title": "Masowa kategoryzacja",
-        "subtitle": "Kategoryzuj nieskategoryzowane przepisy za pomocą AI",
-        "description": "Dodaj do kolejki wszystkie nieskategoryzowane przepisy do rozpoznania kategorii przez AI. Kategorie obejmują: Śniadanie, Lunch, Kolacja i Przekąska.",
-        "button": "Kategoryzuj wszystkie przepisy",
-        "queued": "{count, plural, =0 {Brak przepisów do skategoryzowania} one {Dodano do kolejki # przepis} other {Dodano do kolejki # przepisów}}",
-        "success": "Rozpoczęto kategoryzację",
-        "error": "Nie udało się uruchomić kategoryzacji"
+      "cuisines": {
+        "title": "Kuchnie",
+        "subtitle": "Słownik, z którego wybierają przepisy i AI"
+      },
+      "bulkEnrichment": {
+        "title": "Masowe wzbogacanie",
+        "subtitle": "Uruchom włączone wzbogacanie dla wszystkich przepisów",
+        "description": "Dodaj do kolejki, dla wszystkich przepisów na tym serwerze, każdy rodzaj wzbogacania, którego automatyczny przełącznik jest włączony. Domyślnie uzupełniane są tylko braki; potwierdzenie pozwala nadpisać to, co już istnieje.",
+        "button": "Wzbogać wszystkie przepisy",
+        "confirmTitle": "Uruchomić wzbogacanie dla wszystkich przepisów?",
+        "confirmMessage": "To dodaje do kolejki pracę AI dla każdego przepisu na tym serwerze. Każdy rodzaj wzbogacania z włączonym przełącznikiem automatycznym uruchamia się tam, gdzie brakuje danych.",
+        "replaceExisting": "Nadpisz istniejące dane",
+        "replaceExistingDescription": "Ponownie ustal kategorie, wartości odżywcze, pochodzenie i składniki kroków, nawet jeśli przepis już je ma. Tagi i informacje o alergenach są wyłącznie dodawane.",
+        "replaceWarning": "Tej operacji nie można cofnąć. Zastąpione zostaną także dane wprowadzone przez Ciebie, w tym składniki kroków powiązane ręcznie: nigdzie nie zapisano, które wartości pochodzą od AI.",
+        "costWarning": "To może być kosztowna operacja: przy wielu przepisach może potrwać długo, a u płatnego dostawcy AI zużyć znaczną ilość kredytów.",
+        "confirmButton": "Uruchom dla wszystkich przepisów",
+        "confirmButtonReplace": "Nadpisz wszystkie przepisy",
+        "queued": "{queued, plural, =0 {Brak uruchomień w kolejce} one {# uruchomienie w kolejce} few {# uruchomienia w kolejce} many {# uruchomień w kolejce} other {# uruchomienia w kolejce}} dla {recipes, plural, one {# przepisu} few {# przepisów} many {# przepisów} other {# przepisu}}",
+        "aiDisabled": "AI jest wyłączone na tym serwerze. Najpierw włącz AI.",
+        "error": "Nie udało się uruchomić masowego wzbogacania",
+        "imageCount": "{count, plural, =0 {Nie zostanie wygenerowany żaden obraz.} one {Zostanie wygenerowany # obraz.} few {Zostaną wygenerowane # obrazy.} many {Zostanie wygenerowanych # obrazów.} other {Zostanie wygenerowanych # obrazu.}}"
       }
     },
     "aiConfig": {
@@ -561,25 +593,52 @@
       "temperatureHint": "Niżej = bardziej precyzyjne, Wyżej = bardziej kreatywne",
       "maxTokens": "Maks. tokenów",
       "requestTimeout": "Limit czasu żądania (ms)",
-      "autoTagAllergies": "Automatyczne wykrywanie tagów alergii",
-      "autoTagAllergiesDescription": "Automatycznie dodawaj tagi związane z alergiami podczas importowania przepisów",
       "alwaysUseAI": "Zawsze używaj AI przy imporcie",
       "alwaysUseAIDescription": "Pomijaj parsowanie ustrukturyzowane i wyciągaj przepisy wyłącznie przez AI",
-      "autoTaggingMode": "Tryb automatycznego tagowania",
-      "autoTaggingModeDescription": "Automatycznie przypisuj tagi/słowa kluczowe do importowanych przepisów za pomocą AI",
-      "autoTaggingModes": {
-        "disabled": "Wyłączone",
+      "connectionSuccess": "Połączenie udane",
+      "testConnection": "Testuj połączenie",
+      "vision": "vision",
+      "automaticEnrichment": "Automatyczne wzbogacanie przepisów",
+      "automaticEnrichmentDescription": "Wybierz, które wzbogacanie AI uruchamia się automatycznie dla nowych przepisów. Członkowie nadal mogą uruchomić każde ręcznie, gdy AI jest włączone.",
+      "automaticEnrichmentPlaceholder": "Nic nie działa automatycznie",
+      "automaticEnrichmentKinds": {
+        "autoTagging": "Automatyczne tagowanie",
+        "autoTaggingDescription": "Dodaje tagi zaproponowane przez AI do nowych przepisów bez usuwania istniejących",
+        "allergyDetection": "Wykrywanie alergenów",
+        "allergyDetectionDescription": "Automatycznie dodawaj tagi związane z alergiami podczas importowania przepisów",
+        "autoCategorization": "Automatyczna kategoryzacja",
+        "autoCategorizationDescription": "Ustawia kategorie posiłku w nowych przepisach, które ich nie mają",
+        "nutritionEstimation": "Szacowanie wartości odżywczych",
+        "nutritionEstimationDescription": "Szacuje kalorie, tłuszcze, węglowodany i białko dla nowych przepisów bez podanych wartości",
+        "recipeProvenance": "Pochodzenie przepisu",
+        "recipeProvenanceDescription": "Ustal kraj, region, kuchnie i krótką notatkę dla nowych przepisów, uzupełniane są tylko brakujące pola, to co podano, pozostaje bez zmian",
+        "ingredientLinking": "Wiązanie składników",
+        "ingredientLinkingDescription": "Wiąże każdy krok z używanymi pozycjami składników, tylko dla kroków bez powiązań",
+        "imageGeneration": "Generowanie Obrazów",
+        "imageGenerationDescription": "Narysuj zdjęcie potrawy dla nowych przepisów, które nie mają żadnego obrazu"
+      },
+      "tagStrategy": "Strategia tagów",
+      "tagStrategyDescription": "Jakich tagów może używać automatyczne tagowanie, niezależnie od tego, czy działa automatycznie czy ręcznie",
+      "tagStrategies": {
         "predefined": "Tylko zdefiniowane tagi",
         "predefinedDb": "Zdefiniowane + istniejące tagi",
         "freeform": "AI może tworzyć nowe tagi"
       },
-      "connectionSuccess": "Połączenie udane",
-      "testConnection": "Testuj połączenie",
-      "vision": "vision"
+      "cuisineStrategy": "Strategia kuchni",
+      "cuisineStrategyDescription": "Czy ustalanie pochodzenia może dodawać kuchnie do słownika, czy tylko z niego wybierać",
+      "cuisineStrategies": {
+        "existing": "Tylko istniejące kuchnie",
+        "extend": "AI może dodawać nowe kuchnie"
+      }
+    },
+    "modelListing": {
+      "empty": "Nie zwrócono żadnych modeli. Sprawdź klucz API lub punkt końcowy albo wpisz nazwę modelu.",
+      "refused": "{provider} odrzucił żądanie ({status}). Sprawdź klucz API.",
+      "unreachable": "Nie można połączyć się z {provider}. Sprawdź punkt końcowy."
     },
     "videoConfig": {
       "enableVideo": "Włącz parsowanie wideo",
-      "enableVideoDescription": "Wyciągaj przepisy z TikToka, Instagrama, YouTube Shorts lub Facebooka",
+      "enableVideoDescription": "Wyciągaj przepisy z TikToka, Instagrama, YouTube Shorts, Facebooka, Pinteresta i innych",
       "configureWarning": "Skonfiguruj poniżej dostawcę transkrypcji, aby włączyć przetwarzanie wideo.",
       "aiDisabledWarning": "Włącz konfigurację AI przed uruchomieniem przetwarzania wideo.",
       "maxLength": "Maks. długość wideo (sekundy)",
@@ -587,7 +646,10 @@
       "maxFileSize": "Maks. rozmiar pliku wideo",
       "maxFileSizeDescription": "Maksymalny rozmiar pobieranego pliku wideo",
       "ytDlpVersion": "Wersja yt-dlp",
-      "ytDlpVersionDescription": "Wersja yt-dlp używana do pobierania wideo",
+      "ytDlpVersionDescription": "Wersja yt-dlp uruchomiona na tym serwerze. Nie można jej tu zmienić.",
+      "ytDlpVersionMissing": "Nie znaleziono pliku binarnego yt-dlp",
+      "ytDlpVersionUnknown": "Nie udało się sprawdzić",
+      "ytDlpVersionLoading": "Sprawdzanie …",
       "ytDlpProxy": "yt-dlp Proxy",
       "ytDlpProxyDescription": "Proxy HTTP/SOCKS5 dla yt-dlp",
       "transcription": "Transkrypcja",
@@ -614,10 +676,34 @@
       "transcriptionApiKeyOptionalDescription": "Większość lokalnych serwerów Whisper nie wymaga klucza API",
       "transcriptionApiKeyOptionalPlaceholder": "Zostaw puste dla serwerów lokalnych"
     },
+    "imageGenerationConfig": {
+      "description": "Generowanie obrazów używa własnego dostawcy, ponieważ większość dostawców AI nie potrafi rysować. Obrazy są generowane u tego dostawcy; dostawca AI powyżej obsługuje całą resztę.",
+      "provider": "Dostawca obrazów",
+      "providers": {
+        "disabled": "Wyłączone",
+        "openai": "OpenAI",
+        "google": "Google AI",
+        "azure": "Azure OpenAI",
+        "lmStudio": "LM Studio",
+        "genericOpenai": "Ogólny zgodny z OpenAI"
+      },
+      "endpoint": "Adres URL endpointu",
+      "endpointOptional": "Opcjonalnie: własny adres URL zasobu Azure",
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Wprowadź klucz API...",
+      "apiKeyInherited": "Używany jest klucz API z konfiguracji AI.",
+      "model": "Model obrazów",
+      "modelPlaceholder": "np. gpt-image-1",
+      "modelDescription": "Model, który rysuje obraz. Musi to być model obrazów, nie model tekstowy.",
+      "fallbackHint": "Ten sam dostawca co w konfiguracji AI: endpoint i klucz API są z niej przejmowane, chyba że ustawisz je tutaj."
+    },
     "promptsConfig": {
       "recipeExtraction": "Prompt ekstrakcji przepisu",
       "recipeExtractionDescription": "Ten prompt jest używany do wyciągania danych przepisu ze stron WWW lub transkryptów wideo.",
       "recipeExtractionPlaceholder": "Wpisz prompt ekstrakcji przepisu...",
+      "imageExtraction": "Prompt ekstrakcji z obrazów",
+      "imageExtractionDescription": "Ten prompt jest używany przy wyodrębnianiu danych przepisu z przesłanych obrazów, np. zdjęć książki kucharskiej lub karty przepisu.",
+      "imageExtractionPlaceholder": "Wpisz prompt ekstrakcji z obrazów...",
       "unitConversion": "Prompt konwersji jednostek",
       "unitConversionDescription": "Ten prompt jest używany do konwersji miar przepisu między systemem metrycznym a US. Dostępne zmienne: sourceSystem, targetSystem, units",
       "unitConversionPlaceholder": "Wpisz prompt konwersji jednostek...",
@@ -626,7 +712,25 @@
       "nutritionEstimationPlaceholder": "Wpisz prompt szacowania wartości odżywczych...",
       "autoTagging": "Prompt automatycznego tagowania",
       "autoTaggingDescription": "Ten prompt jest używany do generowania tagów dla importowanych przepisów. Zdefiniuj reguły tagowania i listę predefiniowanych tagów.",
-      "autoTaggingPlaceholder": "Wpisz prompt automatycznego tagowania..."
+      "autoTaggingPlaceholder": "Wpisz prompt automatycznego tagowania...",
+      "autoCategorization": "Prompt automatycznej kategoryzacji",
+      "autoCategorizationDescription": "Ten prompt jest używany do porządkowania przepisów w kategorie posiłków (śniadanie, obiad, kolacja, przekąska).",
+      "autoCategorizationPlaceholder": "Wpisz prompt automatycznej kategoryzacji...",
+      "allergyDetection": "Prompt wykrywania alergenów",
+      "allergyDetectionDescription": "Ten prompt jest używany do wykrywania skonfigurowanych alergenów gospodarstwa domowego w składnikach przepisu.",
+      "allergyDetectionPlaceholder": "Wpisz prompt wykrywania alergenów...",
+      "recipeProvenance": "Prompt pochodzenia przepisu",
+      "recipeProvenanceDescription": "Ten prompt ustala, skąd pochodzi przepis. Powstała notatka jest napisana w języku samego przepisu. Dostępne zmienne: recipeName, description, ingredients",
+      "recipeProvenancePlaceholder": "Wprowadź prompt pochodzenia przepisu...",
+      "ingredientLinking": "Prompt wiązania składników",
+      "ingredientLinkingDescription": "Używany przy wiązaniu każdego kroku z pozycjami składników, których używa",
+      "ingredientLinkingPlaceholder": "Prompt do wiązania składników z krokami...",
+      "imageGenerationBrief": "Prompt opisu wizualnego",
+      "imageGenerationBriefDescription": "Służy do zamiany przepisu w krótki opis wizualny przed wygenerowaniem obrazu. Przepis jest dołączany po prompcie.",
+      "imageGenerationBriefPlaceholder": "Prompt dla opisu wizualnego...",
+      "imageGenerationStyle": "Prompt stylu obrazu",
+      "imageGenerationStyleDescription": "Wysyłany do modelu obrazów z dołączonym opisem wizualnym. Określa wygląd wspólny dla wszystkich wygenerowanych obrazów.",
+      "imageGenerationStylePlaceholder": "Prompt dla stylu obrazu..."
     },
     "unsavedChanges": "Niezapisane zmiany",
     "jsonEditor": {
@@ -684,8 +788,11 @@
         "auto-tagging": "Auto-tagging",
         "auto-categorization": "Auto-categorization",
         "allergy-detection": "Allergy detection",
+        "recipe-provenance": "Pochodzenie przepisu",
+        "ingredient-linking": "Wiązanie składników",
         "caldav-sync": "CalDAV sync",
-        "scheduled-tasks": "Scheduled tasks"
+        "scheduled-tasks": "Scheduled tasks",
+        "image-generation": "Generowanie obrazów"
       },
       "summary": {
         "failed": "{count} failed"
@@ -740,6 +847,26 @@
         "description": "How many finished jobs to keep per queue for monitoring. Changes require a server restart."
       },
       "pagination": "Page {current} of {total}"
+    },
+    "cuisineVocabulary": {
+      "description": "Kuchnie to wyselekcjonowany słownik, który należy do Ciebie. Nazwy są pokazywane dokładnie tak, jak je tu zapiszesz, we wszystkich językach.",
+      "namePlaceholder": "Nazwa kuchni",
+      "addLabel": "Dodaj kuchnię",
+      "renameLabel": "Zmień nazwę {name}",
+      "deleteLabel": "Usuń {name}",
+      "deleteConfirm": "Usunąć „{name}”? Przepisy, które jej używają, ją stracą.",
+      "empty": "Brak kuchni.",
+      "duplicate": "Kuchnia o tej nazwie już istnieje.",
+      "saveFailed": "Nie udało się zapisać tej kuchni."
+    }
+  },
+  "archiveExport": {
+    "progress": "Eksportowanie… {size}",
+    "errors": {
+      "failedTitle": "Eksport nie udał się",
+      "failedDescription": "Nie udało się pobrać archiwum przepisów. Spróbuj ponownie.",
+      "signedOut": "Twoja sesja wygasła. Zaloguj się ponownie, aby eksportować.",
+      "notAllowed": "Nie masz uprawnień, aby to eksportować."
     }
   }
 }

@@ -1,12 +1,9 @@
 import type { SiteAuthTokenDecryptedDto } from "@norish/shared/contracts/dto/site-auth-tokens";
-import { extractRecipeWithAI } from "@norish/api/ai/recipe-parser";
-import { isVideoUrl } from "@norish/api/helpers";
-import { fetchViaPlaywright } from "@norish/api/parser/fetch";
+import { fetchRenderedPage } from "@norish/api/parser/fetch";
 import { extractRecipeNodesFromJsonLd } from "@norish/api/parser/jsonld";
-import { tryLegacyStructuredRecipeParsing } from "@norish/api/parser/legacy";
 import { adaptRecipeScrapersResponse } from "@norish/api/parser/python/adapter";
 import { callRecipeScrapersParser } from "@norish/api/parser/python/client";
-import { SERVER_CONFIG } from "@norish/config/env-config-server";
+import { extractRecipeWithAI } from "@norish/api/parser/recipe-extraction";
 import {
   getContentIndicators,
   isAIEnabled,
@@ -15,11 +12,7 @@ import {
 } from "@norish/shared-server/config/server-config-loader";
 import { parserLogger as log } from "@norish/shared-server/logger";
 import { FullRecipeInsertDTO } from "@norish/shared/contracts/dto/recipe";
-import { hasRecipeName } from "@norish/shared/lib/helpers";
-
-const parserEnvConfig = SERVER_CONFIG as typeof SERVER_CONFIG & {
-  LEGACY_RECIPE_PARSER_ROLLBACK: boolean;
-};
+import { hasRecipeName, isVideoUrl } from "@norish/shared/lib/helpers";
 
 export interface ParseRecipeResult {
   recipe: FullRecipeInsertDTO;
@@ -49,12 +42,15 @@ function getStructuredFailureMessage(code: string): string {
 
 /**
  * Attempt AI extraction. If requireAI = true, throws when AI is disabled.
+ *
+ * The URL parser is the one consumer that wants a non-throwing outcome: it
+ * falls back to non-AI parsing when AI extraction fails, so the failure is
+ * caught here and answered with null.
  */
 async function tryExtractWithAI(
   input: string,
   recipeId: string,
   url: string,
-  allergies: string[] | undefined,
   requireAI: boolean,
   originalHtml?: string
 ): Promise<FullRecipeInsertDTO | null> {
@@ -69,13 +65,14 @@ async function tryExtractWithAI(
   }
 
   log.info({ url }, "Attempting AI extraction");
-  const result = await extractRecipeWithAI(input, recipeId, url, allergies, originalHtml);
 
-  if (result.success) return result.data;
+  try {
+    return await extractRecipeWithAI(input, recipeId, url, originalHtml);
+  } catch (error) {
+    log.warn({ url, err: error }, "AI extraction failed");
 
-  log.warn({ url, error: result.error, code: result.code }, "AI extraction failed");
-
-  return null;
+    return null;
+  }
 }
 
 /**
@@ -86,7 +83,6 @@ async function extractWithAIPreference(
   html: string,
   recipeId: string,
   url: string,
-  allergies: string[] | undefined,
   requireAI: boolean
 ): Promise<FullRecipeInsertDTO | null> {
   const jsonLdNodes = extractRecipeNodesFromJsonLd(html);
@@ -95,24 +91,17 @@ async function extractWithAIPreference(
     log.info({ url }, "AI: using extracted JSON-LD as input (fewer tokens)");
     const jsonLdInput = JSON.stringify(jsonLdNodes, null, 2);
 
-    const fromJsonLd = await tryExtractWithAI(
-      jsonLdInput,
-      recipeId,
-      url,
-      allergies,
-      requireAI,
-      html
-    );
+    const fromJsonLd = await tryExtractWithAI(jsonLdInput, recipeId, url, requireAI, html);
 
     if (fromJsonLd) return fromJsonLd;
   }
 
   log.info({ url }, "AI: using full HTML as input");
 
-  return tryExtractWithAI(html, recipeId, url, allergies, requireAI, html);
+  return tryExtractWithAI(html, recipeId, url, requireAI, html);
 }
 
-async function tryPythonStructuredParser(
+async function tryStructuredParser(
   url: string,
   html: string,
   recipeId: string
@@ -156,28 +145,6 @@ async function tryPythonStructuredParser(
   }
 }
 
-async function tryStructuredParser(
-  url: string,
-  html: string,
-  recipeId: string
-): Promise<StructuredParseOutcome> {
-  if (parserEnvConfig.LEGACY_RECIPE_PARSER_ROLLBACK) {
-    const legacy = await tryLegacyStructuredRecipeParsing(url, html, recipeId);
-
-    return legacy
-      ? { recipe: legacy, failure: null }
-      : {
-          recipe: null,
-          failure: {
-            code: "LegacyParserNoRecipe",
-            message: "Legacy structured parser did not return a valid recipe",
-          },
-        };
-  }
-
-  return tryPythonStructuredParser(url, html, recipeId);
-}
-
 /**
  * Handles video URL parsing (YouTube, Instagram, TikTok, etc.).
  * Returns ParseRecipeResult if URL is a video, null if not a video URL.
@@ -186,10 +153,16 @@ async function tryStructuredParser(
 async function tryHandleVideoUrl(
   url: string,
   recipeId: string,
-  allergies?: string[],
   tokens?: SiteAuthTokenDecryptedDto[]
 ): Promise<ParseRecipeResult | null> {
   if (!isVideoUrl(url)) return null;
+
+  // Two checks so the failure names the setting that is actually off: a video
+  // recipe is extracted with AI, so with AI disabled the import can only cost
+  // money (download, transcription) before failing.
+  if (!(await isAIEnabled())) {
+    throw new Error("Video imports use AI to extract the recipe, and AI features are not enabled.");
+  }
 
   if (!(await isVideoParsingEnabled())) {
     throw new Error("Video recipe parsing is not enabled.");
@@ -197,7 +170,7 @@ async function tryHandleVideoUrl(
 
   try {
     const { processVideoRecipe } = await import("@norish/api/video/processor");
-    const recipe = await processVideoRecipe(url, recipeId, allergies, tokens);
+    const recipe = await processVideoRecipe(url, recipeId, tokens);
 
     return { recipe, usedAI: true };
   } catch (error: unknown) {
@@ -209,22 +182,21 @@ async function tryHandleVideoUrl(
 export async function parseRecipeFromUrl(
   url: string,
   recipeId: string,
-  allergies?: string[],
   forceAI?: boolean,
   tokens?: SiteAuthTokenDecryptedDto[]
 ): Promise<ParseRecipeResult> {
-  const videoResult = await tryHandleVideoUrl(url, recipeId, allergies, tokens);
+  const videoResult = await tryHandleVideoUrl(url, recipeId, tokens);
 
   if (videoResult) return videoResult;
 
-  const html = await fetchViaPlaywright(url, tokens);
+  const html = await fetchRenderedPage(url, tokens);
 
   if (!html) throw new Error("Cannot fetch recipe page.");
 
   const useAIOnly = Boolean(forceAI || (await shouldAlwaysUseAI()));
 
   if (useAIOnly) {
-    const recipe = await extractWithAIPreference(html, recipeId, url, allergies, true);
+    const recipe = await extractWithAIPreference(html, recipeId, url, true);
 
     if (!recipe) throw new Error("AI extraction failed");
 
@@ -242,12 +214,11 @@ export async function parseRecipeFromUrl(
       {
         url,
         failureCode: structured.failure?.code,
-        legacyRollback: parserEnvConfig.LEGACY_RECIPE_PARSER_ROLLBACK,
       },
       "Structured parsing failed, attempting AI fallback"
     );
 
-    const recipe = await extractWithAIPreference(html, recipeId, url, allergies, false);
+    const recipe = await extractWithAIPreference(html, recipeId, url, false);
 
     if (recipe) return { recipe, usedAI: true };
   }

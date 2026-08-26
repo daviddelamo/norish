@@ -1,10 +1,9 @@
-import type { PointerEvent, Ref } from "react";
-
-import type { IngredientLinkCandidate } from "@norish/shared-react/text";
+import type { PointerEvent } from "react";
 
 import type { ResolvedCookingModeStep } from "./cooking-mode-steps";
 
-export type CookingModeTab = "steps" | "ingredients";
+/** Which of cooking mode's two views is on screen. */
+export type CookingModeView = "steps" | "ingredients";
 
 export type IngredientLike = {
   ingredientName: string;
@@ -14,21 +13,35 @@ export type IngredientLike = {
   order: number;
 };
 
+/** What cooking mode needs to know about the recipe it is cooking. */
+export type CookingModeRecipe = {
+  id: string;
+  name: string;
+  /** The recipe's first image, for the header's thumbnail. */
+  image: string | null;
+  categories: string[];
+  totalMinutes: number | null;
+  servings?: number | null;
+  systemUsed: string;
+};
+
 export type CookingModeDialogProps = {
   activeStep: number;
-  activeTab: CookingModeTab;
+  activeView: CookingModeView;
   displayIngredients: IngredientLike[];
-  recipeId: string;
-  recipeName: string;
-  recipeServings?: number | null;
-  recipeSystemUsed: string;
+  recipe: CookingModeRecipe;
   steps: ResolvedCookingModeStep[];
-  highlightedIngredientKey?: string | null;
-  ingredientListRef?: Ref<HTMLUListElement>;
+  /**
+   * Ready At: the Cooking Session's start plus the recipe's total time,
+   * fixed when cooking mode opened. A projection, never a promise — and
+   * absent entirely for a recipe with no total time.
+   */
+  readyAt: Date | null;
+  areTimersOpen: boolean;
   onClose: () => void;
-  onIngredientPress?: (candidate: IngredientLinkCandidate) => void;
   onPointerDown: (event: PointerEvent) => void;
   onPointerUp: (event: PointerEvent) => void;
   onStepChange: (step: number) => void;
-  onTabChange: (tab: CookingModeTab) => void;
+  onViewChange: (view: CookingModeView) => void;
+  onTimersOpenChange: (open: boolean) => void;
 };

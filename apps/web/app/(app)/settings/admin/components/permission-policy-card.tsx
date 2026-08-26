@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { SettingRow } from "@/app/(app)/settings/components/setting-row";
 import { ShieldCheckIcon } from "@heroicons/react/24/outline";
-import { Card, Label, ListBox, Select } from "@heroui/react";
+import { Card, ListBox, Select } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import type { PermissionLevel } from "@norish/config/zod/server-config";
@@ -94,36 +95,23 @@ export default function PermissionPolicyCard() {
         <p className="text-muted text-base">{t("description")}</p>
 
         <div className="flex flex-col gap-4">
-          {/* View Policy */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-0.5">
-              <span className="font-medium">{t("viewRecipes")}</span>
-              <span className="text-muted text-base">{t("viewDescription")}</span>
-            </div>
+          <SettingRow description={t("viewDescription")} title={t("viewRecipes")}>
             {renderPolicySelect("view", t("viewRecipes"))}
-          </div>
+          </SettingRow>
 
-          {/* Edit Policy */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-0.5">
-              <span className="font-medium">{t("editRecipes")}</span>
-              <span className="text-muted text-base">{t("editDescription")}</span>
-            </div>
+          <SettingRow description={t("editDescription")} title={t("editRecipes")}>
             {renderPolicySelect("edit", t("editRecipes"))}
-          </div>
+          </SettingRow>
 
-          {/* Delete Policy */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-0.5">
-              <span className="font-medium">{t("deleteRecipes")}</span>
-              <span className="text-muted text-base">{t("deleteDescription")}</span>
-            </div>
+          <SettingRow description={t("deleteDescription")} title={t("deleteRecipes")}>
             {renderPolicySelect("delete", t("deleteRecipes"))}
-          </div>
+          </SettingRow>
         </div>
 
+        {/* The note names itself; a hard-coded "Note:" in front of it read as
+            "Note: Note:" and was the one English word on a translated card. */}
         <div className="bg-surface-secondary text-muted mt-2 rounded-lg p-3 text-base">
-          <strong>Note:</strong> {t("note")}
+          {t("note")}
         </div>
       </Card.Content>
     </Card>

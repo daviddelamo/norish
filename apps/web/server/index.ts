@@ -1,4 +1,6 @@
 import { initCaldavSync } from "@norish/api/caldav/event-listener";
+import { initRecipeEnrichmentListener } from "@norish/api/recipes/enrichment-listener";
+import { backfillDishColors } from "@norish/api/startup/backfill-dish-color";
 import { createServer } from "@norish/api/startup/http-server";
 import { runStartupMaintenanceCleanup } from "@norish/api/startup/maintenance-cleanup";
 import { migrateGalleryImages } from "@norish/api/startup/migrate-gallery-images";
@@ -8,6 +10,7 @@ import { seedServerConfig } from "@norish/api/startup/seed-config";
 import { registerShutdownHandlers } from "@norish/api/startup/shutdown";
 import { initializeVideoProcessing } from "@norish/api/startup/video-processing";
 import { initializeServerConfig, SERVER_CONFIG } from "@norish/config/env-config-server";
+import { initializeQueues } from "@norish/queue/registry";
 import { startWorkers } from "@norish/queue/start-workers";
 import { serverLogger as log, redactUrl } from "@norish/shared-server/logger";
 
@@ -34,6 +37,11 @@ async function main() {
   await migrateGalleryImages();
   log.info("-".repeat(50));
 
+  // After the gallery migration, so every image URL it rewrites is already
+  // in the canonical shape the extractor resolves.
+  await backfillDishColors();
+  log.info("-".repeat(50));
+
   await initializeVideoProcessing();
   log.info("-".repeat(50));
 
@@ -44,6 +52,19 @@ async function main() {
 
   initCaldavSync();
   log.info("CalDAV sync service initialized");
+  log.info("-".repeat(50));
+
+  // Queues first: the listener enrolls enrichment the moment it receives an
+  // event, so subscribing before the registry exists gives it a window in which
+  // every kind fails to queue. `startWorkers` initializes them too, and
+  // initialization is idempotent, so this only moves the step earlier.
+  await initializeQueues();
+  log.info("-".repeat(50));
+
+  // Subscribe before any recipe-producing worker or HTTP handler can publish,
+  // and await it, so the server never starts creating recipes while claiming a
+  // listener it does not have.
+  await initRecipeEnrichmentListener();
   log.info("-".repeat(50));
 
   await startWorkers();

@@ -38,6 +38,9 @@
     "backToRecipes": "Tilbake til oppskrifter",
     "viewOriginal": "Se original oppskrift",
     "ingredients": "Ingredienser",
+    "ingredientOptions": "Ingrediensalternativer",
+    "showMore": "Vis mer",
+    "showLess": "Vis mindre",
     "steps": "Fremgangsmåte",
     "notes": "Notater",
     "addToGroceries": "Legg til i handleliste",
@@ -51,7 +54,12 @@
     "instructions": "Fremgangsmåte",
     "cook": "Tilbered",
     "switchToDecimal": "Vis desimaler",
-    "switchToFraction": "Vis brøker"
+    "switchToFraction": "Vis brøker",
+    "servingsCount": "{count, plural, one {# porsjon} other {# porsjoner}}",
+    "source": "Kilde",
+    "addedBy": "Lagt til av {name}",
+    "decreaseServings": "Færre porsjoner",
+    "increaseServings": "Flere porsjoner"
   },
   "actions": {
     "plan": "Planlegg",
@@ -70,7 +78,15 @@
     "estimatingNutrition": "Estimerer næring...",
     "screenOn": "Skjerm på",
     "keepScreenOn": "Hold skjermen på",
-    "actionsLabel": "Handlinger"
+    "actionsLabel": "Handlinger",
+    "autoCategorizing": "Kategoriserer…",
+    "inferProvenance": "Finn opphavet",
+    "inferringProvenance": "Finner opphavet …",
+    "linkIngredients": "Koble ingredienser til trinn",
+    "linkingIngredients": "Kobler ingredienser…",
+    "enrichmentFailed": "Siste forsøk mislyktes",
+    "generateImage": "Generer bilde",
+    "generatingImage": "Genererer bilde…"
   },
   "sharePanel": {
     "title": "Del oppskrift",
@@ -119,7 +135,8 @@
   "convert": {
     "ariaLabel": "Konverter målesystem",
     "toMetric": "Konverter til metrisk",
-    "toUS": "Konverter til amerikansk"
+    "toUS": "Konverter til amerikansk",
+    "converting": "Konverterer…"
   },
   "deleteModal": {
     "title": "Slett oppskrift",
@@ -149,7 +166,7 @@
     "notesPlaceholder": "Legg til forberedelsesnotater, justeringer eller serveringstips til denne oppskriften...",
     "ingredientsHelp": "Skriv ingredienser som \"2 dl mel\" – vi analyserer automatisk mengder og enheter.",
     "instructionsHelp": "Skriv klare trinn-for-trinn-instruksjoner. Trykk Enter for å gå til neste trinn.",
-    "tagsHelp": "Skriv tags og klikk på forslag for å legge til. Valgte tags er blå, nye tags har stiplet kant.",
+    "tagsHelp": "Skriv tags og klikk på forslag for å legge til. Tags på oppskriften er fylte, nye tags har stiplet kant.",
     "tagsAndCategories": "Tags og kategorier",
     "categoriesHelp": "Velg måltidskategorier for denne oppskriften.",
     "category": {
@@ -162,6 +179,16 @@
     "fat": "Fett (g)",
     "carbs": "Karbohydrater (g)",
     "protein": "Protein (g)",
+    "provenance": "Opphav",
+    "provenanceHelp": "Hvor denne oppskriften kommer fra.",
+    "originCountry": "Land",
+    "originCountryPlaceholder": "Ingen land",
+    "originRegion": "Region",
+    "originRegionPlaceholder": "f.eks. Sicilia",
+    "cuisines": "Kjøkken",
+    "cuisinesHelp": "Velg fra listen til installasjonen din. Flere gir mening for en fusjonsrett.",
+    "provenanceNote": "Notat",
+    "provenanceNotePlaceholder": "Noen setninger om hvor denne retten kommer fra …",
     "servings": "Porsjoner",
     "cookingTimes": "Tilberedningstider",
     "optional": "(valgfritt)",
@@ -227,6 +254,23 @@
     "stepPlaceholder": "Trinn {number}: Beskriv trinnet...",
     "stepPlaceholderShort": "Trinn {number}"
   },
+  "stepIngredients": {
+    "rowLabel": "Koblede ingredienser",
+    "addLabel": "Koble ingrediens",
+    "pickerLabel": "Koble en ingrediens til dette trinnet",
+    "shareLabel": "Endre andelen av {name}",
+    "share": {
+      "full": "Hele linjen",
+      "half": "Halvparten",
+      "third": "En tredjedel",
+      "quarter": "En fjerdedel",
+      "custom": "Egendefinert…",
+      "amount": "Mengde…"
+    },
+    "customShareLabel": "Egendefinert andel",
+    "customAmountLabel": "Mengde",
+    "removeLabel": "Fjern {name}"
+  },
   "ingredientInput": {
     "placeholder": "f.eks. 2 dl mel"
   },
@@ -238,12 +282,6 @@
     "ariaLabel": "Hold skjermen på"
   },
   "toasts": {
-    "processingBoth": "Behandler tags og allergener",
-    "processingTags": "Genererer tags",
-    "processingAllergies": "Registrerer allergener",
-    "bothComplete": "Tags og allergener oppdatert",
-    "tagsComplete": "Tags generert",
-    "allergiesComplete": "Allergener registrert",
     "imported": "Oppskrift importert",
     "converted": "Mål konvertert",
     "convertedDescription": "Oppskrift konvertert til {system}-enheter",
@@ -269,6 +307,50 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Sveip for å navigere mellom trinn",
     "swipeIngredients": "Sveip til venstre for ingredienser",
-    "swipeBackToSteps": "Sveip til høyre for trinn"
+    "swipeBackToSteps": "Sveip til høyre for trinn",
+    "readyAt": "Ferdig rundt {time}",
+    "timers": "Tidtakere",
+    "nextStep": "Neste steg"
+  },
+  "enrichment": {
+    "failed": "Berikelse mislyktes",
+    "states": {
+      "queued": "I kø",
+      "processing": "Pågår",
+      "succeeded": "Fullført",
+      "failed": "Siste forsøk mislyktes"
+    },
+    "kinds": {
+      "auto-tagging": "Automatiske tagger",
+      "allergy-detection": "Allergideteksjon",
+      "auto-categorization": "Automatisk kategorisering",
+      "nutrition-estimation": "Estimering av næringsinnhold",
+      "recipe-provenance": "Oppskriftens opphav",
+      "ingredient-linking": "Ingredienskobling",
+      "image-generation": "Bildegenerering"
+    }
+  },
+  "provenance": {
+    "title": "Opphav",
+    "region": "Region",
+    "cuisines": "Kjøkken",
+    "inferring": "Finner ut hvor denne oppskriften kommer fra …",
+    "noInfo": "Ingen opphavsinformasjon ennå",
+    "inferWithAI": "Finn ut med KI"
+  },
+  "import": {
+    "alreadyExists": "Du har allerede denne oppskriften",
+    "openExisting": "Åpne"
+  },
+  "glanceBar": {
+    "totalTime": "Total tid",
+    "servings": "{count, plural, one {porsjon} other {porsjoner}}"
+  },
+  "cookingTime": {
+    "title": "Tilberedningstid",
+    "prep": "Forberedelse",
+    "cook": "Koking",
+    "other": "Annen tid",
+    "total": "Totalt"
   }
 }

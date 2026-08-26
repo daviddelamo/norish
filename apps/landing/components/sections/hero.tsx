@@ -1,129 +1,71 @@
-"use client";
-
-import { ArrowRightIcon } from "@heroicons/react/24/outline";
-import { motion, useReducedMotion } from "motion/react";
-
-import { CTAButton } from "../cta-button";
-import { BrowserFrame, PhoneFrame } from "../frames";
-import { GitHubIcon } from "../icons";
-import { GradientMesh } from "../motion/gradient-mesh";
-import { ThemedShot } from "../themed-shot";
-
+import type { CSSProperties } from "react";
 import { links } from "@/lib/css-tokens";
 
-const ease = [0.22, 1, 0.36, 1] as const;
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 22 },
-  show: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.7, delay: 0.1 + i * 0.09, ease },
-  }),
-};
+import { Action } from "../action";
+import { Drift } from "../drift";
+import { GitHubIcon } from "../icons";
+import { Mark } from "../marks";
+import { Reveal } from "../reveal";
+import { SourceFlow } from "../source-flow";
 
 export function Hero() {
-  const reduce = useReducedMotion();
-  const enter = reduce ? false : "hidden";
-
   return (
-    <section className="relative overflow-hidden px-4 pt-28 pb-20 sm:pt-36 sm:pb-28" id="top">
-      <GradientMesh />
+    <section className="relative px-5 pt-32 pb-20 sm:px-8 sm:pt-40 sm:pb-28" id="top">
+      <div
+        aria-hidden
+        className="hero-wash pointer-events-none absolute inset-x-0 top-0 -z-10 h-160"
+      />
 
-      <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-2 lg:gap-10">
-        {/* Copy */}
-        <div className="mx-auto max-w-xl text-center lg:mx-0 lg:text-left">
-          <motion.h1
-            animate="show"
-            className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl xl:text-6xl"
-            custom={0}
-            initial={enter}
-            variants={fadeUp}
-          >
-            Any <span className="text-accent">recipe</span>,
-            <br className="hidden sm:block" /> any <span className="text-accent">source</span>
-          </motion.h1>
-
-          <motion.p
-            animate="show"
-            className="text-muted mx-auto mt-5 max-w-xl text-base text-pretty sm:text-lg lg:mx-0"
-            custom={1}
-            initial={enter}
-            variants={fadeUp}
-          >
-            Paste a link from any website, blog or app, even a TikTok or YouTube video, and Norish
-            imports it clean and structured in seconds.
-          </motion.p>
-
-          <motion.div
-            animate="show"
-            className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start"
-            custom={2}
-            initial={enter}
-            variants={fadeUp}
-          >
-            <CTAButton className="w-full sm:w-auto" href="#self-host" size="lg">
-              Get started
-              <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </CTAButton>
-            <CTAButton
-              external
-              className="w-full sm:w-auto"
-              href={links.github}
-              size="lg"
-              variant="secondary"
-            >
-              <GitHubIcon className="size-4.5" />
-              View on GitHub
-            </CTAButton>
-          </motion.div>
+      <Drift>
+        {/* Only where there is margin to spare: on a phone the copy fills the
+            width and there is nowhere for one to sit that is not in the way. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 hidden lg:block">
+          <Mark at="top-[25%] left-[6%] size-11" depth={1.2} shape="lemon" turn={15} />
+          <Mark at="top-[18%] right-[8%] size-10" delay={200} depth={-1} shape="sprig" turn={12} />
+          <Mark
+            at="bottom-[13%] left-[10%] size-11"
+            delay={340}
+            depth={-1.4}
+            shape="mushroom"
+            turn={17}
+          />
         </div>
 
-        {/* Device showcase */}
-        <div className="relative mx-auto w-full max-w-xl lg:mx-0 lg:max-w-none">
-          <motion.div
-            animate={reduce ? undefined : { opacity: 1, y: 0, scale: 1 }}
-            className="relative"
-            initial={reduce ? false : { opacity: 0, y: 18, scale: 0.96 }}
-            transition={{ duration: 0.9, delay: 0.4, ease }}
-          >
-            <div
-              aria-hidden
-              className="bg-accent/10 absolute -inset-x-6 -inset-y-8 -z-10 rounded-[2.5rem] blur-3xl"
-            />
+        <div className="mx-auto max-w-2xl text-center">
+          <Reveal>
+            <h1 className="font-serif text-[2.75rem] leading-[1.05] font-medium text-balance sm:text-6xl">
+              Any recipe, any source.
+            </h1>
+          </Reveal>
 
-            <BrowserFrame>
-              <ThemedShot
-                priority
-                alt="The Norish recipe dashboard"
-                base="dashboard-web"
-                className="h-auto w-full"
-                height={1340}
-                sizes="(max-width: 1024px) 100vw, 560px"
-                width={1800}
-              />
-            </BrowserFrame>
-          </motion.div>
+          <Reveal delay={90}>
+            <p className="text-muted mx-auto mt-6 max-w-lg text-base leading-relaxed text-pretty sm:text-lg">
+              A link, video, photo, or plain text. Norish reads it and turns it into a clean,
+              structured recipe for you and everyone you cook with.
+            </p>
+          </Reveal>
 
-          <motion.div
-            animate={reduce ? undefined : { opacity: 1, y: 0, scale: 1 }}
-            className="absolute -right-2 -bottom-8 w-28 sm:w-32 lg:w-40"
-            initial={reduce ? false : { opacity: 0, y: 28, scale: 0.94 }}
-            transition={{ duration: 0.85, delay: 0.85, ease }}
-          >
-            <PhoneFrame>
-              <ThemedShot
-                alt="Norish on mobile"
-                base="dashboard-mobile"
-                className="h-auto w-full"
-                height={1100}
-                sizes="180px"
-                width={555}
-              />
-            </PhoneFrame>
-          </motion.div>
+          <Reveal delay={170}>
+            <div className="mt-9 flex items-center justify-center gap-2">
+              <Action href="#self-host">Get started</Action>
+              <Action external href={links.github} variant="secondary">
+                <GitHubIcon className="size-4" />
+                GitHub
+              </Action>
+            </div>
+          </Reveal>
         </div>
-      </div>
+
+        {/* Two equal halves, so the seam between them — where the strands all
+            meet — is the middle of the page. The sources need less than their
+            half and sit against the seam; the width here is set by the half
+            the recipe wants, not by the half the sources want. */}
+        <Reveal className="mx-auto mt-16 max-w-3xl sm:mt-20 md:max-w-4xl lg:max-w-6xl" delay={250}>
+          <div className="parallax" style={{ "--depth": 0.5 } as CSSProperties}>
+            <SourceFlow />
+          </div>
+        </Reveal>
+      </Drift>
     </section>
   );
 }

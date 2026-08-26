@@ -13,6 +13,10 @@
       "description": "Gerencie sua conta"
     },
     "logout": "Sair",
+    "signOutConfirm": {
+      "title": "Descartar alterações não sincronizadas?",
+      "description": "{count, plural, one {# alteração feita offline ainda não chegou ao servidor.} other {# alterações feitas offline ainda não chegaram ao servidor.}} Ao sair, esse trabalho pendente será descartado permanentemente e os dados offline da sua conta serão removidos deste dispositivo."
+    },
     "version": {
       "updateAvailable": "v{version} disponível"
     }
@@ -38,13 +42,22 @@
     "uploading": "Enviando…",
     "uploadFile": "Enviar um arquivo",
     "dragDrop": "ou arraste e solte",
-    "formats": ".melarecipes (Mela), .paprikarecipes (Paprika), .zip (Mealie/Tandoor)",
+    "formats": ".norishrecipes (Norish), .melarecipes (Mela), .paprikarecipes (Paprika), .zip (Mealie/Tandoor)",
+    "dropzoneLabel": "Enviar um arquivo de receitas",
     "uploadingFile": "Enviando arquivo…",
     "processing": "Processando: {details}",
     "complete": "Concluído: {details}",
     "imported": "{count} importadas",
-    "skipped": "{count} ignoradas",
-    "errors": "{count} erros",
-    "ofTotal": "{current} de {total}"
+    "errors": "{count, plural, one {# erro} other {# erros}}",
+    "ofTotal": "{current} de {total}",
+    "progressLabel": "Progresso da importação",
+    "showNotes": "Mostrar {count, plural, one {# nota de importação} other {# notas de importação}}",
+    "hideNotes": "Ocultar {count, plural, one {# nota de importação} other {# notas de importação}}",
+    "toasts": {
+      "startTitle": "Importação de receitas iniciada",
+      "startDescription": "{count, plural, one {Importando # receita…} other {Importando # receitas…}}",
+      "completeTitle": "Importação de receitas concluída",
+      "completeDescription": "{imported, plural, one {# receita importada} other {# receitas importadas}}{notes, plural, =0 {} one {, # com uma nota} other {, # com notas}}{errors, plural, =0 {} one {, # erro} other {, # erros}}"
+    }
   }
 }

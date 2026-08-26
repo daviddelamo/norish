@@ -246,6 +246,55 @@
       "when": 1777204800000,
       "tag": "0034_loosen_step_order_constraint",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1785422267982,
+      "tag": "0035_recipe_cuisines",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1785423220226,
+      "tag": "0036_recipe_provenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1785425822049,
+      "tag": "0037_cuisine_leaves_tags",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1785698527153,
+      "tag": "0038_provenance_country_name",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1785709646509,
+      "tag": "0039_step_ingredients",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1787304565820,
+      "tag": "0040_dish_color",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1787351370601,
+      "tag": "0041_generated_recipe_images",
+      "breakpoints": true
     }
   ]
 }

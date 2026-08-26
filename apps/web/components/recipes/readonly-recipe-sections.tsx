@@ -1,6 +1,7 @@
 "use client";
 
 import AuthorChip from "@/components/recipes/author-chip";
+import OriginFlag from "@/components/recipes/origin-flag";
 import MediaCarousel, { buildMediaItems } from "@/components/shared/media-carousel";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
 import {
@@ -45,6 +46,8 @@ type RecipeSummaryLike = RecipeMediaLike & {
   totalMinutes: number | null;
   tags: RecipeTagLike[];
   author?: { id?: string; name?: string | null; image?: string | null } | null;
+  /** Alpha-2, so the flag and its label are resolved at render time. */
+  originCountry?: string | null;
 };
 
 type ReadonlyRecipeSummaryProps = {
@@ -63,6 +66,11 @@ type ReadonlyRecipeMediaProps = {
   className?: string;
   mediaClassName?: string;
   rounded?: boolean;
+  /**
+   * The author chip drawn on the photo when nothing else claims the top-left
+   * slot. Off where the header underneath already names the author.
+   */
+  showAuthorFallback?: boolean;
   topLeftContent?: React.ReactNode;
   topRightContent?: React.ReactNode;
   bottomRightContent?: React.ReactNode;
@@ -81,6 +89,7 @@ export function ReadonlyRecipeMedia({
   className = "",
   mediaClassName = "",
   rounded = false,
+  showAuthorFallback = true,
   topLeftContent,
   topRightContent,
   bottomRightContent,
@@ -102,7 +111,7 @@ export function ReadonlyRecipeMedia({
         <div className="absolute right-4 bottom-8 z-50">{bottomRightContent}</div>
       )}
 
-      {!topLeftContent && recipe.author && (
+      {showAuthorFallback && !topLeftContent && recipe.author && (
         <div className="absolute top-4 left-4 z-50">
           <AuthorChip
             image={recipe.author.image}
@@ -130,6 +139,7 @@ export function ReadonlyRecipeSummary({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl leading-tight font-bold">
+            <OriginFlag className="mr-2" originCountry={recipe.originCountry} />
             {recipe.name}
             {recipe.url && (
               <Link
@@ -205,7 +215,7 @@ export function ReadonlyRecipeSummary({
                 key={tag.name}
                 className={isAllergen ? "bg-warning text-warning-foreground" : ""}
                 size="sm"
-                variant="soft"
+                variant="tertiary"
               >
                 {tag.name}
               </Chip>

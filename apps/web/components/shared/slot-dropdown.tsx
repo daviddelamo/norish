@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { usePanelPortalContainer } from "@/components/Panel/Panel";
 import { Dropdown, Label } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
@@ -11,10 +12,12 @@ type SlotDropdownProps = {
 };
 export function SlotDropdown({ children, onSelectSlot, ariaLabel }: SlotDropdownProps) {
   const t = useTranslations("common.slots");
+  const portalContainer = usePanelPortalContainer();
+
   return (
     <Dropdown>
       {children}
-      <Dropdown.Popover className="bg-overlay">
+      <Dropdown.Popover UNSTABLE_portalContainer={portalContainer} className="bg-overlay">
         <Dropdown.Menu
           aria-label={ariaLabel ?? t("chooseSlot")}
           onAction={(slot) => onSelectSlot(slot as Slot)}

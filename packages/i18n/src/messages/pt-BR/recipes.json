@@ -38,6 +38,9 @@
     "backToRecipes": "Voltar para receitas",
     "viewOriginal": "Ver receita original",
     "ingredients": "Ingredientes",
+    "ingredientOptions": "Opções de ingredientes",
+    "showMore": "Mostrar mais",
+    "showLess": "Mostrar menos",
     "steps": "Etapas",
     "notes": "Notas",
     "addToGroceries": "Adicionar à lista de compras",
@@ -51,7 +54,12 @@
     "instructions": "Instruções",
     "cook": "Cozinhar",
     "switchToDecimal": "Mostrar decimais",
-    "switchToFraction": "Mostrar frações"
+    "switchToFraction": "Mostrar frações",
+    "servingsCount": "{count, plural, one {# porção} other {# porções}}",
+    "source": "Fonte",
+    "addedBy": "Adicionado por {name}",
+    "decreaseServings": "Menos porções",
+    "increaseServings": "Mais porções"
   },
   "actions": {
     "plan": "Planejar",
@@ -70,7 +78,15 @@
     "estimatingNutrition": "Estimando nutrição...",
     "screenOn": "Tela ligada",
     "keepScreenOn": "Manter tela ligada",
-    "actionsLabel": "Ações"
+    "actionsLabel": "Ações",
+    "autoCategorizing": "Categorizando…",
+    "inferProvenance": "Descobrir a procedência",
+    "inferringProvenance": "Descobrindo a procedência…",
+    "linkIngredients": "Vincular ingredientes às etapas",
+    "linkingIngredients": "Vinculando ingredientes…",
+    "enrichmentFailed": "A última execução falhou",
+    "generateImage": "Gerar imagem",
+    "generatingImage": "Gerando imagem…"
   },
   "sharePanel": {
     "title": "Compartilhar receita",
@@ -119,7 +135,8 @@
   "convert": {
     "ariaLabel": "Converter sistema de medidas",
     "toMetric": "Converter para métrico",
-    "toUS": "Converter para unidades dos EUA"
+    "toUS": "Converter para unidades dos EUA",
+    "converting": "Convertendo…"
   },
   "deleteModal": {
     "title": "Excluir receita",
@@ -149,7 +166,7 @@
     "notesPlaceholder": "Adicione notas de preparo, ajustes ou dicas de como servir esta receita...",
     "ingredientsHelp": "Digite ingredientes como \"2 xícaras de farinha\" - vamos analisar automaticamente quantidades e unidades.",
     "instructionsHelp": "Escreva instruções claras passo a passo. Pressione Enter para passar para a próxima etapa.",
-    "tagsHelp": "Digite tags e clique nas sugestões para adicionar. Tags selecionadas são azuis, novas tags têm uma borda tracejada.",
+    "tagsHelp": "Digite tags e clique nas sugestões para adicionar. As tags da receita são preenchidas, novas tags têm uma borda tracejada.",
     "tagsAndCategories": "Tags e categorias",
     "categoriesHelp": "Selecione categorias de refeição para esta receita.",
     "category": {
@@ -162,6 +179,16 @@
     "fat": "Gordura (g)",
     "carbs": "Carboidratos (g)",
     "protein": "Proteína (g)",
+    "provenance": "Procedência",
+    "provenanceHelp": "De onde vem esta receita.",
+    "originCountry": "País",
+    "originCountryPlaceholder": "Sem país",
+    "originRegion": "Região",
+    "originRegionPlaceholder": "ex.: Sicília",
+    "cuisines": "Culinárias",
+    "cuisinesHelp": "Escolha da lista da sua instalação. Várias fazem sentido em um prato fusion.",
+    "provenanceNote": "Nota",
+    "provenanceNotePlaceholder": "Algumas frases sobre de onde vem este prato…",
     "servings": "Porções",
     "cookingTimes": "Tempos de preparo",
     "optional": "(opcional)",
@@ -227,6 +254,23 @@
     "stepPlaceholder": "Etapa {number}: Descreva a etapa...",
     "stepPlaceholderShort": "Etapa {number}"
   },
+  "stepIngredients": {
+    "rowLabel": "Ingredientes vinculados",
+    "addLabel": "Vincular ingrediente",
+    "pickerLabel": "Vincule um ingrediente a esta etapa",
+    "shareLabel": "Alterar a parte de {name}",
+    "share": {
+      "full": "Linha inteira",
+      "half": "Metade",
+      "third": "Um terço",
+      "quarter": "Um quarto",
+      "custom": "Personalizada…",
+      "amount": "Quantidade…"
+    },
+    "customShareLabel": "Parte personalizada",
+    "customAmountLabel": "Quantidade",
+    "removeLabel": "Remover {name}"
+  },
   "ingredientInput": {
     "placeholder": "ex.: 2 xícaras de farinha"
   },
@@ -238,12 +282,6 @@
     "ariaLabel": "Manter tela ligada"
   },
   "toasts": {
-    "processingBoth": "Processando tags e alergias",
-    "processingTags": "Gerando tags",
-    "processingAllergies": "Detectando alergias",
-    "bothComplete": "Tags e alergias atualizadas",
-    "tagsComplete": "Tags geradas",
-    "allergiesComplete": "Alergias detectadas",
     "imported": "Receita importada",
     "converted": "Medidas convertidas",
     "convertedDescription": "Receita convertida para o sistema {system}",
@@ -269,6 +307,50 @@
     "stepCounter": "{current} / {total}",
     "swipeSteps": "Deslize para navegar pelas etapas",
     "swipeIngredients": "Deslize para a esquerda para ver os ingredientes",
-    "swipeBackToSteps": "Deslize para a direita para ver as etapas"
+    "swipeBackToSteps": "Deslize para a direita para ver as etapas",
+    "readyAt": "Pronto por volta das {time}",
+    "timers": "Temporizadores",
+    "nextStep": "Próximo passo"
+  },
+  "enrichment": {
+    "failed": "Falha no enriquecimento",
+    "states": {
+      "queued": "Na fila",
+      "processing": "Em andamento",
+      "succeeded": "Concluído",
+      "failed": "A última execução falhou"
+    },
+    "kinds": {
+      "auto-tagging": "Marcação automática",
+      "allergy-detection": "Detecção de alergias",
+      "auto-categorization": "Categorização automática",
+      "nutrition-estimation": "Estimativa nutricional",
+      "recipe-provenance": "Procedência da receita",
+      "ingredient-linking": "Vinculação de ingredientes",
+      "image-generation": "Geração de imagens"
+    }
+  },
+  "provenance": {
+    "title": "Procedência",
+    "region": "Região",
+    "cuisines": "Culinárias",
+    "inferring": "Descobrindo de onde vem esta receita…",
+    "noInfo": "Ainda sem informações de procedência",
+    "inferWithAI": "Descobrir com IA"
+  },
+  "import": {
+    "alreadyExists": "Você já tem esta receita",
+    "openExisting": "Abrir"
+  },
+  "glanceBar": {
+    "totalTime": "Tempo total",
+    "servings": "{count, plural, one {porção} other {porções}}"
+  },
+  "cookingTime": {
+    "title": "Tempo de cozinha",
+    "prep": "Preparo",
+    "cook": "Cozimento",
+    "other": "Outro tempo",
+    "total": "Total"
   }
 }

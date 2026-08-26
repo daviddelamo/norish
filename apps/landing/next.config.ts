@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
   basePath: basePath || undefined,
   assetPrefix: basePath || undefined,
   transpilePackages: ["@norish/tailwind-config"],
+  // Reaching `next dev` by machine name rather than localhost is a cross-origin
+  // request, and Next refuses to serve dev resources to one by default. The
+  // page still arrives, but its scripts do not, and every scroll reveal is left
+  // hidden — a blank page. Dev only; the static export has no such check.
+  allowedDevOrigins: ["*.local", "mac-mini.local"],
   turbopack: {
     root: resolve(configDirectory, "../.."),
   },

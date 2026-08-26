@@ -13,9 +13,9 @@ import {
   deleteRecipeById,
   getRecipeFull,
   getRecipeOwnerId,
-  getRecipesWithoutCategories,
   listRecipes,
   updateRecipeCategories,
+  updateRecipeWithRefs,
 } from "../mocks/recipes-repository";
 // Import test utilities
 import {
@@ -42,7 +42,6 @@ vi.mock("@norish/db", async (importOriginal) => {
     getRecipeFull: recipes.getRecipeFull,
     getRecipeOwnerId: recipes.getRecipeOwnerId,
     getRecipesByUrlsForPolicy: vi.fn(),
-    getRecipesWithoutCategories: recipes.getRecipesWithoutCategories,
     listRecipes: recipes.listRecipes,
     recipeExistsByUrlForPolicy: vi.fn(),
     updateRecipeCategories: recipes.updateRecipeCategories,
@@ -53,6 +52,23 @@ vi.mock("@norish/db/repositories/recipes", () => import("../mocks/recipes-reposi
 vi.mock("@norish/auth/permissions", () => import("../mocks/permissions"));
 vi.mock("@norish/trpc/routers/recipes/emitter", () => import("../mocks/recipe-emitter"));
 vi.mock("@norish/shared-server/config/server-config-loader", () => import("../mocks/config"));
+
+// The Dish Colour helpers are pinned by their own suite
+// (shared-server __tests__/media/dish-color.test.ts); here they return a
+// sentinel so the tests can prove the router threads them into the writes.
+// The literal is repeated inside the factory because vi.mock hoists above
+// any file-body binding.
+const EXTRACTED_DISH_COLOR = "#a1b2c3";
+
+vi.mock("@norish/shared-server/media/dish-color", () => ({
+  withDishColor: vi.fn(async (dto: Record<string, unknown>) => ({
+    ...dto,
+    dishColor: "#a1b2c3",
+  })),
+  withDishColorForUpdate: vi.fn(async (data: Record<string, unknown>) =>
+    data.image !== undefined || data.images !== undefined ? { ...data, dishColor: "#a1b2c3" } : data
+  ),
+}));
 
 // Create a test tRPC instance
 const t = initTRPC.context<ReturnType<typeof createMockAuthedContext>>().create({
@@ -92,6 +108,7 @@ describe("recipes procedures", () => {
           systemUsed: "metric",
           order: 0,
           images: [],
+          stepIngredients: [],
           version: 1,
         },
       ],
@@ -507,7 +524,7 @@ describe("recipes procedures", () => {
     it("returns recipe ID and emits created event on success", async () => {
       const mockDashboard = createMockRecipeDashboard({ name: "New Recipe" });
 
-      createRecipeWithRefs.mockResolvedValue("new-recipe-id");
+      createRecipeWithRefs.mockResolvedValue({ status: "inserted", recipeId: "new-recipe-id" });
       dashboardRecipe.mockResolvedValue(mockDashboard);
 
       const testRouter = t.router({
@@ -597,27 +614,6 @@ describe("recipes procedures", () => {
         recipe: expect.objectContaining({ id: "recipe-1" }),
       });
       expect(result).toEqual({ success: true });
-    });
-
-    it("returns only recipes without categories", async () => {
-      const expected = [
-        { id: "recipe-1", name: "No Categories" },
-        { id: "recipe-2", name: "Still Empty" },
-      ];
-
-      getRecipesWithoutCategories.mockResolvedValue(expected);
-
-      const testRouter = t.router({
-        listWithoutCategories: t.procedure
-          .input((v: any) => v)
-          .query(async () => getRecipesWithoutCategories()),
-      });
-
-      const caller = t.createCallerFactory(testRouter)(ctx);
-      const result = await caller.listWithoutCategories(undefined);
-
-      expect(getRecipesWithoutCategories).toHaveBeenCalled();
-      expect(result).toEqual(expected);
     });
   });
 
@@ -745,6 +741,72 @@ describe("recipes procedures", () => {
       expect(canAccessResource).not.toHaveBeenCalled();
       expect(deleteRecipeById).toHaveBeenCalledWith("orphan-recipe");
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe("Dish Colour store paths", () => {
+    const recipeImage = "/recipes/44444444-4444-4444-8444-444444444444/photo.jpg";
+
+    function createCaller() {
+      return recipesRouter.createCaller({
+        ...ctx,
+        connectionId: null,
+        multiplexer: null,
+        operationId: null,
+      });
+    }
+
+    it("a create carrying an image stores the extracted Dish Colour (upload path)", async () => {
+      createRecipeWithRefs.mockResolvedValue({ status: "inserted", recipeId: "new-id" });
+      dashboardRecipe.mockResolvedValue(null);
+
+      await createCaller().create({ name: "Uploaded", image: recipeImage });
+
+      await vi.waitFor(() => expect(createRecipeWithRefs).toHaveBeenCalled());
+      expect(createRecipeWithRefs).toHaveBeenCalledWith(
+        expect.any(String),
+        ctx.user.id,
+        expect.objectContaining({ image: recipeImage, dishColor: EXTRACTED_DISH_COLOR })
+      );
+    });
+
+    it("an edit replacing the image recomputes the Dish Colour", async () => {
+      getRecipeOwnerId.mockResolvedValue(ctx.user.id);
+      canAccessResource.mockResolvedValue(true);
+      updateRecipeWithRefs.mockResolvedValue({ stale: false });
+      getRecipeFull.mockResolvedValue(null);
+
+      await createCaller().update({
+        id: "55555555-5555-4555-8555-555555555555",
+        data: { image: recipeImage },
+        version: 1,
+      });
+
+      await vi.waitFor(() => expect(updateRecipeWithRefs).toHaveBeenCalled());
+      expect(updateRecipeWithRefs).toHaveBeenCalledWith(
+        "55555555-5555-4555-8555-555555555555",
+        ctx.user.id,
+        expect.objectContaining({ image: recipeImage, dishColor: EXTRACTED_DISH_COLOR }),
+        1
+      );
+    });
+
+    it("an edit that does not touch the media says nothing about the colour", async () => {
+      getRecipeOwnerId.mockResolvedValue(ctx.user.id);
+      canAccessResource.mockResolvedValue(true);
+      updateRecipeWithRefs.mockResolvedValue({ stale: false });
+      getRecipeFull.mockResolvedValue(null);
+
+      await createCaller().update({
+        id: "55555555-5555-4555-8555-555555555555",
+        data: { name: "Renamed only" },
+        version: 1,
+      });
+
+      await vi.waitFor(() => expect(updateRecipeWithRefs).toHaveBeenCalled());
+      const payload = updateRecipeWithRefs.mock.calls[0]?.[2] as Record<string, unknown>;
+
+      expect("dishColor" in payload).toBe(false);
     });
   });
 });

@@ -80,6 +80,7 @@
     "placeholder": "f.eks. 1 kg kyllingebryst",
     "editPlaceholder": "f.eks. mælk hver uge",
     "servings": "Portioner",
+    "selectedCount": "{selected} af {total} valgt",
     "loadingIngredients": "Indlæser ingredienser...",
     "noIngredients": "Ingen ingredienser.",
     "addSelectedToGroceries": "Tilføj til indkøbsliste",

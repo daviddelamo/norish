@@ -22,7 +22,7 @@ import {
   getConfigSecret,
   setConfig,
 } from "../mocks/server-config";
-import { getUserServerRole, isUserServerAdmin } from "../mocks/users";
+import { isUserServerAdmin } from "../mocks/users";
 import {
   createMockAdminContext,
   createMockAdminUser,
@@ -67,7 +67,6 @@ const adminMiddleware = t.middleware(async ({ ctx, next }) => {
 });
 
 const adminProcedure = t.procedure.use(adminMiddleware);
-const authedProcedure = t.procedure;
 
 describe("admin procedures", () => {
   const mockUser = createMockUser();
@@ -119,27 +118,6 @@ describe("admin procedures", () => {
     });
   });
 
-  describe("getUserRole", () => {
-    it("returns user role for any authenticated user", async () => {
-      const ctx = createMockAuthedContext(mockUser);
-      const mockRole = { isOwner: false, isAdmin: false };
-
-      getUserServerRole.mockResolvedValue(mockRole);
-
-      const testRouter = t.router({
-        getUserRole: authedProcedure.query(async () => {
-          return getUserServerRole(ctx.user.id);
-        }),
-      });
-
-      const caller = t.createCallerFactory(testRouter)(ctx);
-      const result = await caller.getUserRole();
-
-      expect(result).toEqual(mockRole);
-      expect(getUserServerRole).toHaveBeenCalledWith(mockUser.id);
-    });
-  });
-
   describe("updateRegistration", () => {
     it("updates registration setting for admin users", async () => {
       const ctx = createMockAdminContext(mockAdmin);
@@ -177,9 +155,18 @@ describe("admin procedures", () => {
         temperature: 0.7,
         maxTokens: 4096,
         timeoutMs: 300000,
-        autoTagAllergies: true,
         alwaysUseAI: false,
-        autoTaggingMode: "disabled" as const,
+        tagStrategy: "predefined" as const,
+        cuisineStrategy: "existing" as const,
+        automaticEnrichment: {
+          autoTagging: false,
+          allergyDetection: true,
+          autoCategorization: false,
+          nutritionEstimation: false,
+          recipeProvenance: false,
+          ingredientLinking: false,
+          imageGeneration: false,
+        },
       };
 
       // Current config has enabled: false
@@ -228,9 +215,16 @@ describe("admin procedures", () => {
         temperature: 0.7,
         maxTokens: 4096,
         timeoutMs: 300000,
-        autoTagAllergies: true,
         alwaysUseAI: false,
-        autoTaggingMode: "disabled" as const,
+        tagStrategy: "predefined" as const,
+        cuisineStrategy: "existing" as const,
+        automaticEnrichment: {
+          autoTagging: false,
+          allergyDetection: true,
+          autoCategorization: false,
+          nutritionEstimation: false,
+          recipeProvenance: false,
+        },
       };
 
       // Current config also has enabled: false

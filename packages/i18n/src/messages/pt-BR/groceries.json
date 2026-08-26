@@ -80,6 +80,7 @@
     "placeholder": "ex.: 2 kg de peito de frango",
     "editPlaceholder": "ex.: leite toda semana",
     "servings": "Porções",
+    "selectedCount": "{selected} de {total} selecionados",
     "loadingIngredients": "Carregando ingredientes...",
     "noIngredients": "Nenhum ingrediente.",
     "addSelectedToGroceries": "Adicionar à lista de compras",
