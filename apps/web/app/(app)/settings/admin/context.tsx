@@ -13,8 +13,11 @@ import type {
   AuthProviderOIDC,
   AuthProviderOIDCInput,
   ContentIndicatorsConfig,
+  DecisionConfig,
   I18nLocaleConfig,
   ImageGenerationConfig,
+  IngredientPermissionPolicy,
+  IngredientWordsMap,
   PromptsConfig,
   PromptsConfigInput,
   RecipePermissionPolicy,
@@ -37,12 +40,15 @@ interface AdminSettingsContextValue {
   authProviderGoogle: AuthProviderGoogle | undefined;
   contentIndicators: ContentIndicatorsConfig | undefined;
   units: UnitsMap | undefined;
+  ingredientWords: IngredientWordsMap | undefined;
   recurrenceConfig: RecurrenceConfig | undefined;
   aiConfig: AIConfig | undefined;
   videoConfig: VideoConfig | undefined;
   imageGenerationConfig: ImageGenerationConfig | undefined;
+  decisionConfig: DecisionConfig | undefined;
   schedulerCleanupMonths: number | undefined;
   recipePermissionPolicy: RecipePermissionPolicy | undefined;
+  ingredientPermissionPolicy: IngredientPermissionPolicy | undefined;
   prompts: PromptsConfig | undefined;
   timerKeywords: TimerKeywordsConfig | undefined;
 
@@ -70,12 +76,14 @@ interface AdminSettingsContextValue {
   ) => Promise<{ success: boolean; error?: string }>;
   updateContentIndicators: (json: string) => Promise<{ success: boolean; error?: string }>;
   updateUnits: (json: string) => Promise<{ success: boolean; error?: string }>;
+  updateIngredientWords: (json: string) => Promise<{ success: boolean; error?: string }>;
   updateRecurrenceConfig: (json: string) => Promise<{ success: boolean; error?: string }>;
   updateAIConfig: (config: AIConfig) => Promise<{ success: boolean; error?: string }>;
   updateVideoConfig: (config: VideoConfig) => Promise<{ success: boolean; error?: string }>;
   updateImageGenerationConfig: (
     config: ImageGenerationConfig
   ) => Promise<{ success: boolean; error?: string }>;
+  updateDecisionConfig: (config: DecisionConfig) => Promise<{ success: boolean; error?: string }>;
   updatePrompts: (config: PromptsConfigInput) => Promise<{ success: boolean; error?: string }>;
   updateTimerKeywords: (
     config: TimerKeywordsInput
@@ -84,6 +92,9 @@ interface AdminSettingsContextValue {
   updateRecipePermissionPolicy: (
     policy: RecipePermissionPolicy
   ) => Promise<{ success: boolean; error?: string }>;
+  updateIngredientPermissionPolicy: (
+    policy: IngredientPermissionPolicy
+  ) => Promise<{ success: boolean; error?: string }>;
   restoreDefaultConfig: (key: string) => Promise<{ success: boolean; error?: string }>;
   testAuthProvider: (
     type: "oidc" | "github" | "google",
@@ -91,6 +102,9 @@ interface AdminSettingsContextValue {
   ) => Promise<{ success: boolean; error?: string }>;
   testAIEndpoint: (
     config: Pick<AIConfig, "provider" | "endpoint" | "apiKey">
+  ) => Promise<{ success: boolean; error?: string }>;
+  testDecisionEndpoint: (
+    config: Pick<DecisionConfig, "provider" | "apiKey" | "model" | "endpoint">
   ) => Promise<{ success: boolean; error?: string }>;
   restartServer: () => Promise<void>;
 
@@ -124,16 +138,23 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
   const unitsConfig = configs[ServerConfigKeys.UNITS] as
     { units: UnitsMap; isOverridden: boolean } | undefined;
   const units = unitsConfig?.units;
+  const ingredientWords = (
+    configs[ServerConfigKeys.INGREDIENT_WORDS] as
+      { words: IngredientWordsMap; isOverridden: boolean } | undefined
+  )?.words;
   const recurrenceConfig = configs[ServerConfigKeys.RECURRENCE_CONFIG] as
     RecurrenceConfig | undefined;
   const aiConfig = configs[ServerConfigKeys.AI_CONFIG] as AIConfig | undefined;
   const videoConfig = configs[ServerConfigKeys.VIDEO_CONFIG] as VideoConfig | undefined;
   const imageGenerationConfig = configs[ServerConfigKeys.IMAGE_GENERATION_CONFIG] as
     ImageGenerationConfig | undefined;
+  const decisionConfig = configs[ServerConfigKeys.DECISION_CONFIG] as DecisionConfig | undefined;
   const schedulerCleanupMonths = configs[ServerConfigKeys.SCHEDULER_CLEANUP_MONTHS] as
     number | undefined;
   const recipePermissionPolicy = configs[ServerConfigKeys.RECIPE_PERMISSION_POLICY] as
     RecipePermissionPolicy | undefined;
+  const ingredientPermissionPolicy = configs[ServerConfigKeys.INGREDIENT_PERMISSION_POLICY] as
+    IngredientPermissionPolicy | undefined;
   const prompts = configs[ServerConfigKeys.PROMPTS] as PromptsConfig | undefined;
   const timerKeywords = configs[ServerConfigKeys.TIMER_KEYWORDS] as TimerKeywordsConfig | undefined;
 
@@ -201,6 +222,13 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
     [mutations]
   );
 
+  const updateIngredientWordsConfig = useCallback(
+    async (json: string) => {
+      return mutations.updateIngredientWords(json);
+    },
+    [mutations]
+  );
+
   const updateRecurrence = useCallback(
     async (json: string) => {
       return mutations.updateRecurrenceConfig(json);
@@ -225,6 +253,13 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
   const updateImageGeneration = useCallback(
     async (config: ImageGenerationConfig) => {
       return mutations.updateImageGenerationConfig(config);
+    },
+    [mutations]
+  );
+
+  const updateDecision = useCallback(
+    async (config: DecisionConfig) => {
+      return mutations.updateDecisionConfig(config);
     },
     [mutations]
   );
@@ -257,6 +292,13 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
     [mutations]
   );
 
+  const updateIngredientPolicy = useCallback(
+    async (policy: IngredientPermissionPolicy) => {
+      return mutations.updateIngredientPermissionPolicy(policy);
+    },
+    [mutations]
+  );
+
   const restoreDefault = useCallback(
     async (key: string) => {
       return mutations.restoreDefault(key as ServerConfigKey);
@@ -274,6 +316,13 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
   const testAI = useCallback(
     async (config: Pick<AIConfig, "provider" | "endpoint" | "apiKey">) => {
       return mutations.testAIEndpoint(config);
+    },
+    [mutations]
+  );
+
+  const testDecision = useCallback(
+    async (config: Pick<DecisionConfig, "provider" | "apiKey" | "model" | "endpoint">) => {
+      return mutations.testDecisionEndpoint(config);
     },
     [mutations]
   );
@@ -302,12 +351,15 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
     authProviderGoogle,
     contentIndicators,
     units,
+    ingredientWords,
     recurrenceConfig,
     aiConfig,
     videoConfig,
     imageGenerationConfig,
+    decisionConfig,
     schedulerCleanupMonths,
     recipePermissionPolicy,
+    ingredientPermissionPolicy,
     prompts,
     timerKeywords,
     isLoading,
@@ -320,17 +372,21 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
     deleteAuthProvider: deleteProvider,
     updateContentIndicators: updateContent,
     updateUnits: updateUnitsConfig,
+    updateIngredientWords: updateIngredientWordsConfig,
     updateRecurrenceConfig: updateRecurrence,
     updateAIConfig: updateAI,
     updateVideoConfig: updateVideo,
     updateImageGenerationConfig: updateImageGeneration,
+    updateDecisionConfig: updateDecision,
     updatePrompts: updatePromptsConfig,
     updateTimerKeywords: updateTimerKeywordsConfig,
     updateSchedulerMonths: updateScheduler,
     updateRecipePermissionPolicy: updatePermissionPolicy,
+    updateIngredientPermissionPolicy: updateIngredientPolicy,
     restoreDefaultConfig: restoreDefault,
     testAuthProvider: testAuth,
     testAIEndpoint: testAI,
+    testDecisionEndpoint: testDecision,
     restartServer: restart,
     fetchConfigSecret: fetchSecret,
     refresh,

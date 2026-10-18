@@ -1,9 +1,11 @@
 {
   "dashboard": {
-    "title": "Toutes les recettes",
+    "libraryTitle": "Votre bibliothèque",
+    "recipesTitle": "Vos recettes",
+    "cookbooksTitle": "Vos livres de cuisine",
     "searchPlaceholder": "Rechercher ou ajouter une recette...",
     "searchRecipesPlaceholder": "Rechercher des recettes...",
-    "recipeCount": "{count, plural, one {# recette} other {# recettes}}",
+    "libraryCount": "{count, plural, one {# élément} other {# éléments}}",
     "addRecipe": "Ajouter une recette",
     "importFromUrl": "URL",
     "importFromPaste": "Coller",
@@ -19,13 +21,29 @@
       "label": "Vue des recettes",
       "grid": "Grille",
       "list": "Liste"
+    },
+    "libraryType": {
+      "label": "Afficher",
+      "all": "Tout",
+      "recipes": "Recettes",
+      "cookbooks": "Livres de cuisine"
     }
   },
+  "back": {
+    "all": "Retour à la bibliothèque",
+    "recipes": "Retour aux recettes",
+    "cookbooks": "Retour aux livres de cuisine",
+    "named": "Retour à {name}",
+    "cookbook": "Retour au livre",
+    "generic": "Retour"
+  },
   "empty": {
-    "title": "Votre collection de recettes vous attend",
+    "title": "Votre bibliothèque vous attend",
     "description": "Collez une URL de recette dans le champ de recherche ci-dessus et laissez opérer la magie.",
     "noResults": "Aucune recette trouvée",
-    "noResultsHint": "Essayez d’ajuster ou de réinitialiser vos filtres."
+    "noResultsHint": "Essayez d’ajuster ou de réinitialiser vos filtres.",
+    "noCookbooks": "Aucun livre de cuisine pour l’instant",
+    "noCookbooksHint": "Un livre de cuisine est un ensemble de recettes intitulé. Créez le premier pour organiser votre bibliothèque."
   },
   "card": {
     "noImage": "Aucune image disponible",
@@ -35,7 +53,6 @@
     "recipeOptions": "Options de recette"
   },
   "detail": {
-    "backToRecipes": "Retour aux recettes",
     "viewOriginal": "Voir la recette originale",
     "ingredients": "Ingrédients",
     "ingredientOptions": "Options des ingrédients",
@@ -86,7 +103,8 @@
     "linkingIngredients": "Liaison des ingrédients…",
     "enrichmentFailed": "Dernière tentative échouée",
     "generateImage": "Générer une image",
-    "generatingImage": "Génération de l'image…"
+    "generatingImage": "Génération de l'image…",
+    "cookbooks": "Livres de cuisine"
   },
   "sharePanel": {
     "title": "Partager la recette",
@@ -136,7 +154,10 @@
     "ariaLabel": "Convertir le système de mesure",
     "toMetric": "Convertir en métrique",
     "toUS": "Convertir en US",
-    "converting": "Conversion en cours…"
+    "toMetricWithAI": "Convertir en métrique avec l'AI",
+    "toUSWithAI": "Convertir en US avec l'AI",
+    "converting": "Conversion en cours…",
+    "original": "Original"
   },
   "deleteModal": {
     "title": "Supprimer la recette",
@@ -237,7 +258,20 @@
     "protein": "Protéines",
     "showingPortions": "Affichage des valeurs pour {count} {count, plural, one {portion} other {portions}}",
     "noInfo": "Aucune information nutritionnelle disponible",
-    "estimateWithAI": "Estimer avec l’IA"
+    "estimateWithAI": "Estimer avec l’IA",
+    "estimated": "Estimé",
+    "leftOut": "{count, plural, one {# ligne non comptée} other {# lignes non comptées}}",
+    "estimatedByAI": "estimé par l'IA",
+    "reasons": {
+      "seasoning": "assaisonnement",
+      "noAmount": "pas de quantité",
+      "noSize": "pas de poids pour cette mesure",
+      "noNumbers": "pas encore de valeurs nutritionnelles",
+      "noSpoonWeight": "pas encore de poids par cuillère",
+      "noPieceWeight": "pas encore de poids par pièce"
+    },
+    "workedOutFrom": "Calculé à partir des ingrédients, avec {sources}.",
+    "householdNumbers": "les valeurs de votre foyer"
   },
   "measurementSystem": {
     "label": "Système de mesure",
@@ -283,8 +317,6 @@
   },
   "toasts": {
     "imported": "Recette importée",
-    "converted": "Mesures converties",
-    "convertedDescription": "Recette convertie en unités {system}",
     "failed": "Échec de l'opération",
     "failedDescription": "Une erreur s'est produite pendant le traitement de votre recette. Consultez la console du navigateur pour les détails techniques.",
     "batchImported": "Recettes importées",
@@ -336,7 +368,7 @@
     "cuisines": "Cuisines",
     "inferring": "Recherche de l'origine de cette recette…",
     "noInfo": "Pas encore d'informations de provenance",
-    "inferWithAI": "Déterminer avec l'IA"
+    "inferWithAI": "Déterminer avec l'AI"
   },
   "import": {
     "alreadyExists": "Vous avez déjà cette recette",
@@ -352,5 +384,44 @@
     "cook": "Cuisson",
     "other": "Autre temps",
     "total": "Total"
+  },
+  "cookbooks": {
+    "addCookbook": "Ajouter un livre",
+    "createTitle": "Nouveau livre de cuisine",
+    "editTitle": "Modifier le livre",
+    "titleLabel": "Titre",
+    "titlePlaceholder": "ex. Dîners de semaine",
+    "options": "Options du livre",
+    "deleteTitle": "Supprimer le livre",
+    "deleteConfirm": "Voulez-vous vraiment supprimer « {title} » ?",
+    "deleteKeepsRecipes": "Les recettes qu’il contient restent dans votre bibliothèque.",
+    "recipeCount": "{count, plural, one {# recette} other {# recettes}}",
+    "empty": "Aucune recette pour l’instant",
+    "singular": "Livre de cuisine",
+    "notFound": "Livre de cuisine introuvable",
+    "notFoundHint": "Il a peut-être été supprimé, ou il ne vous est pas visible.",
+    "emptyHint": "Ajoutez des recettes depuis le menu d’actions rapides d’une recette.",
+    "panelTitle": "Ajouter à un livre de cuisine",
+    "newWithRecipe": "Nouveau livre avec cette recette",
+    "noneEditable": "Il n’y a pas encore de livre de cuisine que vous puissiez modifier.",
+    "cardTitle": "Dans les livres de cuisine",
+    "removeFromCookbook": "Retirer du livre",
+    "noMatchingMembers": "Aucune recette de ce livre ne correspond à vos filtres.",
+    "membersLabel": "Recettes dans ce livre",
+    "showMore": "Afficher plus",
+    "willBeCreated": "Sera créé à l’enregistrement",
+    "manage": "Gérer",
+    "addRecipes": "Ajouter des recettes",
+    "addRecipesTitle": "Ajouter des recettes à {title}",
+    "searchRecipes": "Rechercher des recettes",
+    "noRecipesToAdd": "Aucune recette trouvée.",
+    "addCount": "{count, plural, one {Ajouter # recette} other {Ajouter # recettes}}",
+    "everythingAlreadyIn": "Toutes les recettes sont déjà dans ce livre.",
+    "coverLabel": "Couverture",
+    "chooseImage": "Choisir une image",
+    "changeImage": "Changer l'image",
+    "removeImage": "Retirer l'image",
+    "imageUploadFailed": "L'image n'a pas pu être envoyée.",
+    "imageNeedsConnection": "Les images pourront être modifiées une fois de retour en ligne."
   }
 }

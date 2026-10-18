@@ -1,7 +1,7 @@
 "use client";
 
 import type { HiddenItem } from "@/lib/hidden-items";
-import { useHiddenItems } from "@/context/hidden-items-context";
+import { useDevicePreference } from "@/context/device-preferences-context";
 
 export type UseHiddenItemVisibilityResult = {
   showRatings: boolean;
@@ -10,6 +10,7 @@ export type UseHiddenItemVisibilityResult = {
   showProvenance: boolean;
   showNutrition: boolean;
   showNotes: boolean;
+  showCookbooks: boolean;
 };
 
 /**
@@ -18,7 +19,7 @@ export type UseHiddenItemVisibilityResult = {
  * Reads the seeded hidden list, so the answer is right from the first frame.
  */
 export function useHiddenItemVisibility(): UseHiddenItemVisibilityResult {
-  const hidden = useHiddenItems();
+  const [hidden] = useDevicePreference("hiddenItems");
   const shows = (item: HiddenItem) => !hidden.includes(item);
 
   return {
@@ -28,5 +29,8 @@ export function useHiddenItemVisibility(): UseHiddenItemVisibilityResult {
     showProvenance: shows("provenance"),
     showNutrition: shows("nutrition"),
     showNotes: shows("notes"),
+    // The recipe page's cookbooks card only. Hiding it never touches the
+    // Library or its type chips.
+    showCookbooks: shows("cookbooks"),
   };
 }

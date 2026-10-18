@@ -26,10 +26,13 @@ import {
   getGroceryOwnerIds,
   getRecipeInfoForGroceries,
   listGroceriesByUsers,
+  reorderGroceriesInStore,
   updateGroceries,
 } from "../mocks/db";
-import { groceryEmitter } from "../mocks/grocery-emitter";
+import { resolveGroceryName, resolveGroceryNames } from "../mocks/ingredient-groceries";
 import { assertHouseholdAccess } from "../mocks/permissions";
+import { groceries } from "../mocks/realtime/groceries";
+import { stores } from "../mocks/realtime/stores";
 import { listRecurringGroceriesByUsers } from "../mocks/recurring-groceries";
 // Import test utilities
 import {
@@ -42,19 +45,32 @@ import {
 const storesRepository = vi.hoisted(() => ({
   findBestIngredientStorePreference: vi.fn(),
   getStoreOwnerId: vi.fn(),
-  normalizeIngredientName: vi.fn((name: string) => name.toLowerCase()),
   upsertIngredientStorePreference: vi.fn(),
+  // A household with no Store that points at a shop: pricing notices the
+  // groceries, finds nothing to ask, and visits nothing.
+  listStoresByUserIds: vi.fn(async () => []),
+}));
+
+const storeProductsRepository = vi.hoisted(() => ({
+  resolveProductLinks: vi.fn(async () => [] as unknown[]),
+  listStaleProducts: vi.fn(async () => []),
 }));
 
 // Setup mocks before any imports that use them
 vi.mock("@norish/db", () => import("../mocks/db"));
 vi.mock("@norish/db/repositories/stores", () => storesRepository);
+vi.mock("@norish/db/repositories/store-products", () => storeProductsRepository);
+vi.mock("@norish/shared-server/realtime/stores", () => import("../mocks/realtime/stores"));
 vi.mock(
   "@norish/db/repositories/recurring-groceries",
   () => import("../mocks/recurring-groceries")
 );
+vi.mock(
+  "@norish/shared-server/ingredients/groceries",
+  () => import("../mocks/ingredient-groceries")
+);
 vi.mock("@norish/auth/permissions", () => import("../mocks/permissions"));
-vi.mock("@norish/trpc/routers/groceries/emitter", () => import("../mocks/grocery-emitter"));
+vi.mock("@norish/shared-server/realtime/groceries", () => import("../mocks/realtime/groceries"));
 vi.mock("@norish/shared-server/config/server-config-loader", () => import("../mocks/config"));
 vi.mock("@norish/shared/lib/helpers", () => import("../mocks/helpers"));
 vi.mock("@norish/shared-server/logger", () => ({
@@ -99,6 +115,8 @@ describe("groceries procedures", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Every Store a test files a grocery under is the household's own.
+    storesRepository.getStoreOwnerId.mockResolvedValue("user-1");
     ctx = createMockAuthedContext(mockUser, mockHousehold);
   });
 
@@ -144,6 +162,8 @@ describe("groceries openapi procedures", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Every Store a test files a grocery under is the household's own.
+    storesRepository.getStoreOwnerId.mockResolvedValue("user-1");
     ctx = createMockAuthedContext(mockUser, mockHousehold);
     getRecipeInfoForGroceries.mockResolvedValue(new Map());
     storesRepository.findBestIngredientStorePreference.mockResolvedValue(null);
@@ -158,7 +178,7 @@ describe("groceries openapi procedures", () => {
     listGroceriesByUsers.mockResolvedValue(mockGroceries);
     listRecurringGroceriesByUsers.mockResolvedValue([{ id: "recurring-1" }]);
 
-    const caller = openApiGroceriesRouter.createCaller({ ...ctx, multiplexer: null } as any);
+    const caller = openApiGroceriesRouter.createCaller(createMockCallerContext(ctx));
     const result = await caller.listGroceries();
 
     expect(result).toEqual(mockGroceries);
@@ -169,11 +189,13 @@ describe("groceries openapi procedures", () => {
 
     listGroceriesByUsers.mockResolvedValue([]);
     createGroceries.mockImplementation(
-      async (items: Array<{ id: string; groceries: { name: string | null } }>) =>
-        items.map(({ id, groceries }) => createMockGrocery({ id, name: groceries.name }))
+      async (items: Array<{ id: string; groceries: { name: string | null } }>) => ({
+        created: items.map(({ id, groceries }) => createMockGrocery({ id, name: groceries.name })),
+        shifted: [],
+      })
     );
 
-    const caller = openApiGroceriesRouter.createCaller({ ...ctx, multiplexer: null } as any);
+    const caller = openApiGroceriesRouter.createCaller(createMockCallerContext(ctx));
     const result = await caller.createGrocery({
       name: "Apples",
       amount: 2,
@@ -190,14 +212,38 @@ describe("groceries openapi procedures", () => {
     );
   });
 
+  it("toasts a failed create to the actor alone, never the household", async () => {
+    listGroceriesByUsers.mockResolvedValue([]);
+    createGroceries.mockRejectedValue(new Error("db down"));
+
+    const caller = openApiGroceriesRouter.createCaller(createMockCallerContext(ctx));
+
+    await expect(
+      caller.createGrocery({ name: "Milk", amount: 1, unit: "pcs", isDone: false })
+    ).rejects.toThrow("db down");
+
+    expect(groceries.publish).toHaveBeenCalledWith(
+      "failed",
+      { reason: "Failed to create grocery item" },
+      { userId: ctx.user.id }
+    );
+    expect(groceries.publish).not.toHaveBeenCalledWith(
+      "failed",
+      expect.anything(),
+      expect.objectContaining({ householdKey: expect.anything() })
+    );
+  });
+
   it("inserts a new grocery with the client-minted id when one is supplied", async () => {
     const clientId = crypto.randomUUID();
 
     // No existing groceries → no merge, so the create path runs.
     listGroceriesByUsers.mockResolvedValue([]);
     createGroceries.mockImplementation(
-      async (items: Array<{ id: string; groceries: { name: string | null } }>) =>
-        items.map(({ id, groceries }) => createMockGrocery({ id, name: groceries.name }))
+      async (items: Array<{ id: string; groceries: { name: string | null } }>) => ({
+        created: items.map(({ id, groceries }) => createMockGrocery({ id, name: groceries.name })),
+        shifted: [],
+      })
     );
 
     // Exercise the create helper directly: the internal `create` procedure validates
@@ -219,8 +265,10 @@ describe("groceries openapi procedures", () => {
 
     listGroceriesByUsers.mockResolvedValue([]);
     createGroceries.mockImplementation(
-      async (items: Array<{ id: string; groceries: { name: string | null } }>) =>
-        items.map(({ id, groceries }) => createMockGrocery({ id, name: groceries.name }))
+      async (items: Array<{ id: string; groceries: { name: string | null } }>) => ({
+        created: items.map(({ id, groceries }) => createMockGrocery({ id, name: groceries.name })),
+        shifted: [],
+      })
     );
 
     const result = await createGroceriesData(ctx, [
@@ -251,6 +299,35 @@ describe("groceries openapi procedures", () => {
     expect(result.ids).toEqual([existing.id]);
   });
 
+  it("hands back and announces the siblings a create shifted, with their new versions", async () => {
+    // Making room at the top moved the siblings' sort order and version; a
+    // screen still holding the old version would have its next write on one
+    // of them refused as stale. So the answer carries them, and so does the
+    // household's updated event.
+    const sibling = createMockGrocery({ id: "sibling", name: "Peer", sortOrder: 1, version: 2 });
+
+    listGroceriesByUsers.mockResolvedValue([]);
+    createGroceries.mockImplementation(
+      async (items: Array<{ id: string; groceries: { name: string | null } }>) => ({
+        created: items.map(({ id, groceries }) => createMockGrocery({ id, name: groceries.name })),
+        shifted: [sibling],
+      })
+    );
+
+    const result = await createGroceriesData(ctx, [
+      { name: "Apple", unit: null, amount: 1, isDone: false },
+    ]);
+
+    expect(result.updatedGroceries).toEqual([sibling]);
+    expect(groceries.publish).toHaveBeenCalledWith(
+      "updated",
+      {
+        changedGroceries: [sibling],
+      },
+      { householdKey: ctx.householdKey }
+    );
+  });
+
   it("keeps the existing store when the merged-in grocery has none", async () => {
     const storeId = crypto.randomUUID();
     const existing = createMockGrocery({ name: "Milk", unit: null, amount: 1, storeId });
@@ -277,7 +354,7 @@ describe("groceries openapi procedures", () => {
     updateGroceries.mockResolvedValue([updated]);
     assertHouseholdAccess.mockResolvedValue(undefined);
 
-    const caller = openApiGroceriesRouter.createCaller({ ...ctx, multiplexer: null } as any);
+    const caller = openApiGroceriesRouter.createCaller(createMockCallerContext(ctx));
     const result = await caller.markGroceryDone({ id: groceryId, version: 2 });
 
     expect(result).toEqual({ grocery: updated, stale: false });
@@ -290,7 +367,7 @@ describe("groceries openapi procedures", () => {
     assertHouseholdAccess.mockResolvedValue(undefined);
     deleteGroceryByIds.mockResolvedValue({ deletedIds: [], staleIds: [groceryId] });
 
-    const caller = openApiGroceriesRouter.createCaller({ ...ctx, multiplexer: null } as any);
+    const caller = openApiGroceriesRouter.createCaller(createMockCallerContext(ctx));
     const result = await caller.deleteGrocery({ id: groceryId, version: 3 });
 
     expect(result).toEqual({ success: true, stale: true });
@@ -307,7 +384,7 @@ describe("groceries openapi procedures", () => {
     updateGroceries.mockResolvedValue([updated]);
     assertHouseholdAccess.mockResolvedValue(undefined);
 
-    const caller = openApiGroceriesRouter.createCaller({ ...ctx, multiplexer: null } as any);
+    const caller = openApiGroceriesRouter.createCaller(createMockCallerContext(ctx));
     const result = await caller.markGroceryUndone({ id: groceryId, version: 4 });
 
     expect(result).toEqual({ grocery: updated, stale: false });
@@ -325,7 +402,7 @@ describe("groceries openapi procedures", () => {
     assertHouseholdAccess.mockResolvedValue(undefined);
     assignGroceryToStore.mockResolvedValue(updated);
 
-    const caller = openApiGroceriesRouter.createCaller({ ...ctx, multiplexer: null } as any);
+    const caller = openApiGroceriesRouter.createCaller(createMockCallerContext(ctx));
     const result = await caller.assignGroceryToStore({ id: groceryId, version: 2, storeId });
 
     expect(assignGroceryToStore).toHaveBeenCalledWith(groceryId, storeId, ctx.userIds, 2);
@@ -344,6 +421,8 @@ describe("grocery permission checks", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Every Store a test files a grocery under is the household's own.
+    storesRepository.getStoreOwnerId.mockResolvedValue("user-1");
   });
 
   describe("update permission", () => {
@@ -404,18 +483,28 @@ describe("grocery permission checks", () => {
 describe("grocery emitter", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Every Store a test files a grocery under is the household's own.
+    storesRepository.getStoreOwnerId.mockResolvedValue("user-1");
   });
 
   it("emits created event after successful creation", async () => {
     const mockGroceries = [createMockGrocery({ id: "new-1", name: "New Item" })];
 
-    createGroceries.mockResolvedValue(mockGroceries);
+    createGroceries.mockResolvedValue({ created: mockGroceries, shifted: [] });
 
-    groceryEmitter.emitToHousehold("household-1", "created", { groceries: mockGroceries });
+    void groceries.publish(
+      "created",
+      { groceries: mockGroceries },
+      { householdKey: "household-1" }
+    );
 
-    expect(groceryEmitter.emitToHousehold).toHaveBeenCalledWith("household-1", "created", {
-      groceries: mockGroceries,
-    });
+    expect(groceries.publish).toHaveBeenCalledWith(
+      "created",
+      {
+        groceries: mockGroceries,
+      },
+      { householdKey: "household-1" }
+    );
   });
 
   it("emits updated event after successful update", async () => {
@@ -423,11 +512,19 @@ describe("grocery emitter", () => {
 
     updateGroceries.mockResolvedValue(mockUpdated);
 
-    groceryEmitter.emitToHousehold("household-1", "updated", { changedGroceries: mockUpdated });
+    void groceries.publish(
+      "updated",
+      { changedGroceries: mockUpdated },
+      { householdKey: "household-1" }
+    );
 
-    expect(groceryEmitter.emitToHousehold).toHaveBeenCalledWith("household-1", "updated", {
-      changedGroceries: mockUpdated,
-    });
+    expect(groceries.publish).toHaveBeenCalledWith(
+      "updated",
+      {
+        changedGroceries: mockUpdated,
+      },
+      { householdKey: "household-1" }
+    );
   });
 
   it("emits deleted event after successful deletion", async () => {
@@ -435,17 +532,23 @@ describe("grocery emitter", () => {
 
     deleteGroceryByIds.mockResolvedValue(undefined);
 
-    groceryEmitter.emitToHousehold("household-1", "deleted", { groceryIds });
+    void groceries.publish("deleted", { groceryIds }, { householdKey: "household-1" });
 
-    expect(groceryEmitter.emitToHousehold).toHaveBeenCalledWith("household-1", "deleted", {
-      groceryIds,
-    });
+    expect(groceries.publish).toHaveBeenCalledWith(
+      "deleted",
+      {
+        groceryIds,
+      },
+      { householdKey: "household-1" }
+    );
   });
 });
 
 describe("toggle procedure logic", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Every Store a test files a grocery under is the household's own.
+    storesRepository.getStoreOwnerId.mockResolvedValue("user-1");
   });
 
   it("toggles isDone for multiple groceries", async () => {
@@ -481,6 +584,8 @@ describe("stale grocery updates", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Every Store a test files a grocery under is the household's own.
+    storesRepository.getStoreOwnerId.mockResolvedValue("user-1");
     ctx = createMockAuthedContext(mockUser, mockHousehold);
   });
 
@@ -491,7 +596,7 @@ describe("stale grocery updates", () => {
     assertHouseholdAccess.mockResolvedValue(undefined);
     updateGroceries.mockResolvedValue([]);
 
-    const caller = groceriesProcedures.createCaller({ ...ctx, multiplexer: null } as any);
+    const caller = groceriesProcedures.createCaller(createMockCallerContext(ctx));
     const result = await caller.update({ groceryId, raw: "Oat milk", version: 4 });
 
     await Promise.resolve();
@@ -502,14 +607,38 @@ describe("stale grocery updates", () => {
       { userId: ctx.user.id, groceryId, version: 4 },
       "Stale grocery update; requesting client refresh"
     );
-    expect(groceryEmitter.emitToHousehold).not.toHaveBeenCalledWith(
-      ctx.householdKey,
-      "updated",
-      expect.anything()
-    );
-    expect(groceryEmitter.emitToHousehold).toHaveBeenCalledWith(ctx.householdKey, "stale", {
-      reason: expect.any(String),
+    expect(groceries.publish).not.toHaveBeenCalledWith("updated", expect.anything(), {
+      householdKey: ctx.householdKey,
     });
+    expect(groceries.publish).toHaveBeenCalledWith(
+      "stale",
+      {
+        reason: expect.any(String),
+      },
+      { householdKey: ctx.householdKey }
+    );
+  });
+
+  it("resolves an edited grocery knowing the recipe line it came from", async () => {
+    const groceryId = crypto.randomUUID();
+    const recipeIngredientId = crypto.randomUUID();
+
+    getGroceryOwnerIds.mockResolvedValue(new Map([[groceryId, ctx.user.id]]));
+    getGroceriesByIds.mockResolvedValue([
+      createMockGrocery({ id: groceryId, name: "onions, diced", recipeIngredientId }),
+    ]);
+    assertHouseholdAccess.mockResolvedValue(undefined);
+    updateGroceries.mockResolvedValue([]);
+
+    const caller = groceriesProcedures.createCaller(createMockCallerContext(ctx));
+
+    await caller.update({ groceryId, raw: "3 onions, diced", version: 4 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(resolveGroceryName).toHaveBeenCalledWith(
+      expect.objectContaining({ recipeIngredientId }),
+      { userId: ctx.user.id }
+    );
   });
 
   it("saves the ingredient store preference when the update carries a store change", async () => {
@@ -522,7 +651,7 @@ describe("stale grocery updates", () => {
       createMockGrocery({ id: groceryId, name: "Oat Milk", storeId }),
     ]);
 
-    const caller = groceriesProcedures.createCaller({ ...ctx, multiplexer: null } as any);
+    const caller = groceriesProcedures.createCaller(createMockCallerContext(ctx));
 
     await caller.update({ groceryId, raw: "Oat milk", version: 4, storeId });
 
@@ -530,8 +659,49 @@ describe("stale grocery updates", () => {
 
     expect(storesRepository.upsertIngredientStorePreference).toHaveBeenCalledWith(
       ctx.user.id,
-      "oat milk",
+      "ingredient:oat milk",
       storeId
+    );
+  });
+
+  it("asks the Store a grocery was dragged into what it knows about it", async () => {
+    const groceryId = crypto.randomUUID();
+    const storeId = crypto.randomUUID();
+    const link = {
+      storeId,
+      ingredientId: "ingredient:cola",
+      lastTriedAt: null,
+      product: { id: crypto.randomUUID(), storeId, name: "Cola 1 L", price: 1.49 },
+    };
+
+    getGroceryOwnerIds.mockResolvedValue(new Map([[groceryId, ctx.user.id]]));
+    assertHouseholdAccess.mockResolvedValue(undefined);
+    storesRepository.getStoreOwnerId.mockResolvedValue(ctx.user.id);
+    getGroceriesByIds.mockResolvedValue([createMockGrocery({ id: groceryId, name: "cola" })]);
+    reorderGroceriesInStore.mockResolvedValue([
+      createMockGrocery({ id: groceryId, name: "cola", storeId }),
+    ]);
+    storeProductsRepository.resolveProductLinks.mockResolvedValue([link]);
+    // Pricing answers only for the household's own Stores.
+    storesRepository.listStoresByUserIds.mockResolvedValue([{ id: storeId, searchAddress: null }]);
+
+    const caller = groceriesProcedures.createCaller(createMockCallerContext(ctx));
+
+    await caller.reorderInStore({
+      updates: [{ id: groceryId, version: 1, sortOrder: 0, storeId }],
+      savePreference: true,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Dragging a grocery into another Store asks that Store the same question
+    // the panel would: what it already knows reaches the list there and then.
+    expect(stores.publish).toHaveBeenCalledWith(
+      "linkUpdated",
+      {
+        link,
+      },
+      { householdKey: ctx.householdKey }
     );
   });
 
@@ -543,7 +713,7 @@ describe("stale grocery updates", () => {
     assertHouseholdAccess.mockResolvedValue(undefined);
     updateGroceries.mockResolvedValue([createMockGrocery({ id: groceryId, storeId })]);
 
-    const caller = groceriesProcedures.createCaller({ ...ctx, multiplexer: null } as any);
+    const caller = groceriesProcedures.createCaller(createMockCallerContext(ctx));
     const result = await caller.update({
       groceryId,
       raw: "Oat milk",
@@ -572,7 +742,7 @@ describe("stale grocery updates", () => {
     assertHouseholdAccess.mockResolvedValue(undefined);
     updateGroceries.mockResolvedValue([createMockGrocery({ id: groceryId, storeId: null })]);
 
-    const caller = groceriesProcedures.createCaller({ ...ctx, multiplexer: null } as any);
+    const caller = groceriesProcedures.createCaller(createMockCallerContext(ctx));
     const result = await caller.update({
       groceryId,
       raw: "Oat milk",
@@ -598,7 +768,7 @@ describe("stale grocery updates", () => {
     assertHouseholdAccess.mockResolvedValue(undefined);
     updateGroceries.mockResolvedValue([createMockGrocery({ id: groceryId })]);
 
-    const caller = groceriesProcedures.createCaller({ ...ctx, multiplexer: null } as any);
+    const caller = groceriesProcedures.createCaller(createMockCallerContext(ctx));
     const result = await caller.update({
       groceryId,
       raw: "Oat milk",
@@ -616,5 +786,95 @@ describe("stale grocery updates", () => {
     // The update data should not have a storeId property (undefined, not null)
     // It may have storeId undefined or not present — just confirm it's not a value
     expect(update).toBeDefined();
+  });
+});
+
+describe("grocery names through Ingredient Aliases", () => {
+  const ctx = createMockAuthedContext(createMockUser(), createMockHousehold());
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    storesRepository.getStoreOwnerId.mockResolvedValue("user-1");
+    listGroceriesByUsers.mockResolvedValue([]);
+    createGroceries.mockImplementation(
+      async (items: Array<{ id: string; groceries: { name: string | null } }>) => ({
+        created: items.map(({ id, groceries }) => createMockGrocery({ id, name: groceries.name })),
+        shifted: [],
+      })
+    );
+  });
+
+  it("stores a new grocery with the alias its name resolved to, and its text as written", async () => {
+    const recipeIngredientId = crypto.randomUUID();
+
+    await createGroceriesData(ctx, [
+      { id: crypto.randomUUID(), name: "Uien", unit: null, amount: 1, isDone: false },
+      {
+        id: crypto.randomUUID(),
+        name: "onions, diced",
+        unit: null,
+        amount: 2,
+        isDone: false,
+        recipeIngredientId,
+      },
+    ]);
+
+    // A line from a recipe is resolved knowing which line it came from.
+    expect(resolveGroceryNames).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ name: "Uien", recipeIngredientId: null }),
+        expect.objectContaining({ name: "onions, diced", recipeIngredientId }),
+      ],
+      { userId: ctx.user.id }
+    );
+    expect(createGroceries).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          groceries: expect.objectContaining({ name: "Uien", ingredientAliasId: "alias:uien" }),
+        }),
+        expect.objectContaining({
+          groceries: expect.objectContaining({
+            name: "onions, diced",
+            ingredientAliasId: "alias:onions, diced",
+          }),
+        }),
+      ],
+      expect.anything()
+    );
+  });
+
+  it("merges a same-unit add into the line already there, as before", async () => {
+    listGroceriesByUsers.mockResolvedValue([
+      createMockGrocery({ id: "g1", name: "Milk", unit: "l", amount: 1 }),
+    ]);
+    updateGroceries.mockResolvedValue([]);
+
+    await createGroceriesData(ctx, [
+      { id: crypto.randomUUID(), name: "milk", unit: "l", amount: 2, isDone: false },
+    ]);
+
+    expect(createGroceries).not.toHaveBeenCalled();
+    expect(updateGroceries).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "g1", amount: 3 }),
+    ]);
+  });
+
+  it("resolves a renamed grocery's new name", async () => {
+    const groceryId = crypto.randomUUID();
+
+    getGroceryOwnerIds.mockResolvedValue(new Map([[groceryId, ctx.user.id]]));
+    assertHouseholdAccess.mockResolvedValue(undefined);
+    updateGroceries.mockResolvedValue([createMockGrocery({ id: groceryId })]);
+
+    await groceriesProcedures
+      .createCaller(createMockCallerContext(ctx))
+      .update({ groceryId, raw: "1 piece Test", version: 4 });
+
+    // The line parser is mocked here, and reads every raw line as "Test".
+    await vi.waitFor(() =>
+      expect(updateGroceries).toHaveBeenCalledWith([
+        expect.objectContaining({ id: groceryId, name: "Test", ingredientAliasId: "alias:test" }),
+      ])
+    );
   });
 });

@@ -9,62 +9,80 @@
  * file.
  */
 
-import type { ImageModel, TranscriptionModel } from "ai";
+import type {
+  Experimental_EvaluationModel as EvaluationModel,
+  ImageModel,
+  TranscriptionModel,
+} from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createAzure } from "@ai-sdk/azure";
 import { createDeepSeek } from "@ai-sdk/deepseek";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createGoogle } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import { createMistral } from "@ai-sdk/mistral";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createPerplexity } from "@ai-sdk/perplexity";
+import { createTypeSafeAi } from "@ai-sdk/typesafe-ai";
 import { createOllama } from "ai-sdk-ollama";
 import OpenAI from "openai";
 
-import type { ImageGenerationProvider } from "@norish/config/zod/server-config";
+import type { DecisionProvider, ImageGenerationProvider } from "@norish/config/zod/server-config";
 import { aiLogger } from "@norish/shared-server/logger";
 
 import type { AIProvider, ModelConfig } from "./types";
+import {
+  normalizeAzureEndpoint,
+  normalizeOllamaEndpoint,
+  normalizeOpenAICompatibleEndpoint,
+} from "./endpoints";
+import { imageModelKey, withoutRefusedImageParameters } from "./image-parameter-fallback";
 import { withTemperatureFallback } from "./temperature-fallback";
 import { createFetchWithTimeout } from "./transport";
 
-// ============================================================================
-// Endpoint normalization — each rule exists exactly once
-// ============================================================================
+/**
+ * Providers reached through a base URL an operator typed, rather than a service
+ * whose capabilities the SDK knows. What such an endpoint can actually serve is
+ * decided by whatever sits behind it — an aggregator resolves a model to one of
+ * several upstream providers — so it is the only place where asking for a
+ * strict JSON schema may be refused by something that answers everything else
+ * (#538).
+ */
+const OPENAI_COMPATIBLE_PROVIDERS: ReadonlySet<AIProvider> = new Set([
+  "generic-openai",
+  "lm-studio",
+]);
 
-/** The Azure SDK expects the /openai path suffix on a configured endpoint. */
-function normalizeAzureEndpoint(endpoint: string): string {
-  const baseUrl = endpoint.replace(/\/+$/, "");
-
-  return baseUrl.endsWith("/openai") ? baseUrl : `${baseUrl}/openai`;
+/** Whether a plain-JSON retry is available for this provider (#538). */
+export function canDegradeToJsonMode(provider: AIProvider): boolean {
+  return OPENAI_COMPATIBLE_PROVIDERS.has(provider);
 }
 
-/** OpenAI-compatible endpoints are addressed under /v1. */
-function normalizeOpenAICompatibleEndpoint(endpoint: string): string {
-  const baseUrl = endpoint.replace(/\/+$/, "");
-
-  return baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
-}
-
-/** Ollama is addressed at its host root, without a trailing slash or /api. */
-function normalizeOllamaEndpoint(endpoint: string): string {
-  return endpoint.replace(/\/+$/, "").replace(/\/api$/, "");
+export interface ModelBuildOptions {
+  /**
+   * Ask an OpenAI-compatible endpoint for a strict `json_schema` answer
+   * (the default), or for plain `json_object` mode. Ignored by every provider
+   * whose structured-output support is known in advance.
+   */
+  structuredOutputs?: boolean;
 }
 
 /**
  * Create AI model instances from configuration.
  * The AI Runtime checks enablement before calling this.
  */
-export function createModelsFromConfig(config: {
-  provider: AIProvider;
-  model: string;
-  visionModel?: string;
-  endpoint?: string;
-  apiKey?: string;
-  timeoutMs?: number;
-}): ModelConfig {
-  const models = createProviderModels(config);
+export function createModelsFromConfig(
+  config: {
+    provider: AIProvider;
+    model: string;
+    visionModel?: string;
+    endpoint?: string;
+    apiKey?: string;
+    timeoutMs?: number;
+  },
+  options: ModelBuildOptions = {}
+): ModelConfig {
+  const models = createProviderModels(config, options);
 
   // Every AI feature passes the configured temperature. Providers drop it for
   // the models they know; a model newer than the provider package, or one
@@ -76,14 +94,17 @@ export function createModelsFromConfig(config: {
   };
 }
 
-function createProviderModels(config: {
-  provider: AIProvider;
-  model: string;
-  visionModel?: string;
-  endpoint?: string;
-  apiKey?: string;
-  timeoutMs?: number;
-}): ModelConfig {
+function createProviderModels(
+  config: {
+    provider: AIProvider;
+    model: string;
+    visionModel?: string;
+    endpoint?: string;
+    apiKey?: string;
+    timeoutMs?: number;
+  },
+  options: ModelBuildOptions
+): ModelConfig {
   const { provider, model, visionModel, endpoint, apiKey, timeoutMs } = config;
 
   aiLogger.debug({ provider, model, visionModel }, "Creating AI models");
@@ -129,7 +150,9 @@ function createProviderModels(config: {
         name: providerName,
         baseURL: normalizeOpenAICompatibleEndpoint(endpoint),
         headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined,
-        supportsStructuredOutputs: true,
+        // Off means `response_format: { type: "json_object" }` instead of a
+        // strict schema — the retry for an endpoint that refuses the schema.
+        supportsStructuredOutputs: options.structuredOutputs ?? true,
         fetch: customFetch,
       });
 
@@ -206,7 +229,7 @@ function createProviderModels(config: {
     case "google": {
       if (!apiKey) throw new Error("API Key is required for Google AI provider");
 
-      const google = createGoogleGenerativeAI({ apiKey, fetch: customFetch });
+      const google = createGoogle({ apiKey, fetch: customFetch });
 
       return {
         model: google(model),
@@ -236,13 +259,40 @@ function createProviderModels(config: {
 // Image models — beside the language models they belong with (ADR-0024)
 // ============================================================================
 
-/** An image model plus how to ask it for the widest landscape it supports. */
+/** A picture's shape: providers differ in whether they take a size or an aspect ratio. */
+export type ImageShape = { size?: `${number}x${number}`; aspectRatio?: `${number}:${number}` };
+
+/**
+ * A quality tier asked of an image model: the cheapest it has, or the one
+ * above. An Ingredient Icon is shown at 32px, so it never needs a full
+ * illustration's.
+ */
+export type ImageTier = "low" | "medium";
+
+/** The provider options a request carries, by provider. */
+export type ImageProviderOptions = Record<string, Record<string, string>>;
+
+/** What a request may ask of an image model beyond its shape, where the provider has a way to. */
+export interface ImageRequestPreferences {
+  tier?: ImageTier;
+  /** The picture standing on nothing, so no background has to be cut away. */
+  transparent?: boolean;
+}
+
+/** An image model plus how to ask it for each shape, and for a tier or transparency where it has them. */
 export interface ImageModelConfig {
   model: ImageModel;
   providerName: string;
-  /** Providers differ in whether they take a size or an aspect ratio. */
-  landscape: { size?: `${number}x${number}`; aspectRatio?: `${number}:${number}` };
+  /** The widest landscape it supports, for a Generated Image. */
+  landscape: ImageShape;
+  /** A square, for an Ingredient Icon: 1024×1024, or the provider's square aspect. */
+  square: ImageShape;
+  /** The options asking for a tier and transparency; absent where the provider has neither, which leaves it unchanged. */
+  preferences?: (asked: ImageRequestPreferences) => ImageProviderOptions;
 }
+
+/** The square every provider that takes a size accepts. */
+const SQUARE: ImageShape = { size: "1024x1024" };
 
 /**
  * The widest landscape OpenAI's image models accept. The DALL·E family tops
@@ -253,6 +303,19 @@ export interface ImageModelConfig {
 function openAILandscapeSize(model: string): `${number}x${number}` {
   return model.startsWith("dall-e") ? "1792x1024" : "1536x1024";
 }
+
+/**
+ * OpenAI's quality tiers and transparent background, asked of every model:
+ * a model that refuses one (DALL·E only knows `standard` and `hd`, and draws
+ * no transparency) is asked again without it, drawing at its default, which
+ * is its cheapest, or on a background that is then cut away (ADR-0014).
+ */
+const openAIPreferences: ImageModelConfig["preferences"] = ({ tier, transparent }) => ({
+  openai: {
+    ...(tier ? { quality: tier } : {}),
+    ...(transparent ? { background: "transparent" } : {}),
+  },
+});
 
 /**
  * Build an image model from the Image Generation block. Only the providers
@@ -267,7 +330,11 @@ export function createImageModelFromConfig(config: {
   timeoutMs?: number;
 }): ImageModelConfig {
   const { provider, model, endpoint, apiKey, timeoutMs } = config;
-  const customFetch = createFetchWithTimeout(timeoutMs as number);
+  // A parameter this model refused before stays out of the request (ADR-0014).
+  const customFetch = withoutRefusedImageParameters(
+    createFetchWithTimeout(timeoutMs as number),
+    imageModelKey(provider, model)
+  );
 
   switch (provider) {
     case "openai": {
@@ -277,6 +344,8 @@ export function createImageModelFromConfig(config: {
         model: createOpenAI({ apiKey, fetch: customFetch }).image(model),
         providerName: "OpenAI",
         landscape: { size: openAILandscapeSize(model) },
+        square: SQUARE,
+        preferences: openAIPreferences,
       };
     }
 
@@ -284,9 +353,10 @@ export function createImageModelFromConfig(config: {
       if (!apiKey) throw new Error("API Key is required for Google AI provider");
 
       return {
-        model: createGoogleGenerativeAI({ apiKey, fetch: customFetch }).image(model),
+        model: createGoogle({ apiKey, fetch: customFetch }).image(model),
         providerName: "Google AI",
         landscape: { aspectRatio: "16:9" },
+        square: { aspectRatio: "1:1" },
       };
     }
 
@@ -301,6 +371,26 @@ export function createImageModelFromConfig(config: {
         model: azure.image(model),
         providerName: "Azure OpenAI",
         landscape: { size: openAILandscapeSize(model) },
+        square: SQUARE,
+        // Azure's image model is OpenAI's, reading the same `openai` options.
+        preferences: openAIPreferences,
+      };
+    }
+
+    case "ollama": {
+      if (!endpoint) throw new Error("Endpoint is required for Ollama provider");
+
+      return {
+        model: createOllama({
+          baseURL: normalizeOllamaEndpoint(endpoint),
+          fetch: customFetch,
+        }).imageModel(model),
+        providerName: "Ollama",
+        // Ollama's image models take a width and a height, and the SDK
+        // provider turns a size into exactly that — so, as for the other
+        // self-hosted route, ask for the stored shape itself.
+        landscape: { size: "1280x720" },
+        square: SQUARE,
       };
     }
 
@@ -321,6 +411,50 @@ export function createImageModelFromConfig(config: {
         // No published size list to lean on, so ask for exactly the stored
         // shape: self-hosted image servers generally accept arbitrary sizes.
         landscape: { size: "1280x720" },
+        square: SQUARE,
+      };
+    }
+  }
+}
+
+// ============================================================================
+// Decision models — the Decision Model's own provider (ADR-0035)
+// ============================================================================
+
+/** An evaluation model plus the name its log lines carry. */
+export interface DecisionModelConfig {
+  model: EvaluationModel;
+  providerName: string;
+}
+
+/**
+ * Build the evaluation model from the Decision block. Only `typesafe` is
+ * constructible: the config enum keeps `disabled` out, and Vercel's AI
+ * Gateway is a second case here and a base URL when it is wanted. The
+ * provider's default key comes from an environment variable Norish never
+ * sets, so the stored key is passed explicitly and a missing one is refused
+ * here rather than discovered as a 401.
+ */
+export function createDecisionModelFromConfig(config: {
+  provider: Exclude<DecisionProvider, "disabled">;
+  model: string;
+  endpoint: string;
+  apiKey?: string;
+  timeoutMs: number;
+}): DecisionModelConfig {
+  const { provider, model, endpoint, apiKey, timeoutMs } = config;
+
+  switch (provider) {
+    case "typesafe": {
+      if (!apiKey) throw new Error("API Key is required for the TypeSafe AI provider");
+
+      return {
+        model: createTypeSafeAi({
+          apiKey,
+          baseURL: endpoint,
+          fetch: createFetchWithTimeout(timeoutMs),
+        }).evaluationModel(model),
+        providerName: "TypeSafe AI",
       };
     }
   }

@@ -14,6 +14,7 @@ import { request } from "@playwright/test";
 import { Client } from "pg";
 
 import type { AIE2EStack } from "./fixture";
+import { clearDevicePreferences, setDevicePreferences } from "../harness/device-preferences";
 import { databaseUrl } from "./database";
 import { expect, test } from "./fixture";
 import { setAutomaticEnrichment } from "./recipe-enrichment-support";
@@ -62,7 +63,7 @@ async function swipe(deltaX: number, deltaY: number): Promise<void> {
   // The pointer handlers live on cooking mode's content area — the shell's
   // middle flex cell; the dialog's is the last one mounted.
   await page
-    .locator("div.min-h-0.flex-1.overflow-hidden")
+    .locator("div.min-h-0.flex-1.overflow-hidden > *")
     .last()
     .evaluate(
       (element, delta) => {
@@ -71,14 +72,46 @@ async function swipe(deltaX: number, deltaY: number): Promise<void> {
         const startY = rect.top + rect.height / 2;
         const options = { bubbles: true, cancelable: true, pointerType: "touch" as const };
 
+        const startTouch = new Touch({
+          identifier: 1,
+          target: element,
+          clientX: startX,
+          clientY: startY,
+        });
+        const endTouch = new Touch({
+          identifier: 1,
+          target: element,
+          clientX: startX + delta.x,
+          clientY: startY + delta.y,
+        });
+
+        // Two gestures share the area: the horizontal swipe listens to pointer
+        // events on the shell, the vertical paging to touch events on the step
+        // view, which reads the start point from `touches`.
         element.dispatchEvent(
           new PointerEvent("pointerdown", { ...options, clientX: startX, clientY: startY })
+        );
+        element.dispatchEvent(
+          new TouchEvent("touchstart", {
+            bubbles: true,
+            cancelable: true,
+            touches: [startTouch],
+            targetTouches: [startTouch],
+            changedTouches: [startTouch],
+          })
         );
         element.dispatchEvent(
           new PointerEvent("pointerup", {
             ...options,
             clientX: startX + delta.x,
             clientY: startY + delta.y,
+          })
+        );
+        element.dispatchEvent(
+          new TouchEvent("touchend", {
+            bubbles: true,
+            cancelable: true,
+            changedTouches: [endTouch],
           })
         );
       },
@@ -174,7 +207,9 @@ test("the Glance Bar answers above the fold and the cards follow cooking order",
 
   // Card order on the phone tree (the hidden desktop tree keeps its own
   // headings, so only visible ones count). No notes and no provenance are
-  // stored, so neither card renders — a bare section is a shorter page.
+  // stored, so neither card renders — a bare section is a shorter page. The
+  // cookbooks card is absent for the same reason: it states a fact when there
+  // is one, and this recipe is in no cookbook.
   await expect(page.locator("h2:visible")).toHaveText([
     "Ingredients",
     "Steps",
@@ -185,12 +220,27 @@ test("the Glance Bar answers above the fold and the cards follow cooking order",
 });
 
 test("the cook pill stays reachable at full scroll and covers neither nav nor timers", async () => {
+  // This suite is serial on one shared page, so the page arrives during the
+  // test before this one. Wait for the last card to settle before measuring:
+  // a section still resolving re-lays the page out under the locator.
+  await expect(
+    page.getByRole("heading", { name: "Source", exact: true }).locator("visible=true")
+  ).toBeVisible();
+
   // A running timer first, so the corner the dock rises into is occupied.
   // Both page trees render the chip; only the phone tree's copy is visible.
-  const timerChip = page.getByText("40 minutes").locator("visible=true").first();
+  // The chip exists only once the timer keywords arrive; before that
+  // "40 minutes" is plain step text, and clicking it ticks the step off.
+  const timerChip = page
+    .locator("[data-slot=chip]")
+    .filter({ hasText: /^40 minutes$/ })
+    .locator("visible=true")
+    .first();
 
-  await timerChip.scrollIntoViewIfNeeded();
-  await timerChip.click();
+  await expect(async () => {
+    await timerChip.scrollIntoViewIfNeeded();
+    await timerChip.click();
+  }).toPass({ timeout: 20_000 });
 
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await page.waitForTimeout(600);
@@ -229,9 +279,15 @@ test("cooking mode pages its steps, keeps both swipes, and projects Ready At onl
 
   // Step one fills the page; the next step peeks, faded, at the bottom edge.
   await expect(dialog.getByText(RECIPE.steps[0]!.step).first()).toBeVisible();
-  await expect(dialog.locator('[data-cooking-step-peek="bottom"]')).toContainText("Rest the dough");
+  await expect(dialog.getByText("Rest the dough").first()).toBeVisible();
   await expect(dialog.getByText(/Ready around/)).toBeVisible();
   await expect(dialog.getByText("1 / 3")).toBeVisible();
+
+  // The bottom bar fits a phone: keep-screen-on sits clear of Next step.
+  const awakeBox = await dialog.getByRole("button", { name: "Keep screen awake" }).boundingBox();
+  const nextBox = await dialog.getByRole("button", { name: "Next step" }).boundingBox();
+
+  expect(boxesOverlap(awakeBox!, nextBox!)).toBe(false);
 
   // The vertical swipe pages forward.
   await swipe(0, -120);
@@ -254,16 +310,21 @@ test("cooking mode pages its steps, keeps both swipes, and projects Ready At onl
 });
 
 test("hiding Nutrition Information takes the card and the Glance Bar's calories together", async () => {
-  await context.addCookies([
-    { name: "norish_hidden_items", value: "nutrition", url: stack.baseURL },
-  ]);
+  // A phone-sized window, but the browser's user agent is a desktop's.
+  await setDevicePreferences(stack.baseURL, stack.ownerCookies, "desktop", {
+    hiddenItems: ["nutrition"],
+  });
 
-  await page.goto(`/recipes/${recipeId}`);
+  try {
+    await page.goto(`/recipes/${recipeId}`);
 
-  const glanceBar = page.getByTestId("glance-bar");
+    const glanceBar = page.getByTestId("glance-bar");
 
-  await expect(glanceBar).toBeVisible();
-  await expect(glanceBar).toContainText("45m");
-  await expect(glanceBar).not.toContainText("640");
-  await expect(page.locator("h2:visible").filter({ hasText: "Nutrition" })).toHaveCount(0);
+    await expect(glanceBar).toBeVisible();
+    await expect(glanceBar).toContainText("45m");
+    await expect(glanceBar).not.toContainText("640");
+    await expect(page.locator("h2:visible").filter({ hasText: "Nutrition" })).toHaveCount(0);
+  } finally {
+    await clearDevicePreferences(databaseUrl());
+  }
 });

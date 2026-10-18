@@ -11,6 +11,7 @@
  * how Norish reacts to it.
  */
 
+import { InvalidResponseDataError } from "@ai-sdk/provider";
 import { APICallError, NoImageGeneratedError, NoObjectGeneratedError } from "ai";
 
 export abstract class AIError extends Error {
@@ -90,6 +91,59 @@ function isTimeout(error: unknown): boolean {
 }
 
 /**
+ * Statuses that say the provider rejected the *shape* of the request rather
+ * than the caller, the credential, or its own health — the class a refused
+ * structured-output request falls into.
+ *
+ * OpenRouter answers 404 ("no endpoints available matching your guardrail
+ * restrictions") when no permitted upstream can serve a required parameter, so
+ * a missing capability arrives looking like a wrong URL (#538). Both readings
+ * are worth one plain-JSON retry and neither is worth a queue retry, so they
+ * are classified together.
+ */
+export function isRequestShapeRejection(error: unknown): boolean {
+  if (!APICallError.isInstance(error)) return false;
+
+  const status = error.statusCode;
+
+  return status === 400 || status === 404 || status === 422 || status === 501;
+}
+
+/**
+ * Whether the provider refused the credential itself, as opposed to the
+ * request or its own health — the one failure an administrator can only fix
+ * by typing a different key. Reads through a typed AI error to its cause.
+ */
+export function isCredentialRejection(error: unknown): boolean {
+  const cause = error instanceof AIError ? error.cause : error;
+
+  if (!APICallError.isInstance(cause)) return false;
+
+  return cause.statusCode === 401 || cause.statusCode === 403;
+}
+
+/**
+ * How long the provider asked to be left alone before trying again, when it
+ * refused a request for its rate limit (429), from its `retry-after-ms` or
+ * `retry-after` header; null for any other failure. A provider that gives no
+ * header gets a guess of fifteen seconds.
+ */
+export function rateLimitWaitMs(error: unknown): number | null {
+  const cause = error instanceof AIError ? error.cause : error;
+
+  if (!APICallError.isInstance(cause) || cause.statusCode !== 429) return null;
+
+  const headers = cause.responseHeaders ?? {};
+  const ms = Number(headers["retry-after-ms"]);
+  const seconds = Number(headers["retry-after"]);
+
+  if (Number.isFinite(ms) && ms > 0) return ms;
+  if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
+
+  return 15_000;
+}
+
+/**
  * Turn whatever a model call threw into a typed AI error, carrying the
  * original as `cause`.
  */
@@ -106,6 +160,14 @@ export function toAIError(error: unknown): AIError {
     // The provider answered but produced no usable image — the image-model
     // sibling of a schema mismatch, and just as worth a retry.
     return new AIResponseError("The model returned no usable image.", { cause: error });
+  }
+
+  if (InvalidResponseDataError.isInstance(error)) {
+    // The Decision Model answered, but not every question, or not with a
+    // usable distribution — the evaluation sibling of a schema mismatch.
+    return new AIResponseError("The Decision Model's answers did not match the questions asked.", {
+      cause: error,
+    });
   }
 
   if (APICallError.isInstance(error)) {

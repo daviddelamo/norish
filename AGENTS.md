@@ -18,7 +18,7 @@ Use this file for lightweight repo context.
 ## Repo Shape
 
 - `apps/web` - web app and server bundle entry
-- `apps/mobile` - Expo app
+- `apps/mobile` - Expo app, **parked pending a rewrite**: it still starts with `pnpm dev:mobile`, but it defines no `lint`, `typecheck` or `test` script, so none of the root gates reach it, and it is expected to break at compile and runtime against the current release
 - `packages/api` - server domain logic
 - `packages/trpc` - tRPC routers and API surface
 - `packages/db` - schema and repositories
@@ -31,8 +31,9 @@ Use this file for lightweight repo context.
 
 Everything under `packages/shared-server/src/ai/` is AI: `runtime/` (the one
 seam that talks to a model — see ADR-0015), `prompts/` (the administrator-editable
-prompts and their loader), and `enrichment/` (the features whose input is a stored
-recipe and whose output is a domain claim). `shared-server` deliberately holds
+prompts and their loader), `enrichment/` (the features whose input is a stored
+recipe and whose output is a domain claim), and `resolution/` (the features whose
+input is a name and whose output is which catalogue entry it is — ADR-0037). `shared-server` deliberately holds
 these real domain features as well as infrastructure; the `runtime`/`enrichment`
 split says which is which. Recipe extraction is not AI code — it is an
 import-pipeline feature that happens to use AI and lives with the parser in

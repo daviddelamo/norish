@@ -1,17 +1,25 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
-import type { User } from "@norish/shared/contracts/dto/user";
+import type { AdminUserRowDTO, User } from "@norish/shared/contracts";
+import type {
+  DeviceKind,
+  DevicePreferencesUpdate,
+} from "@norish/shared/contracts/zod/device-preferences";
+import type { UserPreferencesDto } from "@norish/shared/contracts/zod/user";
 import { decrypt, encrypt, hmacIndex } from "@norish/config/crypto";
 import { db } from "@norish/db/drizzle";
 import { authLogger } from "@norish/db/logger";
+import { UserPreferencesSchema } from "@norish/shared/contracts/zod/user";
 
 import type { MutationOutcome } from "./mutation-outcomes";
 import { accounts, users } from "../schema/auth";
+import { householdUsers } from "../schema/household-users";
+import { households } from "../schema/households";
 import { ServerConfigKeys } from "../zodSchemas/server-config";
 import { appliedOutcome, staleOutcome } from "./mutation-outcomes";
 import { setConfig } from "./server-config";
 
-type VersionedUser = User & { version: number };
+export type VersionedUser = User & { version: number };
 
 // BetterAuth-compatible user type for adapter operations
 // Note: emailVerified is now a boolean in BetterAuth, not a Date
@@ -178,6 +186,49 @@ export async function getUserById(userId: string): Promise<VersionedUser | null>
     name: user.name ? decrypt(user.name) : "",
     image: user.image ? decrypt(user.image) : null,
     version: user.version,
+  };
+}
+
+/**
+ * The identity a request is authorised with.
+ *
+ * `isServerAdmin` folds in server ownership, matching {@link isUserServerAdmin}.
+ */
+export type SessionIdentity = VersionedUser & { isServerAdmin: boolean };
+
+/**
+ * Load the identity behind a session, in a single query.
+ *
+ * Session payloads are cached outside the database and carry a snapshot of the
+ * user row taken at sign-in, so they outlive both the row itself and any change
+ * to its privileges. Anything that authorises a request must resolve the user
+ * through here rather than trusting that snapshot.
+ */
+export async function getUserSessionIdentity(userId: string): Promise<SessionIdentity | null> {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: {
+      id: true,
+      email: true,
+      name: true,
+      image: true,
+      version: true,
+      isServerOwner: true,
+      isServerAdmin: true,
+    },
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    email: decrypt(user.email),
+    name: user.name ? decrypt(user.name) : "",
+    image: user.image ? decrypt(user.image) : null,
+    version: user.version,
+    isServerAdmin: user.isServerOwner || user.isServerAdmin,
   };
 }
 
@@ -399,7 +450,50 @@ export async function getUserAuthorInfo(
   };
 }
 
-export async function isUserServerAdmin(userId: string): Promise<boolean> {
+/**
+ * List every user on the server for the admin user management page.
+ * Each user is in at most one household, so the left join can't fan out.
+ */
+export async function listUsersForAdmin(): Promise<AdminUserRowDTO[]> {
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      image: users.image,
+      isServerOwner: users.isServerOwner,
+      isServerAdmin: users.isServerAdmin,
+      createdAt: users.createdAt,
+      householdId: households.id,
+      householdName: households.name,
+    })
+    .from(users)
+    .leftJoin(householdUsers, eq(householdUsers.userId, users.id))
+    .leftJoin(households, eq(households.id, householdUsers.householdId))
+    .orderBy(desc(users.isServerOwner), desc(users.isServerAdmin), users.createdAt);
+
+  return rows.map((row) => ({
+    id: row.id,
+    email: decrypt(row.email),
+    name: row.name ? decrypt(row.name) : "",
+    image: row.image ? decrypt(row.image) : null,
+    isServerOwner: row.isServerOwner,
+    isServerAdmin: row.isServerAdmin,
+    createdAt: row.createdAt.getTime(),
+    household:
+      row.householdId && row.householdName
+        ? { id: row.householdId, name: row.householdName }
+        : null,
+  }));
+}
+
+/**
+ * The server roles a user holds, or null when there is no such user.
+ * Callers that only need a yes/no want `isUserServerAdmin`.
+ */
+export async function getUserRoleFlags(
+  userId: string
+): Promise<{ isServerOwner: boolean; isServerAdmin: boolean } | null> {
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId),
     columns: {
@@ -408,11 +502,17 @@ export async function isUserServerAdmin(userId: string): Promise<boolean> {
     },
   });
 
-  if (!user) {
+  return user ?? null;
+}
+
+export async function isUserServerAdmin(userId: string): Promise<boolean> {
+  const roles = await getUserRoleFlags(userId);
+
+  if (!roles) {
     return false;
   }
 
-  return user.isServerOwner || user.isServerAdmin;
+  return roles.isServerOwner || roles.isServerAdmin;
 }
 
 export async function setUserAsOwnerAndAdmin(userId: string): Promise<void> {
@@ -424,6 +524,15 @@ export async function setUserAsOwnerAndAdmin(userId: string): Promise<void> {
       version: sql`${users.version} + 1`,
     })
     .where(eq(users.id, userId));
+}
+
+export async function isUserServerOwner(userId: string): Promise<boolean> {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { isServerOwner: true },
+  });
+
+  return user?.isServerOwner ?? false;
 }
 
 export async function setUserAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
@@ -440,16 +549,19 @@ export async function countUsers(): Promise<number> {
 }
 
 /**
- * Get user preferences (JSONB). If missing (pre-migration), return {} and warn.
+ * The user's preferences document, each choice parsed on its own so one this
+ * version does not know reads as absent. If the column is missing
+ * (pre-migration), return {} and warn.
  */
-export async function getUserPreferences(userId: string): Promise<Record<string, unknown>> {
+export async function getUserPreferences(userId: string): Promise<UserPreferencesDto> {
   try {
     const user = await db.query.users.findFirst({
       where: eq(users.id, userId),
       columns: { preferences: true },
     });
+    const parsed = UserPreferencesSchema.safeParse(user?.preferences ?? {});
 
-    return (user?.preferences as Record<string, unknown>) ?? {};
+    return parsed.success ? parsed.data : {};
   } catch (error) {
     // Migration/column may be missing: warn and return empty preferences
     try {
@@ -463,6 +575,28 @@ export async function getUserPreferences(userId: string): Promise<Record<string,
 
     return {};
   }
+}
+
+/**
+ * Merge Device Preferences into one Device Kind's block, per choice, in one
+ * statement: the rest of the document is never read back and rewritten. The
+ * last writer wins and the profile's version is left alone, so a toggle never
+ * goes stale and never makes a pending profile edit stale.
+ */
+export async function setUserDevicePreferences(
+  userId: string,
+  kind: DeviceKind,
+  updates: DevicePreferencesUpdate
+): Promise<void> {
+  const block = sql`case when jsonb_typeof(${users.preferences} -> ${kind}::text) = 'object'
+    then ${users.preferences} -> ${kind}::text else '{}'::jsonb end`;
+
+  await db
+    .update(users)
+    .set({
+      preferences: sql`jsonb_set(coalesce(${users.preferences}, '{}'::jsonb), array[${kind}::text], ${block} || ${JSON.stringify(updates)}::jsonb)`,
+    })
+    .where(eq(users.id, userId));
 }
 
 /** Update user preferences by atomically merging provided JSONB updates. */

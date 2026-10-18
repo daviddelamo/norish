@@ -24,7 +24,7 @@ export interface HarnessUser {
 }
 
 interface ProductionStackOptions {
-  project: "offline" | "ai";
+  project: "offline" | "ai" | "realtime";
   port: number;
   databaseName: string;
   users: readonly [HarnessUser, HarnessUser];
@@ -35,6 +35,12 @@ interface ProductionStackOptions {
    * no business restating it.
    */
   environment?: Record<string, string>;
+  /**
+   * Keep the server's stdout and stderr in memory (they still reach the
+   * terminal) so a scenario can assert what the server logged. A project that
+   * asserts on log lines lowers `LOG_LEVEL` in `environment` to match.
+   */
+  captureLogs?: boolean;
 }
 
 export interface ProductionServer {
@@ -51,6 +57,35 @@ function ensureBuilt(): void {
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+/**
+ * A host port nobody is listening on right now. Redis gets a fixed binding to
+ * it rather than a kernel-assigned one, because Docker re-assigns ephemeral
+ * host ports on a container restart and a fixed binding survives one — which
+ * is what lets a scenario restart Redis under a server that keeps its URL.
+ * The embedded parser gets one too, so stacks running side by side never
+ * share (or kill) each other's parser.
+ */
+function freeHostPort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+
+    probe.unref();
+    probe.once("error", reject);
+    probe.listen(0, "127.0.0.1", () => {
+      const address = probe.address();
+
+      if (!address || typeof address === "string") {
+        probe.close();
+        reject(new Error("Could not allocate a free host port"));
+
+        return;
+      }
+
+      probe.close(() => resolve(address.port));
+    });
+  });
 }
 
 function portIsOpen(port: number): Promise<boolean> {
@@ -95,15 +130,25 @@ async function stopAll(
 export class ProductionStack {
   readonly baseURL: string;
   readonly uploadsDir: string;
+  private readonly port: number;
+  private readonly runtimeDir: string;
+  private parserPort: number | null = null;
   private postgres: StartedPostgreSqlContainer | null = null;
   private redis: StartedRedisContainer | null = null;
   private activeServer: ProductionServer | null = null;
   private databaseConnectionUrl: string | null = null;
   private redisConnectionUrl: string | null = null;
+  private capturedLogs: string[] = [];
 
   constructor(private readonly options: ProductionStackOptions) {
-    this.baseURL = `http://localhost:${options.port}`;
-    this.uploadsDir = path.join(E2E_RUNTIME_DIR, options.project, "uploads");
+    // Every Playwright worker boots its own stack, so each takes the
+    // project's port plus its worker index and a runtime directory of its own.
+    const worker = Number(process.env.TEST_PARALLEL_INDEX ?? 0);
+
+    this.port = options.port + worker;
+    this.baseURL = `http://localhost:${this.port}`;
+    this.runtimeDir = path.join(E2E_RUNTIME_DIR, `${options.project}-${worker}`);
+    this.uploadsDir = path.join(this.runtimeDir, "uploads");
   }
 
   get databaseUrl(): string {
@@ -114,6 +159,49 @@ export class ProductionStack {
     return this.databaseConnectionUrl;
   }
 
+  get redisUrl(): string {
+    if (!this.redisConnectionUrl) {
+      throw new Error(`[${this.options.project}] Redis is not provisioned`);
+    }
+
+    return this.redisConnectionUrl;
+  }
+
+  /** Everything the server wrote since the last `clearLogs()`, one entry per line. */
+  logs(): readonly string[] {
+    return this.capturedLogs;
+  }
+
+  clearLogs(): void {
+    this.capturedLogs = [];
+  }
+
+  /** Run one `redis-cli` command inside the Redis container and return its output. */
+  async redisCli(command: string, ...args: string[]): Promise<string> {
+    if (!this.redis) {
+      throw new Error(`[${this.options.project}] Redis is not provisioned`);
+    }
+
+    return (await this.redis.executeCliCmd(command, args)).trim();
+  }
+
+  /**
+   * Restart the Redis container in place, the way an operator would: a
+   * SIGTERM, which lets Redis write its snapshot, so sessions and the Resume
+   * Buffer come back with it (testcontainers' default is an immediate kill,
+   * after which every session is gone and every request is anonymous). Its
+   * host port is a fixed binding, so it survives the restart and the
+   * server's clients reconnect on their own — which is the point.
+   */
+  async restartRedis(): Promise<void> {
+    if (!this.redis) {
+      throw new Error(`[${this.options.project}] Redis is not provisioned`);
+    }
+
+    // Milliseconds: testcontainers converts this to Docker's seconds itself.
+    await this.redis.restart({ timeout: 10_000 });
+  }
+
   async start(): Promise<void> {
     ensureBuilt();
     mkdirSync(this.uploadsDir, { recursive: true });
@@ -121,13 +209,18 @@ export class ProductionStack {
     let phase = "container provisioning";
 
     try {
+      const redisHostPort = await freeHostPort();
+
+      this.parserPort = await freeHostPort();
       const [postgresResult, redisResult] = await Promise.allSettled([
         new PostgreSqlContainer("postgres:17-alpine")
           .withDatabase(this.options.databaseName)
           .withUsername(this.options.databaseName)
           .withPassword(this.options.databaseName)
           .start(),
-        new RedisContainer("redis:8.6.2-alpine").start(),
+        new RedisContainer("redis:8.6.2-alpine")
+          .withExposedPorts({ container: 6379, host: redisHostPort })
+          .start(),
       ]);
 
       if (postgresResult.status === "fulfilled") this.postgres = postgresResult.value;
@@ -187,17 +280,22 @@ export class ProductionStack {
     if (this.activeServer) return this.activeServer;
     ensureBuilt();
 
-    if (await portIsOpen(this.options.port)) {
+    if (await portIsOpen(this.port)) {
       throw new Error(
-        `[${this.options.project}] port ${this.options.port} is already in use; stop the lingering process before running browser E2E`
+        `[${this.options.project}] port ${this.port} is already in use; stop the lingering process before running browser E2E`
       );
     }
 
+    const capture = this.options.captureLogs === true;
     const child: ChildProcess = spawn(process.execPath, [DIST_SERVER_ENTRY], {
       cwd: WEB_DIR,
       env: this.serverEnvironment(),
-      stdio: ["ignore", "inherit", "inherit"],
+      stdio: ["ignore", capture ? "pipe" : "inherit", capture ? "pipe" : "inherit"],
     });
+
+    if (capture) {
+      this.captureOutput(child);
+    }
     const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
     let stopped = false;
     const server: ProductionServer = {
@@ -215,10 +313,10 @@ export class ProductionStack {
 
         const closeDeadline = Date.now() + STOP_TIMEOUT_MS;
 
-        while (await portIsOpen(this.options.port)) {
+        while (await portIsOpen(this.port)) {
           if (Date.now() >= closeDeadline) {
             throw new Error(
-              `[${this.options.project}] production port ${this.options.port} stayed open after process exit`
+              `[${this.options.project}] production port ${this.port} stayed open after process exit`
             );
           }
 
@@ -295,17 +393,44 @@ export class ProductionStack {
       },
       {
         label: `[${this.options.project}] runtime directory`,
-        run: () =>
-          rm(path.join(E2E_RUNTIME_DIR, this.options.project), { recursive: true, force: true }),
+        run: () => rm(this.runtimeDir, { recursive: true, force: true }),
       },
     ]);
+  }
+
+  /** Tee the child's output to this process and keep a copy, line by line. */
+  private captureOutput(child: ChildProcess): void {
+    const streams: Array<[NodeJS.ReadableStream | null, NodeJS.WriteStream]> = [
+      [child.stdout, process.stdout],
+      [child.stderr, process.stderr],
+    ];
+
+    for (const [source, sink] of streams) {
+      if (!source) continue;
+
+      let rest = "";
+
+      source.setEncoding("utf8");
+      source.on("data", (chunk: string) => {
+        sink.write(chunk);
+        const lines = (rest + chunk).split("\n");
+
+        rest = lines.pop() ?? "";
+        this.capturedLogs.push(...lines);
+      });
+      source.on("end", () => {
+        if (rest) this.capturedLogs.push(rest);
+        rest = "";
+      });
+    }
   }
 
   private serverEnvironment(): NodeJS.ProcessEnv {
     return {
       ...process.env,
       NODE_ENV: "production",
-      PORT: String(this.options.port),
+      PORT: String(this.port),
+      PARSER_API_PORT: String(this.parserPort),
       DATABASE_URL: this.databaseUrl,
       REDIS_URL: this.redisConnectionUrl!,
       AUTH_URL: this.baseURL,
@@ -321,6 +446,9 @@ export class ProductionStack {
       // returns 429 and pages that need client-side session data hang on their
       // skeletons — a failure about the harness, not the code under test.
       AUTH_RATE_LIMIT_ENABLED: "false",
+      // Nothing outbound: a spec that needs an ingredient catalogue seeds its
+      // own, rather than the server fetching Open Food Facts at boot.
+      INGREDIENT_CATALOGUE_URL: "",
       ...this.options.environment,
     };
   }

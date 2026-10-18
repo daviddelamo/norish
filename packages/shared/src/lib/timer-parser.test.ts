@@ -85,6 +85,21 @@ describe("parseTimerDurations", () => {
       expect(matches[0].durationSeconds).toBe(30);
       expect(matches[0].originalText).toBe("30초");
     });
+
+    it("detects Ukrainian keywords in their declined and short forms", () => {
+      expect(
+        parseTimerDurations("Варіть 15 хвилин", defaultTimerKeywords)[0]?.durationSeconds
+      ).toBe(15 * 60);
+      expect(
+        parseTimerDurations("Запікайте 1 годину", defaultTimerKeywords)[0]?.durationSeconds
+      ).toBe(3600);
+      expect(
+        parseTimerDurations("Перемішуйте 30 сек", defaultTimerKeywords)[0]?.durationSeconds
+      ).toBe(30);
+      expect(parseTimerDurations("Тушкуйте 5 хв", defaultTimerKeywords)[0]?.durationSeconds).toBe(
+        5 * 60
+      );
+    });
   });
 
   describe("custom keywords", () => {
@@ -213,6 +228,35 @@ describe("parseTimerDurations", () => {
 
       expect(matches).toHaveLength(1);
       expect(matches[0].durationSeconds).toBe(1.5 * 3600);
+    });
+
+    it.each([
+      ["Anna hautua 1,5 tuntia", "1,5 tuntia"],
+      ["1,5 Stunden köcheln lassen", "1,5 Stunden"],
+      ["Laat 1,5 uur rijzen", "1,5 uur"],
+      ["Cuire 1,5 heures", "1,5 heures"],
+    ])("reads a decimal comma in %s", (text, originalText) => {
+      const matches = parseTimerDurations(text, defaultTimerKeywords);
+
+      expect(matches).toHaveLength(1);
+      expect(matches[0].durationSeconds).toBe(1.5 * 3600);
+      expect(matches[0].originalText).toBe(originalText);
+    });
+
+    it("reads a decimal comma in a range", () => {
+      const matches = parseTimerDurations("Laat 1,5-2,5 uur rijzen", defaultTimerKeywords);
+
+      expect(matches).toHaveLength(1);
+      expect(matches[0].durationSeconds).toBe(2.5 * 3600);
+      expect(matches[0].originalText).toBe("1,5-2,5 uur");
+    });
+
+    it("keeps a comma followed by a space as a list separator", () => {
+      const matches = parseTimerDurations("Wait 10, 15 minutes");
+
+      expect(matches).toHaveLength(1);
+      expect(matches[0].durationSeconds).toBe(15 * 60);
+      expect(matches[0].originalText).toBe("15 minutes");
     });
 
     it("handles case insensitivity", () => {

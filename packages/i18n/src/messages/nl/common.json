@@ -49,6 +49,7 @@
   "filters": {
     "title": "Filters",
     "search": "Zoeken",
+    "searchIn": "Zoeken in",
     "sort": "Sorteren",
     "mode": "Modus",
     "modeAll": "Alles",
@@ -118,6 +119,9 @@
       "placeholder": "https://example.com/your-recipe",
       "failed": "Importeren van recept mislukt",
       "failedWithAI": "Importeren van recept met AI mislukt"
+    },
+    "clipboard": {
+      "title": "Recept importeren van de link die je hebt gekopieerd?"
     },
     "paste": {
       "title": "Importeren vanuit klembord",
@@ -235,6 +239,7 @@
     "cache": {
       "heading": "Offline cache",
       "recipes": "Recipes",
+      "cookbooks": "Kookboeken",
       "groceries": "Groceries",
       "stores": "Stores",
       "planned": "This week",
@@ -282,5 +287,15 @@
   "queuedOffline": {
     "title": "Je bent offline",
     "description": "In de wachtrij gezet — Norish maakt dit automatisch af zodra je weer online bent."
+  },
+  "storageUnavailable": {
+    "title": "Kan niet starten",
+    "description": "Norish kon de beveiligde opslag niet lezen en weet daardoor niet bij welke server deze app hoort. Er is niets gewijzigd. Probeer het opnieuw of herstart de app.",
+    "detailsLabel": "Technische details"
+  },
+  "aiKeyRejected": {
+    "title": "Een AI-sleutel werkt niet meer",
+    "description": "De provider weigert de API-sleutel voor {blocks} sinds {since}. Sla een nieuwe sleutel op om die AI-functies weer te laten werken.",
+    "openSettings": "Instellingen openen"
   }
 }

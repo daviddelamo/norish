@@ -25,11 +25,43 @@ vi.mock("@/context/user-context", () => ({
   }),
 }));
 
-vi.mock("@/context/hidden-items-context", () => ({
-  useHiddenItems: () => userPreferencesState.hidden,
+vi.mock("@/context/device-preferences-context", async () =>
+  (await import("../../helpers/device-preferences-mock")).mockDevicePreferences(() => ({
+    hiddenItems: userPreferencesState.hidden,
+  }))
+);
+
+const stubRecipe = {
+  id: "r1",
+  name: "Recipe",
+  url: null,
+  description: "desc",
+  categories: [],
+  prepMinutes: 10,
+  cookMinutes: 20,
+  totalMinutes: 30,
+  tags: [],
+  author: null,
+  notes: null,
+  servings: 2,
+  systemUsed: null,
+};
+
+vi.mock("@/components/Panel/consumers", () => ({
+  MiniCookbooks: () => null,
+}));
+
+vi.mock("@/hooks/cookbooks", () => ({
+  useRecipeCookbooksQuery: () => ({ cookbooks: [], isLoading: false }),
+}));
+
+// The worked-out total reads the server; these pages are about their layout.
+vi.mock("@/hooks/recipes/use-worked-out-nutrition", () => ({
+  useWorkedOutNutrition: () => null,
 }));
 
 vi.mock("@/app/(app)/recipes/[id]/context", () => ({
+  useRecipeContext: () => ({ recipe: stubRecipe }),
   useRecipeContextRequired: () => ({
     recipe: {
       id: "r1",
@@ -50,6 +82,12 @@ vi.mock("@/app/(app)/recipes/[id]/context", () => ({
     allergies: [],
     allergySet: new Set<string>(),
   }),
+}));
+
+// The way back reads the reader's lens and the page they came from, neither
+// of which these tests set up — the cards under test are what they are about.
+vi.mock("@/hooks/use-back-destination", () => ({
+  useBackDestination: () => ({ href: "/", label: "Back to library" }),
 }));
 
 vi.mock("@/hooks/favorites", () => ({

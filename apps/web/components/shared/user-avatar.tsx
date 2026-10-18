@@ -36,11 +36,15 @@ export function getUserInitials(value?: string | null) {
 }
 
 /**
- * A person's profile picture: always a circle, initials on a pastel disc
- * rendered underneath the image so nothing ever shows as an empty box —
- * not while loading, not when an old URL 404s, not offline. Presentational
- * only; the image URL arrives via props (either `/avatars/…` or an external
- * OAuth picture).
+ * A person's profile picture: always a circle. Presentational only; the image
+ * URL arrives via props (either `/avatars/…` or an external OAuth picture).
+ *
+ * A picture has no background of its own, loading or not, so a transparent
+ * PNG shows whatever the avatar sits on. Behind it the identity pastel became
+ * a green disc nobody chose, following the person rather than the light or
+ * dark theme around it (#282, #536), and flashing at every start while the
+ * picture loaded (#630). Initials on that pastel disc stand in for a picture
+ * there is none of, or one that fails: an old URL that 404s, or offline.
  */
 export default function UserAvatar({ userId, name, email, image, size = "md" }: UserAvatarProps) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -52,9 +56,8 @@ export default function UserAvatar({ userId, name, email, image, size = "md" }: 
       aria-label={label}
       className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold select-none ${SIZE_CLASSES[size]}`}
       role="img"
-      style={getAvatarFallbackStyle(userId || email || name || "U")}
+      style={showImage ? undefined : getAvatarFallbackStyle(userId || email || name || "U")}
     >
-      <span aria-hidden>{getUserInitials(name || email || "U")}</span>
       {showImage ? (
         // Tiny originals from our own immutable route; the Next image optimizer
         // would re-encode them per size and break offline caching.
@@ -66,7 +69,9 @@ export default function UserAvatar({ userId, name, email, image, size = "md" }: 
           src={image ?? undefined}
           onError={() => setFailedSrc(image ?? null)}
         />
-      ) : null}
+      ) : (
+        <span aria-hidden>{getUserInitials(name || email || "U")}</span>
+      )}
     </span>
   );
 }

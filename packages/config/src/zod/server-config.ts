@@ -16,12 +16,16 @@ export const ServerConfigKeys = {
   AI_CONFIG: "ai_config",
   VIDEO_CONFIG: "video_config",
   IMAGE_GENERATION_CONFIG: "image_generation_config",
+  DECISION_CONFIG: "decision_config",
   SCHEDULER_CLEANUP_MONTHS: "scheduler_cleanup_months",
   JOB_RETENTION: "job_retention",
   RECIPE_PERMISSION_POLICY: "recipe_permission_policy",
+  INGREDIENT_PERMISSION_POLICY: "ingredient_permission_policy",
+  INGREDIENT_SEED_STATE: "ingredient_seed_state",
   PROMPTS: "prompts",
   LOCALE_CONFIG: "locale_config",
   TIMER_KEYWORDS: "timer_keywords",
+  INGREDIENT_WORDS: "ingredient_words",
 } as const;
 
 export type ServerConfigKey = (typeof ServerConfigKeys)[keyof typeof ServerConfigKeys];
@@ -140,11 +144,14 @@ export const PromptsConfigSchema = z.object({
   autoTagging: z.string().optional(),
   recipeProvenance: z.string().optional(),
   ingredientLinking: z.string().optional(),
+  ingredientResolution: z.string().optional(),
   imageExtraction: z.string().optional(),
   autoCategorization: z.string().optional(),
   allergyDetection: z.string().optional(),
   imageGenerationBrief: z.string().optional(),
   imageGenerationStyle: z.string().optional(),
+  ingredientIconStyle: z.string().optional(),
+  ingredientPlainName: z.string().optional(),
   isOverridden: z.boolean().optional(),
 });
 
@@ -197,6 +204,50 @@ export const UnitsConfigSchema = z.object({
 });
 
 export type UnitsConfig = z.infer<typeof UnitsConfigSchema>;
+
+// ============================================================================
+// Ingredient Words Schema
+// ============================================================================
+
+/**
+ * The words of one language an ingredient name is read by (ADR-0037): what
+ * the resolver's second rung strips from a name, what files a new food under
+ * a known one, and what a plural's ending stands for. Written as a cook
+ * writes them; folded when read.
+ */
+export const IngredientWordsLanguageSchema = z.object({
+  /** What is done to a food, never which food: "chopped", "fijngesneden". */
+  preparation: z.array(z.string()).default([]),
+  /** The word between two preparations: "peeled and chopped". */
+  joiners: z.array(z.string()).default([]),
+  /** The word between a leading measure and its food: "a pinch of nutmeg". */
+  connectors: z.array(z.string()).default([]),
+  /** After these comes what a food is packed or served in or with: "tuna in olive oil". */
+  servedWith: z.array(z.string()).default([]),
+  /** Words that never name a food alone, however another language spells one with them. */
+  notFoods: z.array(z.string()).default([]),
+  /** Words that say an amount is a guess: "about", "ongeveer". */
+  approximately: z.array(z.string()).default([]),
+  /** Sizes: "large", "grote". A line's unit that is one counts a piece. */
+  sizes: z.array(z.string()).default([]),
+  /** Plural and diminutive endings, each with the ending of the form it stands for. */
+  inflections: z.array(z.tuple([z.string(), z.string()])).default([]),
+});
+
+export type IngredientWordsLanguage = z.infer<typeof IngredientWordsLanguageSchema>;
+
+/** Every language's ingredient words, by locale: read together, since a recipe's language is not recorded. */
+export const IngredientWordsMapSchema = z.record(z.string(), IngredientWordsLanguageSchema);
+
+export type IngredientWordsMap = z.infer<typeof IngredientWordsMapSchema>;
+
+/** The ingredient words as stored, with whether an administrator edited them. */
+export const IngredientWordsConfigSchema = z.object({
+  words: IngredientWordsMapSchema,
+  isOverridden: z.boolean().default(false),
+});
+
+export type IngredientWordsConfig = z.infer<typeof IngredientWordsConfigSchema>;
 
 // Flat units map (for parse-ingredient library compatibility)
 export type FlatUnitsMap = Record<
@@ -319,6 +370,24 @@ export const DEFAULT_AUTOMATIC_ENRICHMENT: AutomaticEnrichmentConfig = {
   imageGeneration: false,
 };
 
+/**
+ * What runs on a food just minted by someone's action (ADR-0037, amended
+ * 2026-10-10): AI gives it its Plain Name, and the image provider draws it an
+ * icon where it would show none. Both cost a request per food, so both are
+ * off until an administrator opts in.
+ */
+export const AutomaticIngredientsSchema = z.object({
+  plainName: z.boolean(),
+  icon: z.boolean(),
+});
+
+export type AutomaticIngredientsConfig = z.infer<typeof AutomaticIngredientsSchema>;
+
+export const DEFAULT_AUTOMATIC_INGREDIENTS: AutomaticIngredientsConfig = {
+  plainName: false,
+  icon: false,
+};
+
 export const DEFAULT_TAG_STRATEGY: TagStrategy = "predefined";
 
 /** Restrictive by default: an administrator opts in to letting AI mint Cuisines. */
@@ -338,6 +407,7 @@ export const AIConfigInputSchema = z.object({
   tagStrategy: TagStrategySchema.optional(),
   cuisineStrategy: CuisineStrategySchema.optional(),
   automaticEnrichment: AutomaticEnrichmentSchema.partial().optional(),
+  automaticIngredients: AutomaticIngredientsSchema.partial().optional(),
   /** @deprecated Migrated into `automaticEnrichment.autoTagging` + `tagStrategy`. */
   autoTaggingMode: AutoTaggingModeSchema.optional(),
   /** @deprecated Migrated into `automaticEnrichment.allergyDetection`. */
@@ -356,6 +426,7 @@ export const AIConfigSchema = AIConfigInputSchema.transform(
     tagStrategy,
     cuisineStrategy,
     automaticEnrichment,
+    automaticIngredients,
     ...rest
   }) => {
     const legacyAutoTaggingOn =
@@ -389,6 +460,7 @@ export const AIConfigSchema = AIConfigInputSchema.transform(
         imageGeneration:
           automaticEnrichment?.imageGeneration ?? DEFAULT_AUTOMATIC_ENRICHMENT.imageGeneration,
       },
+      automaticIngredients: { ...DEFAULT_AUTOMATIC_INGREDIENTS, ...automaticIngredients },
     };
   }
 );
@@ -497,15 +569,18 @@ export type VideoConfig = z.infer<typeof VideoConfigSchema>;
 
 /**
  * Providers whose installed AI SDK package exposes an image model, plus
- * `disabled` (ADR-0024). Anthropic, Mistral, DeepSeek, Groq, Perplexity and
- * Ollama expose none, which is why Image Generation reads its own provider
- * block rather than the server's. This is a fact about the installed provider
- * packages, not about any model — re-check it when the AI SDK line moves.
+ * `disabled` (ADR-0024). Anthropic, Mistral, DeepSeek, Groq and Perplexity
+ * expose none, which is why Image Generation reads its own provider block
+ * rather than the server's. Ollama joined when the AI SDK line moved to 7:
+ * `ai-sdk-ollama` 4 exposes an image model for Ollama's experimental image
+ * models. This is a fact about the installed provider packages, not about any
+ * model — re-check it when the AI SDK line moves.
  */
 export const ImageGenerationProviderSchema = z.enum([
   "openai",
   "google",
   "azure",
+  "ollama",
   "lm-studio",
   "generic-openai",
   "disabled",
@@ -518,6 +593,7 @@ export const IMAGE_GENERATION_PROVIDERS_ENABLED = [
   "openai",
   "google",
   "azure",
+  "ollama",
   "lm-studio",
   "generic-openai",
 ] as const satisfies readonly ImageGenerationProvider[];
@@ -531,6 +607,7 @@ export const IMAGE_GENERATION_PROVIDERS_CLOUD = [
 
 /** Providers that require an endpoint URL. Azure's is optional, as in the AI block. */
 export const IMAGE_GENERATION_PROVIDERS_NEED_ENDPOINT = [
+  "ollama",
   "lm-studio",
   "generic-openai",
 ] as const satisfies readonly ImageGenerationProvider[];
@@ -600,6 +677,131 @@ export function isImageGenerationConfigValid(
 }
 
 // ============================================================================
+// Decision Model Configuration Schema (ADR-0035)
+// ============================================================================
+
+/**
+ * The providers that can answer a Decision, plus `disabled`. One real member
+ * on purpose: Vercel's AI Gateway also serves Jev, and when that is wanted it
+ * is a second member and a base URL, not a redesign. The enum exists so the
+ * admin form reads like its two sibling blocks and so `disabled` is a stored
+ * fact rather than an absent key.
+ */
+export const DecisionProviderSchema = z.enum(["typesafe", "disabled"]);
+
+export type DecisionProvider = z.infer<typeof DecisionProviderSchema>;
+
+/**
+ * What the Decision Model does for a household, each an administrator's
+ * choice from one list. Import triage is deliberately not here: it serves
+ * Norish's own import algorithm and is not a household preference.
+ */
+export const DecisionUseSchema = z.enum([
+  "autoCategorization",
+  "autoTagging",
+  "allergyDetection",
+  "recipeProvenance",
+  "groceryLinking",
+  "ingredientResolution",
+  "validateEnrichments",
+]);
+
+export type DecisionUse = z.infer<typeof DecisionUseSchema>;
+
+/** Every use, in the order the form lists them — and the default selection. */
+export const DECISION_USES: readonly DecisionUse[] = DecisionUseSchema.options;
+
+/** `jev-latest` follows TypeSafe's newest release. */
+export const DEFAULT_DECISION_MODEL = "jev-latest";
+
+/** TypeSafe's base URL; overridable for a proxy or gateway. */
+export const DEFAULT_DECISION_ENDPOINT = "https://api.typesafe.ai/v1";
+
+/**
+ * The Decision Model block: its own provider, key, model and endpoint,
+ * following the Image Generation shape (ADR-0024, ADR-0035), plus the list
+ * of uses an administrator has selected. No fallback to the AI
+ * configuration's key — the provider never matches — and no timeout, because
+ * the one AI timeout governs a Decision (ADR-0015). Ships unconfigured: no
+ * stored row means no Decision Model.
+ *
+ * `uses` absent means every use, so a block stored before a use existed gains
+ * it, and a use added in a later release is on for everyone until an
+ * administrator deselects it.
+ */
+export const DecisionConfigSchema = z.object({
+  provider: DecisionProviderSchema,
+  apiKey: z.string().optional(),
+  model: z.string().optional(),
+  endpoint: z.url("Endpoint must be a valid URL").optional(),
+  uses: z.array(DecisionUseSchema).optional(),
+});
+
+export type DecisionConfig = z.infer<typeof DecisionConfigSchema>;
+
+/**
+ * The settings one Decision runs with: the stored values with the model and
+ * endpoint defaults filled in. Blank strings count as unset.
+ */
+export function resolveDecisionSettings(
+  config: Pick<DecisionConfig, "provider" | "apiKey" | "model" | "endpoint">
+): { provider: DecisionProvider; apiKey?: string; model: string; endpoint: string } {
+  return {
+    provider: config.provider,
+    apiKey: config.apiKey || undefined,
+    model: config.model?.trim() || DEFAULT_DECISION_MODEL,
+    endpoint: config.endpoint?.trim() || DEFAULT_DECISION_ENDPOINT,
+  };
+}
+
+/**
+ * Whether the stored Decision block can serve a request at all: a provider is
+ * selected and the key it needs is present. One definition, shared by the
+ * loader's one-question getters, the runtime's configuration error and the
+ * admin form.
+ */
+export function isDecisionConfigValid(
+  config: DecisionConfig | null | undefined
+): config is ConfiguredDecisionConfig {
+  if (!config || config.provider === "disabled") return false;
+
+  return !!config.apiKey;
+}
+
+/** A Decision block that can serve a request: a real provider and its key. */
+export type ConfiguredDecisionConfig = DecisionConfig & {
+  provider: Exclude<DecisionProvider, "disabled">;
+  apiKey: string;
+};
+
+/**
+ * The `uses` list to store for a selection: `undefined` when every use is
+ * selected, so a saved block keeps meaning "every use" and a use added in a
+ * later release is on for it, exactly as for a block that never stored a
+ * list; the selection itself otherwise.
+ */
+export function selectedDecisionUses(selected: readonly DecisionUse[]): DecisionUse[] | undefined {
+  const chosen = new Set(selected);
+
+  if (DECISION_USES.every((use) => chosen.has(use))) return undefined;
+
+  return DECISION_USES.filter((use) => chosen.has(use));
+}
+
+/**
+ * Whether a stored (and valid) block has this use selected. A block with no
+ * `uses` list means every use.
+ */
+export function isDecisionUseSelected(
+  config: DecisionConfig | null | undefined,
+  use: DecisionUse
+): boolean {
+  if (!isDecisionConfigValid(config)) return false;
+
+  return config.uses === undefined || config.uses.includes(use);
+}
+
+// ============================================================================
 // Scheduler Configuration Schema
 // ============================================================================
 
@@ -644,6 +846,44 @@ export const DEFAULT_RECIPE_PERMISSION_POLICY: RecipePermissionPolicy = {
   edit: "household",
   delete: "household",
 };
+
+/**
+ * Who may edit an Ingredient someone else minted: rename it, mark it
+ * distinct, remove its aliases. One level, because Ingredients are always
+ * visible — a hidden one would split the shared catalogue and leave recipes
+ * pointing at food their readers cannot see. Adding an alias is open to
+ * everyone; ownerless (seeded) rows are an administrator's alone, and an
+ * administrator bypasses the policy, as for recipes.
+ */
+export const IngredientPermissionPolicySchema = z.object({
+  edit: PermissionLevelSchema.default("household"),
+});
+
+export type IngredientPermissionPolicy = z.infer<typeof IngredientPermissionPolicySchema>;
+
+export const DEFAULT_INGREDIENT_PERMISSION_POLICY: IngredientPermissionPolicy = {
+  edit: "household",
+};
+
+/**
+ * Where the ingredient catalogue seed stands (ADR-0038): the validators of
+ * the last file applied, so the nightly fetch asks only for a newer one, and
+ * whether existing Ingredients have been merged into the seed — a pass that
+ * runs once. Written by the seed task alone.
+ */
+export const IngredientSeedStateSchema = z.object({
+  etag: z.string().nullable().default(null),
+  lastModified: z.string().nullable().default(null),
+  appliedAt: z.string().nullable().default(null),
+  entries: z.number().int().default(0),
+  mergedExisting: z.boolean().default(false),
+  /** The resolver's `RUNG_VERSION` the last pass over undecided mints ran under. */
+  rungVersion: z.number().int().default(0),
+  /** The version of Ingredient Nutrition's source table last applied (ADR-0039). */
+  nutritionVersion: z.string().nullable().default(null),
+});
+
+export type IngredientSeedState = z.infer<typeof IngredientSeedStateSchema>;
 
 // ============================================================================
 // Server Config Entry Schema (for database rows)
@@ -747,18 +987,26 @@ export function getSchemaForConfigKey(key: ServerConfigKey): z.ZodType {
       return VideoConfigSchema;
     case ServerConfigKeys.IMAGE_GENERATION_CONFIG:
       return ImageGenerationConfigSchema;
+    case ServerConfigKeys.DECISION_CONFIG:
+      return DecisionConfigSchema;
     case ServerConfigKeys.SCHEDULER_CLEANUP_MONTHS:
       return SchedulerCleanupMonthsSchema;
     case ServerConfigKeys.JOB_RETENTION:
       return JobRetentionConfigSchema;
     case ServerConfigKeys.RECIPE_PERMISSION_POLICY:
       return RecipePermissionPolicySchema;
+    case ServerConfigKeys.INGREDIENT_PERMISSION_POLICY:
+      return IngredientPermissionPolicySchema;
+    case ServerConfigKeys.INGREDIENT_SEED_STATE:
+      return IngredientSeedStateSchema;
     case ServerConfigKeys.PROMPTS:
       return PromptsConfigSchema;
     case ServerConfigKeys.LOCALE_CONFIG:
       return I18nLocaleConfigSchema;
     case ServerConfigKeys.TIMER_KEYWORDS:
       return TimerKeywordsSchema;
+    case ServerConfigKeys.INGREDIENT_WORDS:
+      return IngredientWordsConfigSchema;
     default:
       return z.any();
   }
@@ -796,6 +1044,7 @@ export const SENSITIVE_CONFIG_KEYS: ServerConfigKey[] = [
   ServerConfigKeys.AI_CONFIG,
   ServerConfigKeys.VIDEO_CONFIG,
   ServerConfigKeys.IMAGE_GENERATION_CONFIG,
+  ServerConfigKeys.DECISION_CONFIG,
 ];
 
 /**

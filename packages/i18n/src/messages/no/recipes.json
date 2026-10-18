@@ -1,9 +1,11 @@
 {
   "dashboard": {
-    "title": "Alle oppskrifter",
+    "libraryTitle": "Biblioteket ditt",
+    "recipesTitle": "Oppskriftene dine",
+    "cookbooksTitle": "Kokebøkene dine",
     "searchPlaceholder": "Søk eller legg til oppskrift...",
     "searchRecipesPlaceholder": "Søk oppskrifter...",
-    "recipeCount": "{count, plural, one {# oppskrift} other {# oppskrifter}}",
+    "libraryCount": "{count, plural, one {# element} other {# elementer}}",
     "addRecipe": "Legg til oppskrift",
     "importFromUrl": "URL",
     "importFromPaste": "Lim inn",
@@ -19,13 +21,29 @@
       "label": "Oppskriftsvisning",
       "grid": "Rutenett",
       "list": "Liste"
+    },
+    "libraryType": {
+      "label": "Vis",
+      "all": "Alt",
+      "recipes": "Oppskrifter",
+      "cookbooks": "Kokebøker"
     }
   },
+  "back": {
+    "all": "Tilbake til biblioteket",
+    "recipes": "Tilbake til oppskrifter",
+    "cookbooks": "Tilbake til kokebøker",
+    "named": "Tilbake til {name}",
+    "cookbook": "Tilbake til kokeboken",
+    "generic": "Tilbake"
+  },
   "empty": {
-    "title": "Oppskriftsamlingen din venter",
+    "title": "Biblioteket ditt venter",
     "description": "Lim inn en oppskrift-URL i søkefeltet ovenfor, og la magien skje.",
     "noResults": "Ingen oppskrifter funnet",
-    "noResultsHint": "Prøv å justere eller tømme filtrene."
+    "noResultsHint": "Prøv å justere eller tømme filtrene.",
+    "noCookbooks": "Ingen kokebøker ennå",
+    "noCookbooksHint": "En kokebok er et navngitt sett med oppskrifter. Lag din første for å få orden i biblioteket."
   },
   "card": {
     "noImage": "Ingen bilde tilgjengelig",
@@ -35,7 +53,6 @@
     "recipeOptions": "Oppskriftsvalg"
   },
   "detail": {
-    "backToRecipes": "Tilbake til oppskrifter",
     "viewOriginal": "Se original oppskrift",
     "ingredients": "Ingredienser",
     "ingredientOptions": "Ingrediensalternativer",
@@ -86,7 +103,8 @@
     "linkingIngredients": "Kobler ingredienser…",
     "enrichmentFailed": "Siste forsøk mislyktes",
     "generateImage": "Generer bilde",
-    "generatingImage": "Genererer bilde…"
+    "generatingImage": "Genererer bilde…",
+    "cookbooks": "Kokebøker"
   },
   "sharePanel": {
     "title": "Del oppskrift",
@@ -136,7 +154,10 @@
     "ariaLabel": "Konverter målesystem",
     "toMetric": "Konverter til metrisk",
     "toUS": "Konverter til amerikansk",
-    "converting": "Konverterer…"
+    "toMetricWithAI": "Konverter til metrisk med AI",
+    "toUSWithAI": "Konverter til amerikansk med AI",
+    "converting": "Konverterer…",
+    "original": "Original"
   },
   "deleteModal": {
     "title": "Slett oppskrift",
@@ -237,7 +258,20 @@
     "protein": "Protein",
     "showingPortions": "Viser verdier for {count} {count, plural, one {porsjon} other {porsjoner}}",
     "noInfo": "Ingen næringsinformasjon tilgjengelig",
-    "estimateWithAI": "Estimér med AI"
+    "estimateWithAI": "Estimér med AI",
+    "estimated": "Anslått",
+    "leftOut": "{count, plural, one {# linje ikke regnet med} other {# linjer ikke regnet med}}",
+    "estimatedByAI": "anslått av AI",
+    "reasons": {
+      "seasoning": "krydder",
+      "noAmount": "ingen mengde",
+      "noSize": "ingen vekt for dette målet",
+      "noNumbers": "ingen næringsverdier ennå",
+      "noSpoonWeight": "ingen skjevekt ennå",
+      "noPieceWeight": "ingen stykkvekt ennå"
+    },
+    "workedOutFrom": "Beregnet fra ingrediensene, med {sources}.",
+    "householdNumbers": "husstandens verdier"
   },
   "measurementSystem": {
     "label": "Målesystem",
@@ -283,8 +317,6 @@
   },
   "toasts": {
     "imported": "Oppskrift importert",
-    "converted": "Mål konvertert",
-    "convertedDescription": "Oppskrift konvertert til {system}-enheter",
     "failed": "Oppskrifthandling mislyktes",
     "failedDescription": "Noe gikk galt under behandling av oppskriften din. Sjekk nettleserkonsollen for tekniske detaljer.",
     "batchImported": "Oppskrifter importert",
@@ -336,7 +368,7 @@
     "cuisines": "Kjøkken",
     "inferring": "Finner ut hvor denne oppskriften kommer fra …",
     "noInfo": "Ingen opphavsinformasjon ennå",
-    "inferWithAI": "Finn ut med KI"
+    "inferWithAI": "Finn ut med AI"
   },
   "import": {
     "alreadyExists": "Du har allerede denne oppskriften",
@@ -352,5 +384,44 @@
     "cook": "Koking",
     "other": "Annen tid",
     "total": "Totalt"
+  },
+  "cookbooks": {
+    "addCookbook": "Legg til kokebok",
+    "createTitle": "Ny kokebok",
+    "editTitle": "Rediger kokebok",
+    "titleLabel": "Tittel",
+    "titlePlaceholder": "f.eks. Hverdagsmiddager",
+    "options": "Kokebokalternativer",
+    "deleteTitle": "Slett kokebok",
+    "deleteConfirm": "Er du sikker på at du vil slette «{title}»?",
+    "deleteKeepsRecipes": "Oppskriftene i den blir liggende i biblioteket ditt.",
+    "recipeCount": "{count, plural, one {# oppskrift} other {# oppskrifter}}",
+    "empty": "Ingen oppskrifter ennå",
+    "singular": "Kokebok",
+    "notFound": "Fant ikke kokeboken",
+    "notFoundHint": "Den kan være slettet, eller den er ikke synlig for deg.",
+    "emptyHint": "Legg til oppskrifter fra hurtigmenyen på en oppskrift.",
+    "panelTitle": "Legg til i kokebok",
+    "newWithRecipe": "Ny kokebok med denne oppskriften",
+    "noneEditable": "Det finnes ingen kokebøker du kan redigere ennå.",
+    "cardTitle": "I kokebøker",
+    "removeFromCookbook": "Fjern fra kokeboken",
+    "noMatchingMembers": "Ingen oppskrifter i denne kokeboken passer filtrene dine.",
+    "membersLabel": "Oppskrifter i denne kokeboken",
+    "showMore": "Vis flere",
+    "willBeCreated": "Opprettes når du lagrer",
+    "manage": "Administrer",
+    "addRecipes": "Legg til oppskrifter",
+    "addRecipesTitle": "Legg oppskrifter til {title}",
+    "searchRecipes": "Søk oppskrifter",
+    "noRecipesToAdd": "Ingen oppskrifter funnet.",
+    "addCount": "{count, plural, one {Legg til # oppskrift} other {Legg til # oppskrifter}}",
+    "everythingAlreadyIn": "Alle oppskrifter er allerede i denne kokeboken.",
+    "coverLabel": "Forside",
+    "chooseImage": "Velg bilde",
+    "changeImage": "Bytt bilde",
+    "removeImage": "Fjern bilde",
+    "imageUploadFailed": "Bildet kunne ikke lastes opp.",
+    "imageNeedsConnection": "Bilder kan endres når du er tilkoblet igjen."
   }
 }

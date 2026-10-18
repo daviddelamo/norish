@@ -14,6 +14,7 @@ import {
   updatePlannedItem,
 } from "@norish/db/repositories/planned-items";
 import { trpcLogger as log } from "@norish/shared-server/logger";
+import { calendar } from "@norish/shared-server/realtime/calendar";
 import {
   PlannedItemDeleteInputSchema,
   PlannedItemMoveInputSchema,
@@ -23,7 +24,6 @@ import { dateKey, endOfMonth, startOfMonth } from "@norish/shared/lib/helpers";
 
 import { authedProcedure } from "../../middleware";
 import { router } from "../../trpc";
-import { calendarEmitter } from "./emitter";
 import {
   createCalendarItem,
   deleteCalendarItem,
@@ -41,6 +41,7 @@ import {
   plannedRecipeListItemSchema,
   plannedRecipeMutationOutputSchema,
 } from "./planned-items-openapi-types";
+import { publishCalendarItemEvent } from "./publish";
 
 export const listTodayPlannedRecipesProcedure = authedProcedure
   .meta({
@@ -50,6 +51,7 @@ export const listTodayPlannedRecipesProcedure = authedProcedure
       protect: true,
       tags: ["Planned Recipes"],
       summary: "Get planned recipes for today",
+      description: '"Today" is the day in the server\'s timezone.',
       errorResponses: {
         401: "Missing or invalid API credentials",
       },
@@ -70,6 +72,7 @@ export const listWeekPlannedRecipesProcedure = authedProcedure
       protect: true,
       tags: ["Planned Recipes"],
       summary: "Get planned recipes for the current week",
+      description: "The week runs Monday through Sunday in the server's timezone.",
       errorResponses: {
         401: "Missing or invalid API credentials",
       },
@@ -94,6 +97,7 @@ export const listMonthPlannedRecipesProcedure = authedProcedure
       protect: true,
       tags: ["Planned Recipes"],
       summary: "Get planned recipes for the current month",
+      description: "The month is the calendar month in the server's timezone.",
       errorResponses: {
         401: "Missing or invalid API credentials",
       },
@@ -236,14 +240,18 @@ export const plannedItemsProcedures = router({
       calories: movedItemWithRecipe.calories,
     };
 
-    calendarEmitter.emitToHousehold(ctx.householdKey, "itemMoved", {
-      item: itemPayload,
-      targetSlotItems: targetSlotSortUpdates,
-      sourceSlotItems: sourceSlotSortUpdates,
-      oldDate: item.date,
-      oldSlot: item.slot,
-      oldSortOrder: item.sortOrder,
-    });
+    await publishCalendarItemEvent(
+      "itemMoved",
+      {
+        item: itemPayload,
+        targetSlotItems: targetSlotSortUpdates,
+        sourceSlotItems: sourceSlotSortUpdates,
+        oldDate: item.date,
+        oldSlot: item.slot,
+        oldSortOrder: item.sortOrder,
+      },
+      ctx.householdKey
+    );
 
     return { success: true, moved: true, stale: false };
   }),
@@ -307,16 +315,12 @@ export const plannedItemsProcedures = router({
           calories: itemWithRecipe.calories,
         };
 
-        calendarEmitter.emitToHousehold(householdKey, "itemUpdated", {
-          item: itemPayload,
-        });
+        await publishCalendarItemEvent("itemUpdated", { item: itemPayload }, householdKey);
 
         return { success: true, stale: false };
       } catch (err) {
         log.error({ err, userId, itemId }, "Failed to update calendar item");
-        calendarEmitter.emitToHousehold(householdKey, "failed", {
-          reason: "Failed to update item",
-        });
+        void calendar.publish("failed", { reason: "Failed to update item" }, { householdKey });
 
         return { success: false };
       }

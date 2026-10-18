@@ -6,6 +6,7 @@ import { Bars3Icon } from "@heroicons/react/16/solid";
 import { useTranslations } from "next-intl";
 
 import type { GroceryDto, RecurringGroceryDto } from "@norish/shared/contracts";
+import { shownAmount } from "@norish/shared/lib/grocery-grouping";
 
 import { GroceryCheckbox } from "../grocery-checkbox";
 
@@ -26,30 +27,31 @@ export function GroceryDragOverlay({
   const hasSubtitle = Boolean(recurringGrocery || recipeName);
   const containerClass =
     "bg-surface ring-accent/20 flex items-center gap-3 rounded-lg px-4 py-3 shadow-xl ring-2";
-  const iconWrapClass = "text-muted flex h-8 w-8 items-center justify-center";
+  const iconWrapClass = "text-muted/60 flex h-8 w-8 items-center justify-center max-sm:hidden";
   const contentClass = "flex min-w-0 flex-1 flex-col items-start gap-0.5";
   const rowClass = "flex w-full items-baseline gap-1.5";
 
   return (
     <div className={containerClass} style={{ minHeight: hasSubtitle ? 72 : 56 }}>
       <div className={iconWrapClass}>
-        <Bars3Icon className="h-5 w-5" />
+        <Bars3Icon className="h-4 w-4" />
       </div>
 
       <GroceryCheckbox
-        aria-label={grocery.name || t("unnamedItem")}
         isDisabled
+        storeColored
+        aria-label={grocery.name || t("unnamedItem")}
         isSelected={grocery.isDone}
         size="lg"
       />
 
       <div className={contentClass}>
         <div className={rowClass}>
-          {(grocery.amount || grocery.unit) && (
+          {(shownAmount(grocery) || grocery.unit) && (
             <span
               className={`shrink-0 font-medium ${grocery.isDone ? "text-muted" : "text-accent"}`}
             >
-              {formatAmountUnit(grocery.amount, grocery.unit)}
+              {formatAmountUnit(shownAmount(grocery), grocery.unit)}
             </span>
           )}
           <span

@@ -12,8 +12,12 @@ import { startAutoTaggingWorker } from "@norish/queue/auto-tagging/worker";
 import { startCaldavSyncWorker } from "@norish/queue/caldav-sync/worker";
 import { startImageGenerationWorker } from "@norish/queue/image-generation/worker";
 import { startImageImportWorker } from "@norish/queue/image-import/worker";
+import { startIngredientIconsWorker } from "@norish/queue/ingredient-icons/worker";
 import { startIngredientLinkingWorker } from "@norish/queue/ingredient-linking/worker";
+import { startIngredientReviewWorker } from "@norish/queue/ingredient-review/worker";
 import { stopAllLazyWorkers } from "@norish/queue/lazy-worker-manager";
+import { addNewIngredientsJob } from "@norish/queue/new-ingredients/producer";
+import { startNewIngredientsWorker } from "@norish/queue/new-ingredients/worker";
 import { startNutritionEstimationWorker } from "@norish/queue/nutrition-estimation/worker";
 import { startPasteImportWorker } from "@norish/queue/paste-import/worker";
 import { startRecipeImportWorker } from "@norish/queue/recipe-import/worker";
@@ -25,6 +29,8 @@ import {
   startScheduledTasksWorker,
   stopScheduledTasksWorker,
 } from "@norish/queue/scheduled-tasks/worker";
+import { startStoreLookupWorker, stopStoreLookupWorker } from "@norish/queue/store-lookup/worker";
+import { onIngredientsMinted } from "@norish/shared-server/ingredients/minted";
 import { createLogger } from "@norish/shared-server/logger";
 
 const log = createLogger("bullmq");
@@ -59,11 +65,21 @@ export async function startWorkers(): Promise<void> {
     startRecipeProvenanceWorker(),
     startIngredientLinkingWorker(),
     startImageGenerationWorker(),
+    startIngredientReviewWorker(),
+    startIngredientIconsWorker(),
+    startNewIngredientsWorker(),
     startCaldavSyncWorker(),
   ]);
 
+  // Foods someone's action mints get what the administrator turned on for new foods.
+  onIngredientsMinted(addNewIngredientsJob);
+
   // Scheduled tasks (always-running for cron jobs)
   startScheduledTasksWorker();
+
+  // Store lookups run always-on: a grocery is priced while the user is still
+  // looking at the list, and a lazy worker is where the `delay` trap lives.
+  startStoreLookupWorker();
   await initializeScheduledJobs(getQueues().scheduledTasks);
 
   log.info("All BullMQ workers started (lazy workers waiting for jobs)");
@@ -81,6 +97,7 @@ export async function stopWorkers(): Promise<void> {
 
   // Stop the always-running scheduled tasks worker
   await stopScheduledTasksWorker();
+  await stopStoreLookupWorker();
 
   // Close all queue connections via registry
   await closeAllQueues();

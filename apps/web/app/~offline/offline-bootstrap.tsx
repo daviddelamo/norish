@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/app/(app)/app-shell";
 import CalendarPage from "@/app/(app)/calendar/page";
 import { GroceriesScreen } from "@/app/(app)/groceries/groceries-screen";
+import { OfflineCookbook } from "@/app/~offline/offline-cookbook";
 import { OfflineRecipeDetail } from "@/app/~offline/offline-recipe-detail";
 import { OfflineUnavailable } from "@/app/~offline/offline-unavailable";
 import { Dashboard } from "@/components/dashboard/dashboard";
+import { cacheManager } from "@/lib/query-cache";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -14,13 +16,19 @@ function offlineSurface(pathname: string) {
   const path = pathname.replace(/\/+$/, "") || "/";
 
   if (path === "/") return <Dashboard />;
-  if (path === "/groceries") return <GroceriesScreen />;
+  if (path === "/groceries" || path === "/groceries/pantry") return <GroceriesScreen />;
   if (path === "/calendar") return <CalendarPage />;
 
   const recipeId = /^\/recipes\/([^/]+)$/.exec(path)?.[1];
 
   if (recipeId && UUID_RE.test(recipeId)) {
     return <OfflineRecipeDetail id={recipeId.toLowerCase()} />;
+  }
+
+  const cookbookId = /^\/cookbooks\/([^/]+)$/.exec(path)?.[1];
+
+  if (cookbookId && UUID_RE.test(cookbookId)) {
+    return <OfflineCookbook id={cookbookId.toLowerCase()} />;
   }
 
   return <OfflineUnavailable />;
@@ -32,22 +40,35 @@ function offlineSurface(pathname: string) {
  * holds the originally requested URL. After mount — never during the static
  * prerender, which must stay free of user data (ADR-0005) — it reads that
  * URL and boots the matching Warm Set surface under the full provider shell:
- * dashboard, warmed recipe detail, groceries, or calendar. Unwarmed recipes
- * and unsupported routes get the explicit Offline-unavailable state.
+ * dashboard, warmed recipe detail, warmed cookbook, groceries, the Pantry, or
+ * calendar.
+ * Anything outside the floor and any unsupported route get the explicit
+ * Offline-unavailable state.
+ *
+ * The worker serves this document only when a navigation failed, so the
+ * reader is Offline: the last reader's cache is restored before anything
+ * renders, and the first frame already carries their Device Preferences.
  */
 export function OfflineBootstrap() {
   const [pathname, setPathname] = useState<string | null>(null);
 
   useEffect(() => {
-    setPathname(window.location.pathname);
+    void cacheManager
+      .reconcileIdentity({ sessionUserId: null, isOffline: true })
+      .then(() => setPathname(window.location.pathname));
   }, []);
 
   if (pathname === null) {
     // The precached shell: exactly what the static prerender emitted.
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center p-6">
-        {/* eslint-disable-next-line @next/next/no-img-element -- the raw /logo.svg ships in the precached public/ scan; next/image needs a runtime endpoint. */}
-        <img aria-hidden alt="" className="size-12 animate-pulse opacity-80" src="/logo.svg" />
+        {/* eslint-disable-next-line @next/next/no-img-element -- the raw /logo-small.svg ships in the precached public/ scan; next/image needs a runtime endpoint. */}
+        <img
+          aria-hidden
+          alt=""
+          className="size-12 animate-pulse opacity-80"
+          src="/logo-small.svg"
+        />
       </main>
     );
   }

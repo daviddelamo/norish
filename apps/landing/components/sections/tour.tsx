@@ -5,20 +5,28 @@ import { useRef } from "react";
 
 import { Phone, Screen } from "../frames";
 import { clamp, useScrollFrame } from "../scroll-frame";
-import { asking, heldAt, walkAt } from "../sequence";
+import { asking, heldAt, reachOf, stopsOf, walkAt } from "../sequence";
 import { Shot } from "../shot";
+import { SnapPoints } from "../snapping";
 
 type Screenful = {
   title: string;
   body: string;
   /** The two captures of one screen: the wide one, and the same on a phone. */
-  web: "dashboard-web" | "recipe-web" | "cooking-web" | "calendar-web" | "groceries-web";
+  web:
+    | "dashboard-web"
+    | "recipe-web"
+    | "cooking-web"
+    | "calendar-web"
+    | "groceries-web"
+    | "pantry-web";
   mobile:
     | "dashboard-mobile"
     | "recipe-mobile"
     | "cooking-mobile"
     | "calendar-mobile"
-    | "groceries-mobile";
+    | "groceries-mobile"
+    | "pantry-mobile";
   alt: string;
 };
 
@@ -32,21 +40,21 @@ const screens: Screenful[] = [
   },
   {
     title: "Customise it how you want",
-    body: "Need to scale the recipe? Use the plus and minus icons for however many servings you need. Is the recipe is metric whilst you need US? Let Norish adjust the ingredients. ",
+    body: "Need to scale the recipe? Use the plus and minus icons for however many servings you need. Is the recipe metric whilst you need US? Let Norish adjust the ingredients.",
     web: "recipe-web",
     mobile: "recipe-mobile",
     alt: "A recipe page in Norish, with scaled ingredients beside the steps",
   },
   {
     title: "Need to focus?",
-    body: "Open the cooking mode, and see the recipe one step at a time. The screen will remain on whilst you are in cooking mode, so no need to worry about your device turning off. ",
+    body: "Open the cooking mode, and see the recipe one step at a time. The screen will remain on whilst you are in cooking mode, so no need to worry about your device turning off.",
     web: "cooking-web",
     mobile: "cooking-mobile",
     alt: "Cooking mode in Norish: one step filling the screen, with the ingredients it uses beneath it",
   },
   {
     title: "Plan your week ahead",
-    body: "Drop the recipes you woudl like to eat onto the calendar your whole household shares. Want to use your own calendar? Let Norish handle the syncing using CalDAV.",
+    body: "Drop the recipes you would like to eat onto the calendar your whole household shares. Want to use your own calendar? Let Norish handle the syncing using CalDAV.",
     web: "calendar-web",
     mobile: "calendar-mobile",
     alt: "The Norish meal calendar, with planned meals on each day and today picked out",
@@ -56,7 +64,14 @@ const screens: Screenful[] = [
     body: "Groceries that went into store 'Y' will go into store 'Y' the next time you need it. When doing groceries with your partner split up, the list stays in sync in realtime.",
     web: "groceries-web",
     mobile: "groceries-mobile",
-    alt: "A shared Norish grocery list grouped by shop, with one group folded away and items ticked off",
+    alt: "A Norish grocery list under one shop, sorted by aisle, with tonight's Chicken Cacciatore on it",
+  },
+  {
+    title: "Keep track of what is in your inventory",
+    body: "Keep a pantry of what you already have. When you add a recipe to your groceries, your inventory stays off the list, even when the recipe names them in another language.",
+    web: "pantry-web",
+    mobile: "pantry-mobile",
+    alt: "The Norish Pantry: the foods the household already has, each with its icon",
   },
 ];
 
@@ -75,6 +90,13 @@ const INK = 0.25;
 
 /** The share of the held screen a move between two screens takes. */
 const GLIDE = 0.08;
+
+/** Where the scroll may stop, and how near it has to be to be carried there. */
+const STOPS = stopsOf(screens.length, GLIDE);
+const REACH = reachOf(screens.length, GLIDE);
+
+/** The other side of `WIDE`: the sizes at which the section holds the screen. */
+const NARROW = "(max-width: 63.999rem)";
 
 /**
  * How far the reader has come, counted in blocks: a whole number is a block at
@@ -153,6 +175,10 @@ function Capture({ screen }: { screen: Screenful }) {
  * because a screenshot scrubbed halfway into another screenshot is a blend of
  * two pictures and reads as neither; under reduced motion it is a cut.
  *
+ * Held, the scroll may only come to rest on a screen rather than in the middle
+ * of a swap, and how far a flick carries in the first place is Lenis's business
+ * rather than the phone's (see `app/providers.tsx`).
+ *
  * Adding a screen is one entry here plus its four captures, web and mobile in
  * both themes, registered in `components/shot.tsx`.
  */
@@ -217,6 +243,8 @@ export function Tour() {
       className="tour-stage border-border border-t"
       style={{ "--screens": `${screens.length}` } as CSSProperties}
     >
+      <SnapPoints at={STOPS} reach={REACH} when={NARROW} />
+
       <div className="tour-pin px-5 sm:px-8">
         {/* Two columns where there is room for them, and the copy stacked over
             the capture where there is not. The copy blocks own their stretch of

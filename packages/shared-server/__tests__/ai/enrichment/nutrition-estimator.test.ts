@@ -1,0 +1,247 @@
+/**
+ * Nutrition Estimator Tests
+ *
+ * The AI Runtime is the single mocked AI seam, plus the validation helper the
+ * estimate is handed to before it is returned.
+ *
+ * @vitest-environment node
+ */
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { AIResponseError } from "@norish/shared-server/ai/runtime/errors";
+
+const mocked = vi.hoisted(() => ({
+  generateStructured: vi.fn(),
+  verifyClaims: vi.fn(),
+}));
+
+vi.mock("@norish/shared-server/ai/runtime/runtime", () => ({
+  generateStructured: mocked.generateStructured,
+}));
+
+vi.mock("@norish/shared-server/ai/enrichment/verification", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@norish/shared-server/ai/enrichment/verification")>()),
+  verifyClaims: mocked.verifyClaims,
+}));
+
+vi.mock("@norish/shared-server/logger", () => ({
+  aiLogger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+const { estimateNutritionFromIngredients, estimateNutritionGap } =
+  await import("@norish/shared-server/ai/enrichment/nutrition-estimator");
+
+const INGREDIENTS = [
+  { ingredientName: "rolled oats", amount: 80, unit: "g" },
+  { ingredientName: "milk", amount: 200, unit: "ml" },
+  { ingredientName: "honey", amount: null, unit: null },
+];
+
+const ESTIMATE = { calories: 420, fat: 9, carbs: 68, protein: 15 };
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocked.generateStructured.mockResolvedValue(ESTIMATE);
+  mocked.verifyClaims.mockImplementation(({ claims }: { claims: { id: string }[] }) =>
+    Promise.resolve({ kept: claims, dropped: [], mode: "shadow" })
+  );
+});
+
+describe("estimateNutritionFromIngredients", () => {
+  it("refuses a recipe with no ingredients", async () => {
+    await expect(estimateNutritionFromIngredients("Oats", 2, [])).rejects.toThrow(
+      "No ingredients provided"
+    );
+    expect(mocked.generateStructured).not.toHaveBeenCalled();
+  });
+
+  it("runs under the nutrition-estimation prompt with the numbered ingredient list", async () => {
+    await estimateNutritionFromIngredients("Overnight oats", 2, INGREDIENTS);
+
+    expect(mocked.generateStructured).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: "nutrition-estimation",
+        fill: {
+          recipeName: "Overnight oats",
+          servings: "2",
+          ingredients: "- 80 g rolled oats\n- 200 ml milk\n- honey",
+        },
+      })
+    );
+  });
+
+  it("appends no section: the whole recipe is estimated as one", async () => {
+    await estimateNutritionFromIngredients("Overnight oats", 2, INGREDIENTS);
+
+    expect(mocked.generateStructured).toHaveBeenCalledWith(
+      expect.objectContaining({ sections: [] })
+    );
+  });
+
+  it("returns the estimate the model gave", async () => {
+    await expect(
+      estimateNutritionFromIngredients("Overnight oats", 2, INGREDIENTS)
+    ).resolves.toEqual(ESTIMATE);
+  });
+
+  describe("Enrichment Validation", () => {
+    it("asks one question per figure, in shadow, and changes nothing", async () => {
+      const estimate = await estimateNutritionFromIngredients("Overnight oats", 2, INGREDIENTS);
+
+      expect(mocked.verifyClaims).toHaveBeenCalledWith({
+        feature: "nutrition-estimation",
+        state: {
+          recipeName: "Overnight oats",
+          servings: 2,
+          ingredients: ["- 80 g rolled oats", "- 200 ml milk", "- honey"],
+        },
+        claims: [
+          { id: "calories", question: expect.stringMatching(/420 kcal per serving/) },
+          { id: "fat", question: expect.stringMatching(/9 g of fat/) },
+          { id: "carbs", question: expect.stringMatching(/68 g of carbohydrates/) },
+          { id: "protein", question: expect.stringMatching(/15 g of protein/) },
+        ],
+        mode: "shadow",
+      });
+      expect(estimate).toEqual(ESTIMATE);
+    });
+
+    it("keeps the whole group when a figure is disputed in shadow", async () => {
+      mocked.verifyClaims.mockResolvedValue({
+        kept: [],
+        dropped: [{ claim: { id: "calories" }, probability: 0.02 }],
+        mode: "shadow",
+      });
+
+      await expect(
+        estimateNutritionFromIngredients("Overnight oats", 2, INGREDIENTS)
+      ).resolves.toEqual(ESTIMATE);
+    });
+
+    it("fails the run for a retry, writing nothing, once a disputed figure is enforced", async () => {
+      mocked.verifyClaims.mockResolvedValue({
+        kept: [],
+        dropped: [{ claim: { id: "calories" }, probability: 0.02 }],
+        mode: "enforce",
+      });
+
+      const error = await estimateNutritionFromIngredients("Overnight oats", 2, INGREDIENTS).catch(
+        (err: unknown) => err
+      );
+
+      expect(error).toBeInstanceOf(AIResponseError);
+      expect((error as AIResponseError).retryable).toBe(true);
+      expect((error as AIResponseError).message).toMatch(/calories/);
+    });
+  });
+});
+
+describe("estimateNutritionGap", () => {
+  const HONEY = { key: "key-honey", ingredientName: "honey", amount: null, unit: null };
+  const CREAM = { key: "key-cream", ingredientName: "cream", amount: 2, unit: "tbsp" };
+  const COUNTED = [
+    { text: "80 g rolled oats", calories: 303.2, fat: 5.6, carbs: 48.8, protein: 10.8 },
+    { text: "200 ml milk", calories: 128, fat: 7, carbs: 9.6, protein: 6.8 },
+  ];
+  const ANSWER = {
+    lines: [
+      { line: 2, calories: 50, fat: 5, carbs: 1, protein: 0 },
+      { line: 1, calories: 60, fat: 0, carbs: 15, protein: 0 },
+    ],
+  };
+
+  beforeEach(() => {
+    mocked.generateStructured.mockResolvedValue(ANSWER);
+  });
+
+  it("refuses an empty gap", async () => {
+    await expect(estimateNutritionGap("Oats", 2, [], COUNTED)).rejects.toThrow(
+      "No ingredients provided"
+    );
+  });
+
+  it("numbers the lines left out, asks for a share per number, and gives the counted lines as facts", async () => {
+    await estimateNutritionGap("Overnight oats", 2, [HONEY, CREAM], COUNTED);
+
+    const [request] = mocked.generateStructured.mock.calls[0]!;
+
+    expect(request.prompt).toBe("nutrition-estimation");
+    expect(request.fill.ingredients).toBe("1. honey\n2. 2 tbsp cream");
+    expect(request.sections).toHaveLength(2);
+    expect(request.sections[0]).toMatch(/^Per ingredient:/);
+    expect(request.sections[1]).toMatch(/^Already counted:/);
+    expect(request.sections[1]).toContain(
+      "- 80 g rolled oats: 303.2 kcal, 5.6 g fat, 48.8 g carbohydrates, 10.8 g protein"
+    );
+  });
+
+  it("returns each line's share under its key, whatever order the model answered in", async () => {
+    await expect(
+      estimateNutritionGap("Overnight oats", 2, [HONEY, CREAM], COUNTED)
+    ).resolves.toEqual([
+      { key: "key-cream", calories: 50, fat: 5, carbs: 1, protein: 0 },
+      { key: "key-honey", calories: 60, fat: 0, carbs: 15, protein: 0 },
+    ]);
+  });
+
+  it.each([
+    ["skips a line", [{ line: 1, calories: 60, fat: 0, carbs: 15, protein: 0 }]],
+    [
+      "doubles a line",
+      [
+        { line: 1, calories: 60, fat: 0, carbs: 15, protein: 0 },
+        { line: 1, calories: 50, fat: 5, carbs: 1, protein: 0 },
+      ],
+    ],
+    [
+      "names a line that was not asked about",
+      [
+        { line: 1, calories: 60, fat: 0, carbs: 15, protein: 0 },
+        { line: 3, calories: 50, fat: 5, carbs: 1, protein: 0 },
+      ],
+    ],
+  ])("fails the run for a retry where the answer %s", async (_, lines) => {
+    mocked.generateStructured.mockResolvedValue({ lines });
+
+    const error = await estimateNutritionGap("Overnight oats", 2, [HONEY, CREAM], COUNTED).catch(
+      (err: unknown) => err
+    );
+
+    expect(error).toBeInstanceOf(AIResponseError);
+    expect((error as AIResponseError).retryable).toBe(true);
+    expect(mocked.verifyClaims).not.toHaveBeenCalled();
+  });
+
+  it("asks the Decision Model about the shares' sum, for the estimated lines rather than the recipe", async () => {
+    await estimateNutritionGap("Overnight oats", 2, [HONEY, CREAM], COUNTED);
+
+    expect(mocked.verifyClaims).toHaveBeenCalledWith(
+      expect.objectContaining({
+        state: expect.objectContaining({ ingredients: ["1. honey", "2. 2 tbsp cream"] }),
+        claims: [
+          {
+            id: "calories",
+            question: expect.stringMatching(
+              /110 kcal per serving .* these ingredients of the recipe/
+            ),
+          },
+          { id: "fat", question: expect.stringMatching(/5 g of fat/) },
+          { id: "carbs", question: expect.stringMatching(/16 g of carbohydrates/) },
+          { id: "protein", question: expect.stringMatching(/0 g of protein/) },
+        ],
+      })
+    );
+  });
+
+  it("fails the run for a retry once a disputed figure is enforced", async () => {
+    mocked.verifyClaims.mockResolvedValue({
+      kept: [],
+      dropped: [{ claim: { id: "fat" }, probability: 0.02 }],
+      mode: "enforce",
+    });
+
+    await expect(
+      estimateNutritionGap("Overnight oats", 2, [HONEY, CREAM], COUNTED)
+    ).rejects.toThrow(/fat/);
+  });
+});

@@ -49,6 +49,7 @@
   "filters": {
     "title": "Filter",
     "search": "Suchen",
+    "searchIn": "Suchen in",
     "sort": "Sortieren",
     "mode": "Übereinstimmung",
     "modeAll": "Alle",
@@ -118,6 +119,9 @@
       "placeholder": "https://example.com/your-recipe",
       "failed": "Fehler beim Importieren des Rezepts",
       "failedWithAI": "Fehler beim Importieren des Rezepts mit KI"
+    },
+    "clipboard": {
+      "title": "Rezept von dem Link importieren, den du kopiert hast?"
     },
     "paste": {
       "title": "Aus Paste importieren",
@@ -235,6 +239,7 @@
     "cache": {
       "heading": "Offline cache",
       "recipes": "Recipes",
+      "cookbooks": "Kochbücher",
       "groceries": "Groceries",
       "stores": "Stores",
       "planned": "This week",
@@ -282,5 +287,15 @@
   "queuedOffline": {
     "title": "Du bist offline",
     "description": "In der Warteschlange — Norish schließt dies automatisch ab, sobald du wieder online bist."
+  },
+  "storageUnavailable": {
+    "title": "Start nicht möglich",
+    "description": "Norish konnte den sicheren Speicher nicht lesen und weiß daher nicht, zu welchem Server diese App gehört. Es wurde nichts geändert. Versuch es erneut oder starte die App neu.",
+    "detailsLabel": "Technische Details"
+  },
+  "aiKeyRejected": {
+    "title": "Ein KI-Schlüssel funktioniert nicht mehr",
+    "description": "Der Anbieter lehnt den API-Schlüssel für {blocks} seit {since} ab. Speichere einen neuen Schlüssel, damit diese KI-Funktionen wieder laufen.",
+    "openSettings": "Einstellungen öffnen"
   }
 }

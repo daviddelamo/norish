@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { GroceryCheckbox } from "@/components/groceries/grocery-checkbox";
+import { IngredientIcon } from "@/components/ingredients/ingredient-icon";
 import { AnimatedNumber } from "@/components/recipes/animated-number";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
 import { useAmountDisplayPreference } from "@/hooks/use-amount-display-preference";
@@ -11,6 +12,7 @@ import { useLocale } from "next-intl";
 import type { UnitsMap } from "@norish/config/zod/server-config";
 import { useUnitFormatter as useSharedUnitFormatter } from "@norish/shared-react/hooks";
 import { formatAmount } from "@norish/shared/lib/format-amount";
+import { namesNoFood } from "@norish/shared/lib/ingredient-text";
 
 type IngredientLike = {
   ingredientName: string;
@@ -18,6 +20,10 @@ type IngredientLike = {
   unit: string | null;
   systemUsed: string;
   order: number;
+  /** The line's food, whose icon the surface read; absent until the server resolved it. */
+  ingredientId?: string | null;
+  /** The icon's address outright, where the surface has no ids to look it up by. */
+  icon?: string | null;
 };
 
 export type ReadonlyIngredientsListProps = {
@@ -25,6 +31,8 @@ export type ReadonlyIngredientsListProps = {
   systemUsed: string;
   interactive?: boolean;
   units?: UnitsMap;
+  checkedIndices?: Set<number>;
+  onCheckedIndicesChange?: (indices: Set<number>) => void;
 };
 
 type ReadonlyIngredientsListContentProps = Omit<ReadonlyIngredientsListProps, "units"> & {
@@ -36,23 +44,28 @@ function ReadonlyIngredientsListContent({
   systemUsed,
   interactive = false,
   formatUnitOnly,
+  checkedIndices: controlledCheckedIndices,
+  onCheckedIndicesChange,
 }: ReadonlyIngredientsListContentProps) {
-  const [checked, setChecked] = useState<Set<number>>(() => new Set());
+  const [uncontrolledChecked, setUncontrolledChecked] = useState<Set<number>>(() => new Set());
   const { mode } = useAmountDisplayPreference();
+
+  const checked = controlledCheckedIndices ?? uncontrolledChecked;
 
   const toggle = (idx: number) => {
     if (!interactive) {
       return;
     }
 
-    setChecked((prev) => {
-      const next = new Set(prev);
+    const next = new Set(checked);
+    if (next.has(idx)) next.delete(idx);
+    else next.add(idx);
 
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
-
-      return next;
-    });
+    if (onCheckedIndicesChange) {
+      onCheckedIndicesChange(next);
+    } else {
+      setUncontrolledChecked(next);
+    }
   };
 
   const onKeyToggle = (e: React.KeyboardEvent, idx: number) => {
@@ -102,10 +115,10 @@ function ReadonlyIngredientsListContent({
           const unit = it.unit ? formatUnitOnly(it.unit, it.amount) : "";
           const isChecked = checked.has(idx);
           const wrapperClassName = interactive
-            ? `group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 select-none ${
+            ? `group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 md:gap-3 transition-all duration-200 select-none ${
                 isChecked ? "bg-surface-secondary/50" : "hover:bg-surface-secondary"
               }`
-            : "flex items-start gap-3 rounded-xl px-3 py-2.5";
+            : "flex items-start gap-2 rounded-xl px-3 py-2.5 md:gap-3";
 
           return (
             <li key={`${it.ingredientName}-${idx}`}>
@@ -128,6 +141,15 @@ function ReadonlyIngredientsListContent({
                   </span>
                 ) : (
                   <span className="bg-surface-secondary mt-1 h-2.5 w-2.5 shrink-0 rounded-full" />
+                )}
+
+                {/* A line that names no food ("200 g" alone) gets no icon, like a heading. */}
+                {namesNoFood(it.ingredientName) ? null : (
+                  <IngredientIcon
+                    className={interactive && isChecked ? "opacity-50" : undefined}
+                    ingredientId={it.ingredientId}
+                    src={it.icon}
+                  />
                 )}
 
                 <div

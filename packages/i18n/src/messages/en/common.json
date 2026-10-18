@@ -29,7 +29,7 @@
     "goHome": "Go Home",
     "test": "Test",
     "format": "Format",
-    "restoreDefaults": "Restore Defaults",
+    "restoreDefaults": "Restore defaults",
     "saveChanges": "Save Changes"
   },
   "secret": {
@@ -49,6 +49,7 @@
   "filters": {
     "title": "Filters",
     "search": "Search",
+    "searchIn": "Search in",
     "sort": "Sort",
     "mode": "Mode",
     "modeAll": "All",
@@ -118,6 +119,9 @@
       "placeholder": "https://example.com/your-recipe",
       "failed": "Failed to import recipe",
       "failedWithAI": "Failed to import recipe with AI"
+    },
+    "clipboard": {
+      "title": "Import a recipe from the link you copied?"
     },
     "paste": {
       "title": "Import from paste",
@@ -235,6 +239,7 @@
     "cache": {
       "heading": "Offline cache",
       "recipes": "Recipes",
+      "cookbooks": "Cookbooks",
       "groceries": "Groceries",
       "stores": "Stores",
       "planned": "This week",
@@ -282,5 +287,15 @@
   "queuedOffline": {
     "title": "You're offline",
     "description": "Queued — Norish will finish this automatically when you're back online."
+  },
+  "storageUnavailable": {
+    "title": "Couldn't start",
+    "description": "Norish could not read its secure storage, so it cannot tell which server it belongs to. Nothing has been changed. Try again, or restart the app.",
+    "detailsLabel": "Technical details"
+  },
+  "aiKeyRejected": {
+    "title": "An AI key stopped working",
+    "description": "The provider has refused the API key for {blocks} since {since}. Save a new key to get those AI features working again.",
+    "openSettings": "Open settings"
   }
 }

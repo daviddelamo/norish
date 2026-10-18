@@ -1,6 +1,13 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { StoreCreateDto, StoreDeleteInput, StoreDto } from "@norish/shared/contracts";
+import type {
+  AisleDto,
+  AisleInput,
+  StoreCreateDto,
+  StoreDeleteInput,
+  StoreDto,
+  StoreSearchAddressResult,
+} from "@norish/shared/contracts";
 import { createClientId } from "@norish/shared/lib/operation-helpers";
 
 import type {
@@ -10,14 +17,39 @@ import type {
   StoresQueryResult,
   StoreUpdateDraft,
 } from "./types";
+import type { StoreAislesData } from "./use-store-aisles";
 import {
   invalidateUnlessPreserved,
   shouldPreserveOptimisticUpdate as preserveOptimisticUpdate,
 } from "../optimistic-updates";
+import { mergeAisleFiling } from "./use-store-aisles";
 
 type CreateUseStoresMutationsOptions = CreateStoresHooksOptions & {
   useStoresQuery: () => StoresQueryResult;
 };
+
+/**
+ * The aisles as the Store will carry them once the save lands, for the
+ * optimistic row: a known aisle keeps its version unless its name or place
+ * changed, in which case the server will bump it; a new one starts at 1; and
+ * the position in the list is the order (ADR-0031).
+ */
+function optimisticAisles(storeId: string, input: AisleInput[], before: AisleDto[]): AisleDto[] {
+  const known = new Map(before.map((aisle) => [aisle.id, aisle]));
+
+  return input.map((aisle, index) => {
+    const was = known.get(aisle.id);
+    const changed = was !== undefined && (was.name !== aisle.name || was.sortOrder !== index);
+
+    return {
+      id: aisle.id,
+      storeId,
+      name: aisle.name,
+      sortOrder: index,
+      version: was === undefined ? 1 : was.version + (changed ? 1 : 0),
+    };
+  });
+}
 
 export function createUseStoresMutations({
   useTRPC,
@@ -25,6 +57,7 @@ export function createUseStoresMutations({
 }: CreateUseStoresMutationsOptions) {
   return function useStoresMutations(): StoresMutationsResult {
     const trpc = useTRPC();
+    const queryClient = useQueryClient();
     const { setStoresData, invalidate, stores } = useStoresQuery();
 
     const getStoreVersion = (storeId: string): number =>
@@ -37,6 +70,8 @@ export function createUseStoresMutations({
     const updateMutation = useMutation(trpc.stores.update.mutationOptions());
     const deleteMutation = useMutation(trpc.stores.delete.mutationOptions());
     const reorderMutation = useMutation(trpc.stores.reorder.mutationOptions());
+    const checkMutation = useMutation(trpc.stores.checkSearchAddress.mutationOptions());
+    const fileMutation = useMutation(trpc.stores.fileGroceryName.mutationOptions());
 
     const createStore = (data: StoreCreateDto): Promise<string> => {
       // Client-minted id, honoured on insert so a queued offline create stays
@@ -49,9 +84,11 @@ export function createUseStoresMutations({
           userId: "",
           name: data.name,
           color: data.color ?? "primary",
-          icon: data.icon ?? "ShoppingBagIcon",
+          website: data.website ?? null,
+          searchAddress: data.searchAddress ?? null,
           sortOrder: stores.length,
           version: 1,
+          aisles: optimisticAisles(storeId, data.aisles ?? [], []),
         };
 
         setStoresData((prev) => {
@@ -89,7 +126,17 @@ export function createUseStoresMutations({
       setStoresData((prev) => {
         if (!prev) return prev;
 
-        return prev.map((s) => (s.id === data.id ? { ...s, ...data } : s));
+        return prev.map((s) => {
+          if (s.id !== data.id) return s;
+          const { aisles, ...fields } = data;
+
+          return {
+            ...s,
+            ...fields,
+            // Absent, the aisles are not part of this save and stay as they are.
+            aisles: aisles === undefined ? s.aisles : optimisticAisles(s.id, aisles, s.aisles),
+          };
+        });
       });
 
       updateMutation.mutate(
@@ -147,11 +194,71 @@ export function createUseStoresMutations({
       );
     };
 
+    /**
+     * Ask a Store's shop whether Norish can search it. It never gates a save:
+     * the Store is already stored by the time this is asked, and the answer
+     * is something to tell the user rather than something to act on.
+     */
+    const checkSearchAddress = (
+      storeId: string,
+      term: string | null,
+      searchAddress: string | null,
+      website: string | null
+    ): Promise<StoreSearchAddressResult> =>
+      checkMutation.mutateAsync({ storeId, term, searchAddress, website }).then((result) => {
+        invalidate();
+
+        return result;
+      });
+
+    /**
+     * File a grocery's Ingredient at a Store: what the Store remembers changes on this
+     * screen at once, by the same merge every housemate's screen will run when
+     * the event lands, and the write goes the way every grocery mutation goes —
+     * optimistic here, through the Outbox when the backend is out of reach
+     * (ADR-0004), last writer winning. Nothing lives on the grocery row, so
+     * there is no row to roll back: a refusal simply re-reads what is filed.
+     */
+    const fileGroceryName = (
+      storeId: string,
+      grocery: { name: string | null; ingredientId?: string | null },
+      aisleId: string | null
+    ) => {
+      const name = grocery.name?.trim();
+
+      if (!name) return;
+      const aisleLinksKey = trpc.stores.aisleLinks.queryKey();
+
+      // What is filed is the grocery's Ingredient. A grocery added offline has
+      // none yet; the server resolves its name, and the filing lands with the
+      // echo instead.
+      if (grocery.ingredientId) {
+        const ingredientId = grocery.ingredientId;
+
+        // A read already under way answers for the Store as it was; it must
+        // not land over this filing. The echo reads the links again.
+        void queryClient.cancelQueries({ queryKey: aisleLinksKey });
+        queryClient.setQueryData<StoreAislesData>(aisleLinksKey, (prev) =>
+          mergeAisleFiling(prev ?? [], { storeId, ingredientId, aisleId })
+        );
+      }
+      fileMutation.mutate(
+        { storeId, name, aisleId },
+        {
+          onError: invalidateUnlessPreserved(() =>
+            queryClient.invalidateQueries({ queryKey: aisleLinksKey })
+          ),
+        }
+      );
+    };
+
     return {
       createStore,
       updateStore,
       deleteStore,
       reorderStores,
+      checkSearchAddress,
+      fileGroceryName,
       isCreating: createMutation.isPending,
       isUpdating: updateMutation.isPending,
       isDeleting: deleteMutation.isPending,

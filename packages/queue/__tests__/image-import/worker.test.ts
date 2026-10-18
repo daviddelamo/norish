@@ -10,7 +10,7 @@ const dashboardRecipe = vi.fn();
 const getAllergiesForUsers = vi.fn();
 const addRecipeImages = vi.fn();
 const updateRecipeDishColor = vi.fn();
-const emitByPolicy = vi.fn();
+const publishRecipe = vi.fn(async () => undefined);
 const extractRecipeFromImages = vi.fn();
 const saveImageBytes = vi.fn();
 const dishColorForImageUrl = vi.fn();
@@ -43,12 +43,19 @@ vi.mock("@norish/queue/api-handlers", () => ({
   requireQueueApiHandler: vi.fn(() => extractRecipeFromImages),
 }));
 
-vi.mock("@norish/shared-server/realtime/policy", () => ({
-  emitByPolicy,
+vi.mock("@norish/shared-server/realtime/recipes", () => ({
+  recipes: { publish: publishRecipe },
 }));
 
-vi.mock("@norish/shared-server/realtime/recipes", () => ({
-  recipeEmitter: {},
+// Resolution reads the catalogue; these tests are about the worker, not it.
+vi.mock("@norish/shared-server/ingredients/recipe-lines", () => ({
+  withResolvedIngredients: vi.fn(async (payload: object) => ({
+    ...payload,
+    ingredientResolutions: new Map(),
+  })),
+  createResolvedRecipe: vi.fn(async (id: string, userId: unknown, payload: object) =>
+    createRecipeWithRefs(id, userId, { ...payload, ingredientResolutions: new Map() })
+  ),
 }));
 
 vi.mock("@norish/shared-server/logger", () => ({

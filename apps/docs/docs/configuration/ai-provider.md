@@ -1,36 +1,32 @@
 ---
 sidebar_position: 2
 title: AI provider
-description: Enable Norish's AI features and connect an AI provider for recipe, image, and video import.
+description: Connect an AI provider for AI imports, recipe enrichment, images and video.
 ---
 
 # AI provider
 
-Several Norish features are powered by AI. They're **off by default**, configure a provider to enable them.
+Most of Norish works without AI. With an AI provider you also get:
 
-AI enables:
+- a fallback for pages the [recipe scraper](https://github.com/hhursev/recipe-scrapers)
+  can't read
+- [image import](../recipes/importing.md#from-pasted-text-or-photos) from
+  photos and screenshots
+- [video import](#video-import) from social media
+- [recipe enrichment](../recipes/enrichment.md): tags, allergies, categories,
+  nutrition, provenance, step ingredients and pictures
+- metric and US conversion by AI, next to the built-in one
 
-- AI fallback when a recipe can't be imported from a URL structurally
-- **Image import** from screenshots or photos of recipes
-- **Video import** from YouTube Shorts, Instagram Reels, TikTok, Pinterest,
-  and more
-- **Recipe Enrichment**: tags, allergy indications, meal categories, nutrition values, ingredient to step linking, and a generated picture of the dish.
-- **Unit conversion** between metric and US units
+## Enable AI
 
-## Enable AI via the environment
-
-:::note
-AI can also be enabled via the admin settings.
-:::
-
-Set `AI_ENABLED=true` and configure a provider. Norish speaks the OpenAI API
-format, so any OpenAI-compatible endpoint works (OpenAI, Azure OpenAI, Open
-Router, a local Ollama/LM Studio server, …).
+Set `AI_ENABLED=true` and a provider, or do the same under
+**Settings => Admin**. Any OpenAI-compatible API works, like OpenAI, Azure
+OpenAI, OpenRouter, Ollama or LM Studio.
 
 ```yaml title="docker-compose.yml (environment)"
 AI_ENABLED: "true"
 AI_PROVIDER: openai
-AI_MODEL: gpt-5-mini
+AI_MODEL: gpt-6-luna
 AI_API_KEY: <your-api-key>
 # For an OpenAI-compatible endpoint (Azure, OpenRouter, Ollama, …):
 # AI_ENDPOINT: https://your-endpoint/v1
@@ -41,253 +37,170 @@ AI_API_KEY: <your-api-key>
 | `AI_ENABLED`     | Enable AI features globally          | `false`      |
 | `AI_PROVIDER`    | AI provider                          | `openai`     |
 | `AI_ENDPOINT`    | Custom OpenAI-compatible endpoint    | (empty)      |
-| `AI_MODEL`       | Default model                        | `gpt-5-mini` |
+| `AI_MODEL`       | Default model                        | `gpt-6-luna` |
 | `AI_API_KEY`     | API key for the provider             | (empty)      |
 | `AI_TEMPERATURE` | Generation temperature               | `1.0`        |
 | `AI_MAX_TOKENS`  | Maximum tokens for model responses   | `10000`      |
 | `AI_TIMEOUT_MS`  | Maximum time for an AI response (ms) | `300000`     |
 
-:::note
-AI feature speed and quality vary by provider, model, and region. You can also
-adjust AI settings at runtime in **Settings => Admin**.
-:::
+### What an OpenAI-compatible endpoint has to support
 
-## Recipe Enrichment
+Norish asks for structured output with `response_format: json_schema`, and
+falls back to JSON mode with `response_format: json_object`. An endpoint that
+supports neither doesn't work.
 
-Recipe Enrichment is the optional AI work that runs **after** a recipe is saved:
-auto-tagging, allergy detection, auto-categorization, nutrition estimation,
-recipe provenance, ingredient linking, and image generation.
-
-Importing and creating a recipe never depend on it. The recipe is saved first;
-enrichment is enrolled separately, and a disabled, unavailable, slow, or failing
-AI provider cannot make a save fail.
+## Recipe enrichment
 
 ### Automatic enrichment
 
-Under **Settings => Admin => AI**, each kind has its own switch. They apply to
-every newly created recipe, manual entry and every import path alike.
+Under **Settings => Admin => AI** you choose which
+[enrichments](../recipes/enrichment.md) run on every new recipe. What each one
+leaves alone is listed under
+[What enrichment leaves alone](../recipes/enrichment.md#what-enrichment-leaves-alone).
 
-| Switch                   | What it does automatically                                                                | Default |
-| ------------------------ | ----------------------------------------------------------------------------------------- | ------- |
-| **Auto-tagging**         | Adds suggested tags without removing existing ones                                        | Off     |
-| **Allergy detection**    | Adds allergy tags for your household's configured allergies                               | On      |
-| **Auto-categorization**  | Sets meal categories on recipes that have none                                            | Off     |
-| **Nutrition estimation** | Estimates calories, fat, carbs, and protein when the recipe doesn't already have all four | Off     |
-| **Recipe Provenance**    | Works out the country, region, cuisines, and a short note                                 | Off     |
-| **Ingredient Linking**   | Links ingredient lines to the steps that have none                                        | Off     |
-| **Image Generation**     | Draws a picture of the dish for new recipes that have no image at all                     | Off     |
+| Switch                   | What it does                                                          | Default |
+| ------------------------ | --------------------------------------------------------------------- | ------- |
+| **Auto-tagging**         | Adds tags, never removes any                                          | Off     |
+| **Allergy detection**    | Adds allergy tags for your household's allergies                      | On      |
+| **Auto-categorization**  | Sets meal categories on recipes without any                           | Off     |
+| **Nutrition estimation** | Fills in calories, fat, carbs and protein when one of them is missing | Off     |
+| **Recipe provenance**    | Works out the country, region, cuisines and a short note              | Off     |
+| **Ingredient linking**   | Links ingredients to steps that have none                             | Off     |
+| **Image generation**     | Draws a picture for new recipes without any image                     | Off     |
 
-Enabling AI globally does not switch these on by itself, each is opt-in
-(except allergy detection, which keeps the behaviour of the setting it
-replaced). Turning one off only stops the automatic run; household members can
-still request that kind by hand from the recipe.
+### New ingredients
 
-Automatic enrichment runs once, when a recipe is first created. Editing a recipe
-later does not trigger it again, and a URL import that matches a recipe you
-already have is not treated as a new recipe.
+**Automatic for new ingredients** runs on every ingredient a recipe, grocery or
+pantry item adds to the catalogue. Both options are off by default.
 
-### Supplied recipe data wins
+![Automatic for new ingredients](/img/screenshots/admin-automatic-ingredients.png)
 
-Information you entered yourself, or that an import source stated explicitly, outranks automatic enrichment. Each group has its own precedence rule:
-
-- Any meal category on the recipe suppresses **automatic** categorization.
-- A **complete** nutrition group, calories, fat, carbs, and protein all
-  present, suppresses **automatic** nutrition estimation; zeros count as present. An incomplete group does not: the estimate replaces the group as a whole, so the four values always agree with each other rather than mixing a supplied figure with an estimate.
-- Any part of provenance, country, region, a cuisine, or the note, suppresses
-  **automatic** provenance inference for the whole group. The note explains the
-  whole claim, so it is never mixed with a value you set yourself.
-- Ingredients are decided **per step**: a step you linked yourself is left alone, and only steps with no links at all are filled. This holds for a run you request by hand too. See
-  [Step ingredients](../recipes/step-ingredients.md#letting-ai-fill-the-gaps).
-- A recipe holding **any image at all**, a gallery image or the older single
-  image field, suppresses **automatic** image generation entirely. Background
-  work never replaces a stored picture; only the manual **Generate Picture**
-  action and a bulk run with **Overwrite existing data** do.
-- Empty and blank values do not count as supplied, so placeholders don't block useful enrichment.
-
-Tags and allergy indications work differently: enrichment appends findings and
-never removes what is already there, so existing tags never suppress it.
-
-A run you request by hand is a deliberate refresh and does replace the current
-categories, the complete nutrition group, or the complete provenance group.
+| Option             | What it does                                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------------------------------- |
+| **Clean the name** | [Cleans the name](../groceries/ingredients.md#cleaning-names) right away                                       |
+| **Draw an icon**   | Draws an icon when neither the ingredient nor its parent has one. Needs an [image provider](#image-generation) |
 
 ### Tag strategy
 
-**Tag strategy** decides which tags auto-tagging may use, independently of
-whether it runs automatically:
+**Tag strategy** decides which tags auto-tagging may use:
 
 | Strategy                       | Behaviour                                          |
 | ------------------------------ | -------------------------------------------------- |
-| **Predefined tags only**       | Only Norish's built-in tag list                    |
+| **Predefined tags only**       | Only the built-in tag list                         |
 | **Predefined + existing tags** | Also tags already used by recipes on this instance |
-| **AI can create new tags**     | May invent new tags when nothing fits              |
-
-Turning automatic auto-tagging off keeps the selected strategy for manual runs.
+| **AI can create new tags**     | Creates new tags when needed                       |
 
 ### Cuisine strategy
 
-**Cuisine strategy** decides whether provenance inference may add to the cuisine
-list your administrator maintains, independently of whether it runs
-automatically:
+**Cuisine strategy** decides whether [provenance](../recipes/provenance.md) may
+add to your cuisine list:
 
 | Strategy                    | Behaviour                                           |
 | --------------------------- | --------------------------------------------------- |
-| **Only existing cuisines**  | Pick from the list; anything else is discarded      |
+| **Only existing cuisines**  | Pick from the list, anything else is discarded      |
 | **AI can add new cuisines** | Pick from the list, or add an entry that is missing |
 
-Under both strategies the AI's answers are matched against the existing list
-first, so a slight misspelling lands on the entry that already exists rather than
-creating a near-duplicate. The list itself is managed under
-**Settings => Admin => AI & Processing => Cuisines**; see
-[Recipe provenance](../recipes/provenance.md).
+The default is **Only existing cuisines**. Either way, the AI's answers are
+matched against the list first, so a misspelling lands on the existing cuisine.
+Manage the list under **Settings => Admin => AI & processing => Cuisines**.
 
 ### Image generation
 
 ![Image Generation settings](/img/screenshots/admin-image-generation.png)
 
-Image generation is the one enrichment kind that needs its own provider,
-because most AI providers cannot draw: Anthropic, Mistral, DeepSeek, Groq,
-Perplexity and Ollama expose no image model at all. So a self-hoster running a
-local text model can still point image generation somewhere else. Configure it
-under **Settings => Admin => AI & Processing => Image Generation**:
+Image generation has its own provider, because many AI providers, like
+Anthropic, Mistral, DeepSeek, Groq and Perplexity, have no image model. You can
+also use an Ollama server running an image model. Set it up under
+**Settings => Admin => AI & processing => Image generation**:
 
-| Field              | Notes                                                                                                                                             |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Image Provider** | OpenAI, Google AI, Azure OpenAI, LM Studio, or a generic OpenAI-compatible endpoint, only providers that can actually generate images are offered |
-| **Endpoint URL**   | For LM Studio and generic endpoints; optional custom resource URL for Azure                                                                       |
-| **API Key**        | For the cloud providers                                                                                                                           |
-| **Image Model**    | Must be an image model, e.g. `gpt-image-1` or `imagen-4.0-generate-001`, not a text model                                                         |
+| Field              | Notes                                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| **Image provider** | OpenAI, Google AI, Azure OpenAI, Ollama, LM Studio, or a generic OpenAI-compatible endpoint.             |
+| **Endpoint URL**   | For Ollama, LM Studio and generic endpoints; optional custom resource URL for Azure                      |
+| **API key**        | For the cloud providers                                                                                  |
+| **Image model**    | Must be an image model, e.g. `gpt-image-1-mini`, `gemini-2.5-flash-image` or Ollama's `x/z-image-turbo`. |
 
-When the image provider is the **same** provider as your AI configuration, the
-endpoint and API key fall back to it, so you don't type a key twice.
+When the image provider is the same as your AI provider, it reuses the AI
+endpoint and API key.
 
-The feature makes **two AI requests per picture**: a cheap text request first,
-turning the recipe into a short visual brief with your regular AI provider, and
-then the image request that draws it. Both prompts, the brief and the image
-style, are editable under **Prompts**, like every other AI feature.
+The image provider also draws [ingredient icons](../groceries/ingredient-icons.md).
 
-How pictures reach recipes:
+### Decision Model
 
-- **Automatically**, when the **Image Generation** switch above is on: newly
-  created recipes that have **no image at all** get one drawn in the
-  background. Recipes holding any image are left alone, and a failed
-  generation changes nothing and tells nobody.
-- **On request**, from a recipe's actions menu (**Generate Picture**), on web
-  and on mobile. This runs regardless of the automatic switch and **replaces
-  the recipe's primary image outright**, including a photograph, and the
-  replaced image is not recoverable. See
-  [Recipe enrichment](../recipes/enrichment.md#running-one-yourself).
-- **In bulk**, through **Enrich All Recipes** below.
+![Decision Model settings](/img/screenshots/admin-decision-model.png)
 
-With no image provider configured the rest of Recipe Enrichment is unaffected:
-the automatic run and the sweep simply skip the kind, and the manual action is
-refused with a message that says the server has no image provider.
+A Decision Model is a model trained to answer closed questions fast and
+cheaply. Norish uses it to spot recipes on imported pages, to make some
+enrichment decisions, and to check what the AI provider adds. Only models
+that adhere to TypeSafe's API are supported.
 
-The generated picture is stored in the recipe's gallery at 1280×720 like any
-other image, nothing in the interface marks it as generated, and it sets the
-recipe page's tint the way a photograph would. When the recipe travels in a
-[Recipe Archive](../recipes/recipe-archive.md), the receiving instance is told
-which images were generated.
+Set it up under **Settings => Admin => AI & processing => Decision model**:
 
-### Run it on your whole library
+| Field                          | Notes                                                                                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Provider**                   | _Disabled_ or _TypeSafe AI_                                                                                                                       |
+| **API key**                    | From your TypeSafe AI account                                                                                                                     |
+| **Model**                      | Defaults to `jev-latest`                                                                                                                          |
+| **Endpoint URL**               | Optional. A proxy, gateway or self-hosted server that speaks TypeSafe's API. Empty uses `https://api.typesafe.ai/v1`                              |
+| **Use the decision model for** | _Auto-categorization_, _Auto-tagging_, _Allergy detection_, _Recipe Provenance_, _Grocery linking_, _Validate enrichments_. All are on by default |
 
-Automatic enrichment only runs when a recipe is created, so recipes imported
-before you enabled a switch, or before an enrichment kind existed, never
-catch up on their own. **Settings => Admin => AI & Processing => Bulk Enrichment
-=> Enrich All Recipes** closes that gap: it queues every enrichment kind whose
-automatic switch is enabled, for every recipe on the server, under the same
-rules as the automatic run, supplied data wins and only gaps are filled.
+What each use does:
 
-The action asks for confirmation first, because it can be an expensive
-operation: with many recipes it may take a long time and, on a paid AI
-provider, use a significant amount of credits. When image generation is among
-the enabled kinds, the confirmation also states **how many images the sweep
-will generate**, image models are billed per picture, so the number is worth
-reading before you confirm. By default that is only the recipes with no image
-at all; with **Overwrite existing data** on it is every recipe with
-ingredients, and stored photographs are replaced and not recoverable.
+- **Auto-categorization** decides whether a recipe is breakfast, lunch, dinner
+  or a snack.
+- **Auto-tagging** decides each tag under _Predefined tags only_. Under the
+  other strategies it checks each new tag.
+- **Allergy detection** asks one question per household allergy.
+- **Recipe Provenance** picks the country, and the cuisines under _Only
+  existing cuisines_. The AI provider writes the region and the note.
+- **Grocery linking** picks a shop product, see
+  [Prices](../groceries/prices.md#which-product).
+- **Validate enrichments** checks everything an enrichment adds before it is
+  saved.
+- **Import triage** checks whether a page holds a recipe. It is always on when
+  a Decision Model is set up.
 
-![Bulk enrichment image count](/img/screenshots/bulk-enrichment-image-count.png) It replaces the old
-**Categorize All Recipes** button, which ran only categorization and ignored
-the switches.
+When the Decision Model isn't sure, or fails, Norish asks the AI provider
+instead. The [job queues](./admin-settings.md#job-queues) show which models a
+job used.
 
-The confirmation also offers **Overwrite existing data**, which turns the behaviour from filling gaps into redoing them. Every recipe's categories, nutrition, provenance and step ingredients are inferred again and replace what is stored useful after tuning a prompt, or after an upgrade improves one of the kinds. Two things to know before using it:
+### Enriching existing recipes
 
-- **It cannot be undone, and it does not spare your own work.**
-- **It costs more than the default sweep.**
-- **Tags and allergy indications are never overwritten**
+Automatic enrichment only runs on new recipes. To catch up the rest, use
+**Settings => Admin => AI & processing => Bulk enrichment => Enrich all
+recipes**. It runs every enabled enrichment on every recipe, which may cost a lot.
 
-### Turning it all off
+![Bulk enrichment image count](/img/screenshots/bulk-enrichment-image-count.png)
 
-`AI_ENABLED=false` (or the global switch in the admin settings) suppresses every
-enrichment, automatic and manual. No AI request can bypass it.
+The dialog also has **Overwrite existing data**. It redoes categories, nutrition,
+provenance and step ingredients even where a recipe already has them, and that
+can't be undone. Tags and allergies are only ever added to. On a large library
+this costs a lot more.
 
 ## Prompts
 
 ![The Prompts panel in admin settings](/img/screenshots/admin-prompts.png)
 
-Every AI feature runs from an administrator-editable prompt, nine in total,
-listed together under **Settings => Admin => AI & Processing => Prompts**:
-recipe extraction, image extraction, unit conversion, nutrition estimation,
-auto-tagging, auto-categorization, allergy detection, Recipe Provenance, and
-Ingredient Linking. What you see there is exactly what is tunable; there are no
-hardcoded prompts behind it.
-
-Each feature appends its own input, the recipe under analysis, your
-household's allergens, the webpage text, _after_ your prompt rather than
-filling placeholders inside it, so a customised prompt keeps working across
-upgrades and editing one prompt never changes what a different feature sends.
-A prompt left empty falls back to the shipped default, and **Restore defaults**
-brings all nine back at once.
+You can edit every prompt Norish uses under **Settings => Admin**.
 
 ## Video import
 
-Video import downloads the clip with `yt-dlp`, transcribes the audio, and uses
-the AI provider to extract the recipe. It requires AI to be enabled: a video
-import is refused immediately when AI is off, before anything is downloaded or
-a transcription is billed.
+Video import downloads the video with `yt-dlp`, transcribes the audio and has
+the AI provider read the recipe from it. Links from YouTube, Instagram, TikTok,
+Facebook, Pinterest, X, Threads, Snapchat, Vimeo, Dailymotion, Douyin, Bilibili
+and RedNote count as videos.
 
-Links from YouTube, Instagram, TikTok, Facebook, Pinterest (including `pin.it`
-share links), X, Threads, Snapchat, Vimeo, Dailymotion, Douyin, Bilibili, and
-RedNote are recognised as videos and take this pipeline; a link from any other
-site imports as a regular webpage.
-
-| Variable                   | Description                                                                                  | Default                                   |
-| -------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `VIDEO_PARSING_ENABLED`    | Enable the video parsing pipeline                                                            | `false`                                   |
-| `VIDEO_MAX_LENGTH_SECONDS` | Maximum accepted video length                                                                | `120`                                     |
-| `YT_DLP_VERSION`           | yt-dlp release a development install downloads on first use (the Docker image ships its own) | `2026.08.19`                              |
-| `YT_DLP_BIN_DIR`           | Folder containing the yt-dlp binary                                                          | `./.runtime/bin` (dev), `/app/bin` (prod) |
-| `YT_DLP_PROXY`             | HTTP/SOCKS proxy URL for yt-dlp downloads                                                    | (empty)                                   |
-
-### Photo posts and reels
-
-An Instagram or Facebook post with no video is imported from its caption alone,
-which only works when the caption holds the whole recipe. Norish decides which
-path to take by asking `yt-dlp` whether the post has a video stream.
-
-A post `yt-dlp` says nothing about either way is treated as a video and
-downloaded; only a post it reports as having no video, or one where there turned
-out to be nothing to download, falls back to the caption. Silence is never read
-as "no video".
-
-If reels still import as photo posts on your instance, check which `yt-dlp` you
-are running first: a build too old for Instagram's current markup can fail to
-report the video at all. **Settings => Admin => AI & Processing => Video
-Processing** shows the release the server is actually running, it asks the
-binary, so it is the truth rather than a stored setting, and it is read-only for
-the same reason. The Docker image ships the binary named above and upgrading
-Norish upgrades it; a development install downloads whatever `YT_DLP_VERSION`
-names, once, the first time it needs it.
-
-If that field reports **no yt-dlp binary found**, there is nothing to import
-with. In Docker, check that `YT_DLP_BIN_DIR` points at the image's own `/app/bin`, an empty volume mounted over it hides the shipped binary. On a development
-install, run an import once with network access and Norish downloads the binary
-itself; if that fails, place the release named by `YT_DLP_VERSION` in
-`YT_DLP_BIN_DIR` by hand and make it executable.
+| Variable                   | Description                                                              | Default                                   |
+| -------------------------- | ------------------------------------------------------------------------ | ----------------------------------------- |
+| `VIDEO_PARSING_ENABLED`    | Enable video parsing                                                     | `false`                                   |
+| `VIDEO_MAX_LENGTH_SECONDS` | Maximum accepted video length                                            | `120`                                     |
+| `YT_DLP_VERSION`           | yt-dlp release for development purposes (the Docker image ships its own) | `2026.08.19`                              |
+| `YT_DLP_BIN_DIR`           | Folder containing the yt-dlp binary                                      | `./.runtime/bin` (dev), `/app/bin` (prod) |
+| `YT_DLP_PROXY`             | HTTP/SOCKS proxy URL for yt-dlp downloads                                | (empty)                                   |
 
 ## Transcription
 
-Transcription turns the video's audio into text for the AI step.
+Transcription turns a video's audio into text.
 
 | Variable                 | Description                                     | Default     |
 | ------------------------ | ----------------------------------------------- | ----------- |
@@ -296,8 +209,4 @@ Transcription turns the video's audio into text for the AI step.
 | `TRANSCRIPTION_API_KEY`  | Transcription API key                           | (empty)     |
 | `TRANSCRIPTION_MODEL`    | Transcription model                             | `whisper-1` |
 
-When the endpoint or API key is left empty, transcription falls back to the AI
-configuration's endpoint and key, and it follows `AI_TIMEOUT_MS` the same way.
-There is no separate transcription timeout: the one number you tuned for your
-model applies here too, so a hung transcription endpoint gives up instead of
-holding a video import worker until the server is restarted.
+When the endpoint or API key is empty, transcription uses the AI provider's.

@@ -175,7 +175,12 @@ export async function updateRecurringGroceries(
 
 export async function updateRecurringGroceryWithGrocery(
   recurringData: RecurringGroceryUpdateDto,
-  groceryRef: { id: string; version: number; storeId?: string | null }
+  groceryRef: {
+    id: string;
+    version: number;
+    storeId?: string | null;
+    purchaseAmount?: number | null;
+  }
 ): Promise<MutationOutcome<{ recurringGrocery: RecurringGroceryDto; grocery: GroceryDto }>> {
   const updateData = {
     ...recurringData,
@@ -207,8 +212,12 @@ export async function updateRecurringGroceryWithGrocery(
         id: groceryRef.id,
         version: groceryRef.version,
         name: recurringParsed.data.name,
+        // The grocery names what its recurring grocery names, and so the same food.
+        ingredientAliasId: recurringRow.ingredientAliasId,
+        ingredientId: recurringRow.ingredientId,
         unit: recurringParsed.data.unit || null,
         amount: recurringParsed.data.amount,
+        purchaseAmount: groceryRef.purchaseAmount,
         ...(groceryRef.storeId !== undefined ? { storeId: groceryRef.storeId } : {}),
       });
 
@@ -243,9 +252,12 @@ export async function detachRecurringGrocery(input: {
     id: string;
     version: number;
     name: string | null;
+    ingredientAliasId?: string | null;
+    ingredientId?: string | null;
     unit: string | null;
     amount: number | null;
     storeId?: string | null;
+    purchaseAmount?: number | null;
   };
 }): Promise<MutationOutcome<GroceryDto>> {
   const groceryUpdate = GroceryUpdateBaseSchema.safeParse(input.grocery);

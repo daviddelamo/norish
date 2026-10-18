@@ -11,9 +11,13 @@ import {
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Accordion, Button, Chip, Modal, Spinner } from "@heroui/react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 
-import type { AdminJobAttemptDTO, AdminJobStepDTO } from "@norish/shared/contracts";
+import type {
+  AdminJobAttemptDTO,
+  AdminJobModelDTO,
+  AdminJobStepDTO,
+} from "@norish/shared/contracts";
 
 import { formatDuration, formatStep, formatTimestamp } from "./job-format";
 import JobStatusChip from "./job-status-chip";
@@ -89,7 +93,9 @@ function StepList({ steps, t }: { steps: AdminJobStepDTO[]; t: Translate }) {
               </div>
               {meta ? <span className="text-muted text-xs">{meta}</span> : null}
               {step.detailJson ? (
-                <span className="text-muted font-mono text-xs break-all">{step.detailJson}</span>
+                <pre className="text-muted max-h-80 overflow-auto font-mono text-xs break-all whitespace-pre-wrap">
+                  {step.detailJson}
+                </pre>
               ) : null}
               {step.error ? (
                 <span className="text-danger text-xs break-all">{step.error}</span>
@@ -100,6 +106,47 @@ function StepList({ steps, t }: { steps: AdminJobStepDTO[]; t: Translate }) {
       })}
     </ul>
   );
+}
+
+/**
+ * Which models the job asked, the failed ones marked, so "jev or openai?" is
+ * answered at a glance, each with the tokens it took where its provider said.
+ */
+function ModelChips({ models, t }: { models: AdminJobModelDTO[]; t: Translate }) {
+  const format = useFormatter();
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {models.map((use) => (
+        <Chip
+          key={`${use.provider}/${use.model}/${use.outcome}`}
+          color={use.outcome === "failed" ? "danger" : "default"}
+          size="sm"
+          variant="soft"
+        >
+          <span className="font-mono">{`${use.provider} · ${use.model}`}</span>
+          {use.outcome === "failed" ? ` (${t("stepStatus.failed")})` : null}
+          {use.tokens !== null ? (
+            <span className="text-muted tabular-nums">
+              {` · ${t("detail.modelTokens", {
+                tokens: format.number(use.tokens, {
+                  notation: "compact",
+                  maximumFractionDigits: 1,
+                }),
+              })}`}
+            </span>
+          ) : null}
+        </Chip>
+      ))}
+    </div>
+  );
+}
+
+/** Every token the job's models took, where any provider said; null where none did. */
+function totalTokens(models: readonly AdminJobModelDTO[]): number | null {
+  const counted = models.filter((use) => use.tokens !== null);
+
+  return counted.length > 0 ? counted.reduce((sum, use) => sum + (use.tokens ?? 0), 0) : null;
 }
 
 /** Body of one attempt's accordion panel: error, steps, and logs. */
@@ -135,6 +182,7 @@ function AttemptBody({ attempt, t }: { attempt: AdminJobAttemptDTO; t: Translate
 export default function JobDetailModal({ queue, jobId, onClose }: Props) {
   const t = useTranslations("settings.admin.jobQueue");
   const tActions = useTranslations("common.actions");
+  const format = useFormatter();
   const isOpen = !!queue && !!jobId;
   const { job, isLoading, error } = useJobDetailQuery({
     queue: queue ?? "",
@@ -142,6 +190,7 @@ export default function JobDetailModal({ queue, jobId, onClose }: Props) {
     enabled: isOpen,
   });
   const { retryJob, removeJob, isRetrying, isRemoving } = useJobQueueMutations();
+  const tokensUsed = job ? totalTokens(job.models) : null;
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -233,6 +282,17 @@ export default function JobDetailModal({ queue, jobId, onClose }: Props) {
                       {field(t("detail.fields.finished"), formatTimestamp(job.finishedOn))}
                       {field(t("detail.fields.duration"), formatDuration(job.durationMs))}
                       {field(t("detail.fields.attempts"), `${job.attemptsMade}/${job.maxAttempts}`)}
+                      {tokensUsed !== null
+                        ? field(t("detail.fields.tokens"), format.number(tokensUsed))
+                        : null}
+                      {job.models.length > 0 ? (
+                        <div className="col-span-2">
+                          <dt className="text-muted mb-1 text-xs">{t("detail.fields.models")}</dt>
+                          <dd>
+                            <ModelChips models={job.models} t={t} />
+                          </dd>
+                        </div>
+                      ) : null}
                     </dl>
 
                     {/* Input payload (moved to top) */}
@@ -268,13 +328,11 @@ export default function JobDetailModal({ queue, jobId, onClose }: Props) {
                                       {t("detail.attempt", { number: attempt.attempt })}
                                     </span>
                                     <Chip
-                                      color={attempt.message ? "danger" : "success"}
+                                      color={stepStatusColors[attempt.outcome]}
                                       size="sm"
                                       variant="soft"
                                     >
-                                      {attempt.message
-                                        ? t("stepStatus.failed")
-                                        : t("stepStatus.done")}
+                                      {t(`stepStatus.${attempt.outcome}`)}
                                     </Chip>
                                   </div>
                                   <Accordion.Indicator />

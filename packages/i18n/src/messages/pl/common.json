@@ -49,6 +49,7 @@
   "filters": {
     "title": "Filtry",
     "search": "Szukaj",
+    "searchIn": "Szukaj w",
     "sort": "Sortuj",
     "mode": "Tryb",
     "modeAll": "Wszystkie",
@@ -118,6 +119,9 @@
       "placeholder": "https://przykład.pl/przepis",
       "failed": "Nie udało się zaimportować przepisu",
       "failedWithAI": "Nie udało się zaimportować przepisu z AI"
+    },
+    "clipboard": {
+      "title": "Zaimportować przepis ze skopiowanego linku?"
     },
     "paste": {
       "title": "Importuj przez wklejenie",
@@ -235,6 +239,7 @@
     "cache": {
       "heading": "Offline cache",
       "recipes": "Recipes",
+      "cookbooks": "Książki kucharskie",
       "groceries": "Groceries",
       "stores": "Stores",
       "planned": "This week",
@@ -282,5 +287,15 @@
   "queuedOffline": {
     "title": "Jesteś offline",
     "description": "Dodano do kolejki — Norish dokończy to automatycznie, gdy wrócisz online."
+  },
+  "storageUnavailable": {
+    "title": "Nie można uruchomić",
+    "description": "Norish nie mógł odczytać bezpiecznego magazynu, więc nie wie, do którego serwera należy ta aplikacja. Nic nie zostało zmienione. Spróbuj ponownie lub uruchom aplikację jeszcze raz.",
+    "detailsLabel": "Szczegóły techniczne"
+  },
+  "aiKeyRejected": {
+    "title": "Klucz AI przestał działać",
+    "description": "Dostawca odrzuca klucz API dla {blocks} od {since}. Zapisz nowy klucz, aby te funkcje AI znów działały.",
+    "openSettings": "Otwórz ustawienia"
   }
 }

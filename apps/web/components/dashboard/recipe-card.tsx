@@ -2,19 +2,22 @@
 
 import type { MouseEvent } from "react";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { MiniCalendar, MiniGroceries } from "@/components/Panel/consumers";
 import OriginFlag from "@/components/recipes/origin-flag";
 import HeartButton from "@/components/shared/heart-button";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
 import { usePermissionsContext } from "@/context/permissions-context";
 import { useRecipePrefetch } from "@/hooks/recipes/use-recipe-prefetch";
+import { useMountedOnceOpened } from "@/hooks/use-mounted-once-opened";
 import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
+import { withOrigin } from "@/lib/back-destination";
 import { useAppStore } from "@/stores/useAppStore";
 import {
   CalendarDaysIcon,
   ClockIcon,
   EllipsisHorizontalIcon,
+  MinusCircleIcon,
   ShoppingBagIcon,
   StarIcon,
   TrashIcon,
@@ -35,6 +38,7 @@ import {
 import { DeleteRecipeModal } from "../shared/delete-recipe-modal";
 import DoubleTapContainer from "../shared/double-tap-container";
 import SwipeableRow, { SwipeableRowRef, SwipeAction } from "../shared/swipable-row";
+import { CardFact, CardFacts } from "./card-facts";
 import RecipeMetadata from "./recipe-metadata";
 import RecipeTags from "./recipe-tags";
 
@@ -45,6 +49,8 @@ type RecipeCardProps = {
   variant?: "grid" | "list";
   onToggleFavorite: (recipeId: string) => void;
   onDelete: (recipeId: string, version: number) => void;
+  /** Inside a cookbook, the card's last action takes the recipe out of it instead of deleting it. */
+  onRemoveFromCookbook?: (recipeId: string) => void;
 };
 
 type RecipeTagValue = RecipeDashboardDTO["tags"][number] | string | null | undefined;
@@ -103,23 +109,6 @@ function dashboardFieldEqual(a: unknown, b: unknown): boolean {
   return false;
 }
 
-/**
- * Whether a panel should be in the tree at all. Cards are virtualized, so one
- * scrolls out and back in constantly — and a panel mounted before it is ever
- * opened subscribes to its queries on every one of those mounts, refetching
- * them each time. Nothing renders until the reader actually opens it; after
- * that it stays, so closing still animates.
- */
-function useMountedOnceOpened(open: boolean) {
-  const [mounted, setMounted] = useState(open);
-
-  if (open && !mounted) {
-    setMounted(true);
-  }
-
-  return mounted;
-}
-
 function RecipeCardComponent({
   recipe,
   isFavorite: recipeIsFavorite,
@@ -127,8 +116,12 @@ function RecipeCardComponent({
   variant = "grid",
   onToggleFavorite,
   onDelete,
+  onRemoveFromCookbook,
 }: RecipeCardProps) {
   const router = useRouter();
+  // This card stands on the Library and inside a cookbook, so where the reader
+  // is standing is what the recipe's back link should offer.
+  const pathname = usePathname();
   const rowRef = useRef<SwipeableRowRef>(null);
   const mobileSearchOpen = useAppStore((s) => s.mobileSearchOpen);
   const { canDeleteRecipe } = usePermissionsContext();
@@ -144,6 +137,7 @@ function RecipeCardComponent({
     close: onDeleteModalClose,
   } = useOverlayState();
   const t = useTranslations("recipes.card");
+  const tCookbooks = useTranslations("recipes.cookbooks");
   const { showRatings, showFavorites } = useHiddenItemVisibility();
 
   // Automatically prefetch recipe when card enters viewport
@@ -155,9 +149,9 @@ function RecipeCardComponent({
     if (recipe.id && !open && !mobileSearchOpen) {
       // Navigate immediately - skeleton shows while data loads
       // Prefetch is already happening via useRecipePrefetch hook
-      router.push(`/recipes/${recipe.id}`);
+      router.push(withOrigin(`/recipes/${recipe.id}`, pathname));
     }
-  }, [router, recipe.id, open, mobileSearchOpen]);
+  }, [router, recipe.id, open, mobileSearchOpen, pathname]);
 
   const totalMinutes =
     recipe.totalMinutes ?? ((recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0) || undefined);
@@ -238,7 +232,17 @@ function RecipeCardComponent({
       },
     ];
 
-    if (showDeleteAction) {
+    if (onRemoveFromCookbook) {
+      // Taking a recipe out of the cookbook it is being read in. This never
+      // touches the recipe, only its membership (ADR-0027).
+      baseActions.push({
+        key: "remove-from-cookbook",
+        icon: MinusCircleIcon,
+        color: "danger",
+        onPress: () => onRemoveFromCookbook(recipe.id),
+        label: tCookbooks("removeFromCookbook"),
+      });
+    } else if (showDeleteAction) {
       baseActions.push({
         key: "delete",
         icon: TrashIcon,
@@ -250,7 +254,7 @@ function RecipeCardComponent({
     }
 
     return baseActions;
-  }, [showDeleteAction, handleDeleteClick, t]);
+  }, [showDeleteAction, handleDeleteClick, t, onRemoveFromCookbook, recipe.id, tCookbooks]);
 
   const optionsButton = (
     <div className="hidden md:block" role="presentation" onClick={stopParentActivation}>
@@ -294,31 +298,26 @@ function RecipeCardComponent({
       </div>
     );
 
+  const facts = (
+    <>
+      {typeof averageRating === "number" && averageRating > 0 && showRatings && (
+        <CardFact icon={StarIcon} iconClassName="text-warning">
+          {Math.round(averageRating)}
+        </CardFact>
+      )}
+      {timeLabel && <CardFact icon={ClockIcon}>{timeLabel}</CardFact>}
+      {typeof servings === "number" && servings > 0 && (
+        <CardFact icon={UserGroupIcon}>{servings}</CardFact>
+      )}
+    </>
+  );
+
   const metadataChips = (
     <div
       className="flex min-w-0 flex-wrap items-center gap-1.5 overflow-hidden"
       title={tagNames.length > 0 ? tagNames.join(", ") : undefined}
     >
-      {typeof averageRating === "number" && averageRating > 0 && showRatings && (
-        <Chip className="shrink-0 rounded-full px-2 text-[11px]" size="sm" variant="tertiary">
-          <StarIcon className="text-warning h-3.5 w-3.5" />
-          <Chip.Label>{Math.round(averageRating)}</Chip.Label>
-        </Chip>
-      )}
-
-      {timeLabel && (
-        <Chip className="shrink-0 rounded-full px-2 text-[11px]" size="sm" variant="tertiary">
-          <ClockIcon className="h-3.5 w-3.5" />
-          <Chip.Label>{timeLabel}</Chip.Label>
-        </Chip>
-      )}
-
-      {typeof servings === "number" && servings > 0 && (
-        <Chip className="shrink-0 rounded-full px-2 text-[11px]" size="sm" variant="tertiary">
-          <UserGroupIcon className="h-3.5 w-3.5" />
-          <Chip.Label>{servings}</Chip.Label>
-        </Chip>
-      )}
+      <span className="flex items-center gap-1.5 empty:hidden">{facts}</span>
 
       {visibleTagNames.map((tag) => {
         const isAllergen = isAllergenTag(tag, allergySet);
@@ -326,7 +325,7 @@ function RecipeCardComponent({
         return (
           <Chip
             key={tag.toLowerCase()}
-            className="max-w-[8rem] min-w-0 rounded-full px-2 text-[11px]"
+            className={`max-w-[8rem] min-w-0 rounded-full px-2 text-[11px] ${isAllergen ? "" : "dark:bg-surface-tertiary"}`}
             color={isAllergen ? "warning" : undefined}
             size="sm"
             variant={isAllergen ? "primary" : "tertiary"}
@@ -340,7 +339,7 @@ function RecipeCardComponent({
         <Tooltip delay={0}>
           <Tooltip.Trigger aria-label={tagNames.join(", ")} onClick={stopParentActivation}>
             <Chip
-              className="shrink-0 rounded-full px-2 text-[11px]"
+              className={`shrink-0 rounded-full px-2 text-[11px] ${hiddenAllergenCount > 0 ? "" : "dark:bg-surface-tertiary"}`}
               color={hiddenAllergenCount > 0 ? "warning" : undefined}
               size="sm"
               variant={hiddenAllergenCount > 0 ? "primary" : "tertiary"}
@@ -449,7 +448,7 @@ function RecipeCardComponent({
       <div
         ref={cardRef}
         data-recipe-card
-        className={`relative h-[340px] w-full overflow-hidden transition-all duration-300 ${open ? "rounded-none opacity-70" : "rounded-3xl"} `}
+        className={`relative h-[286px] w-full overflow-hidden transition-all duration-300 sm:h-[378px] ${open ? "rounded-none opacity-70" : "rounded-3xl"} `}
         role="button"
         tabIndex={open ? 0 : -1}
         onClick={() => {
@@ -468,7 +467,7 @@ function RecipeCardComponent({
             variant="default"
           >
             <DoubleTapContainer
-              className="relative h-[236px] w-full shrink-0 cursor-pointer overflow-hidden"
+              className="relative h-40 w-full shrink-0 cursor-pointer overflow-hidden sm:h-[236px]"
               disabled={open || mobileSearchOpen}
               doubleTapEnabled={showFavorites}
               onDoubleTap={() => {
@@ -481,10 +480,7 @@ function RecipeCardComponent({
               </div>
 
               <RecipeMetadata
-                averageRating={showRatings ? averageRating : null}
                 isFavorite={recipeIsFavorite}
-                servings={servings}
-                timeLabel={timeLabel}
                 onOptionsPress={() => {
                   if (rowRef.current?.isOpen()) rowRef.current?.closeRow();
                   else rowRef.current?.openRow();
@@ -496,11 +492,11 @@ function RecipeCardComponent({
             </DoubleTapContainer>
 
             <Card.Content
-              className="h-[104px] cursor-pointer overflow-hidden px-4 pt-3 pb-3"
+              className="flex h-[124px] cursor-pointer flex-col overflow-hidden px-3 pt-2.5 pb-3 sm:h-[140px] sm:px-4 sm:pt-3"
               onClick={handleNavigate}
             >
               <h3
-                className={`text-foreground truncate text-base font-semibold ${open ? "" : "group-hover/row:underline"} `}
+                className={`text-foreground line-clamp-2 shrink-0 text-sm font-semibold sm:text-base ${open ? "" : "group-hover/row:underline"} `}
                 title={recipe.name}
               >
                 <OriginFlag className="mr-1.5" originCountry={recipe.originCountry} />
@@ -509,18 +505,15 @@ function RecipeCardComponent({
 
               {description && (
                 <p
-                  className="text-muted mt-1 text-sm"
-                  style={{
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }}
+                  className="text-muted mt-0.5 shrink-0 truncate text-xs sm:mt-1 sm:text-sm"
                   title={description}
                 >
                   <SmartMarkdownRenderer disableLinks text={description} />
                 </p>
               )}
+
+              {/* The facts sit under one line of description, at the card's foot */}
+              <CardFacts>{facts}</CardFacts>
             </Card.Content>
           </Card>
         </div>
@@ -574,6 +567,7 @@ const RecipeCard = memo(RecipeCardComponent, (prevProps, nextProps) => {
   // Functions are stable via useCallback in parent, but check identity anyway
   if (prevProps.onToggleFavorite !== nextProps.onToggleFavorite) return false;
   if (prevProps.onDelete !== nextProps.onDelete) return false;
+  if (prevProps.onRemoveFromCookbook !== nextProps.onRemoveFromCookbook) return false;
 
   const prev = prevProps.recipe;
   const next = nextProps.recipe;

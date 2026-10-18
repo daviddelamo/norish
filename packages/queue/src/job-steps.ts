@@ -10,10 +10,11 @@
 
 import type { Job } from "bullmq";
 
+import type { ModelUse } from "@norish/shared-server/ai/runtime/model-use-ledger";
 import { createLogger } from "@norish/shared-server/logger";
 
-import type { QueueName } from "./config";
-import { QUEUE_NAMES } from "./config";
+import type { QueueName } from "./queue-names";
+import { QUEUE_NAMES } from "./queue-names";
 
 const log = createLogger("queue:job-steps");
 
@@ -23,12 +24,16 @@ export interface JobStepEvent {
   endedAt?: number;
   /** Small JSON-able summary recorded when the step completed */
   detail?: unknown;
+  /** The model requests the step made, where a job counts them per step as well as per attempt */
+  models?: ModelUse[];
 }
 
 export interface JobAttemptTimeline {
   /** 1-based attempt number (job.attemptsMade + 1 at processing time) */
   attempt: number;
   timeline: JobStepEvent[];
+  /** Every model request the attempt made, in order, as the AI Runtime recorded it */
+  models?: ModelUse[];
 }
 
 export interface JobStepProgress {
@@ -61,9 +66,17 @@ export const JOB_PIPELINES: Record<QueueName, string[]> = {
   [QUEUE_NAMES.ALLERGY_DETECTION]: ["ai-request", "saving"],
   [QUEUE_NAMES.RECIPE_PROVENANCE]: ["ai-request", "saving"],
   [QUEUE_NAMES.INGREDIENT_LINKING]: ["ai-request", "saving"],
+  [QUEUE_NAMES.IMAGE_GENERATION]: ["ai-request", "saving"],
   // CalDAV runs either a sync or a delete flow; no fixed sequence
   [QUEUE_NAMES.CALDAV_SYNC]: [],
   [QUEUE_NAMES.SCHEDULED_TASKS]: ["running"],
+  [QUEUE_NAMES.STORE_LOOKUP]: ["searching", "reading-product", "saving-link"],
+  // One step per food, "asking-ai:3/12", each carrying what came of it.
+  [QUEUE_NAMES.INGREDIENT_REVIEW]: ["asking-ai"],
+  // One step per food, "drawing-icon:3/12", each carrying what came of it.
+  [QUEUE_NAMES.INGREDIENT_ICONS]: ["drawing-icon"],
+  // Per food, its Plain Name then its icon, each where the administrator turned it on.
+  [QUEUE_NAMES.NEW_INGREDIENTS]: ["naming", "drawing-icon"],
 };
 
 /**
@@ -120,6 +133,7 @@ function cloneAttempts(job: Job): JobAttemptTimeline[] {
   return prev.attempts.map((entry) => ({
     attempt: entry.attempt,
     timeline: entry.timeline.map((event) => ({ ...event })),
+    ...(entry.models ? { models: entry.models.map((use) => ({ ...use })) } : {}),
   }));
 }
 
@@ -136,11 +150,22 @@ function currentAttemptEntry(attempts: JobAttemptTimeline[], job: Job): JobAttem
   return entry;
 }
 
+/** Whether two details can be merged rather than one replacing the other. */
+function isMergeable(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /**
  * Report that the job is entering a new processing step.
+ *
+ * A step may carry a detail from the start — what the step was given to work
+ * with, rather than what it produced — so the pipeline view and the job log
+ * still name it when the step goes on to fail. `completeStep` merges its own
+ * detail on top rather than replacing it.
+ *
  * Best-effort: monitoring must never fail the job itself.
  */
-export async function reportStep(job: Job, step: string): Promise<void> {
+export async function reportStep(job: Job, step: string, detail?: unknown): Promise<void> {
   try {
     const now = Date.now();
     const attempts = cloneAttempts(job);
@@ -151,13 +176,14 @@ export async function reportStep(job: Job, step: string): Promise<void> {
       last.endedAt = now;
     }
 
-    entry.timeline.push({ id: step, startedAt: now });
+    entry.timeline.push({ id: step, startedAt: now, detail });
 
     const progress: JobStepProgress = { step, updatedAt: now, attempts };
+    const note = detail === undefined ? "" : ` ${JSON.stringify(detail)}`;
 
     const results = await Promise.allSettled([
       job.updateProgress(progress),
-      job.log(`${new Date().toISOString()} [attempt ${entry.attempt}] ${step}`),
+      job.log(`${new Date().toISOString()} [attempt ${entry.attempt}] ${step}${note}`),
     ]);
 
     for (const result of results) {
@@ -173,6 +199,7 @@ export async function reportStep(job: Job, step: string): Promise<void> {
 /**
  * Mark the current step as completed, optionally attaching a small
  * JSON-able summary shown in the pipeline view (e.g. {alreadyExists: false}).
+ * A plain object is merged onto whatever `reportStep` already recorded.
  * Best-effort: never throws.
  */
 export async function completeStep(job: Job, detail?: unknown): Promise<void> {
@@ -191,7 +218,8 @@ export async function completeStep(job: Job, detail?: unknown): Promise<void> {
     last.endedAt = now;
 
     if (detail !== undefined) {
-      last.detail = detail;
+      last.detail =
+        isMergeable(last.detail) && isMergeable(detail) ? { ...last.detail, ...detail } : detail;
     }
 
     await job.updateProgress({
@@ -201,5 +229,74 @@ export async function completeStep(job: Job, detail?: unknown): Promise<void> {
     } satisfies JobStepProgress);
   } catch (err) {
     log.debug({ err, jobId: job.id }, "Failed to complete job step");
+  }
+}
+
+/**
+ * Record steps that have already run, in one write. For a job with many short
+ * steps: progress is one value, rewritten whole on every write and copied into
+ * the queue's event stream each time, so a write per step stores the square
+ * of the step count. Each step is still logged on its own.
+ * Best-effort: never throws.
+ */
+export async function recordCompletedSteps(
+  job: Job,
+  steps: readonly (JobStepEvent & { endedAt: number })[]
+): Promise<void> {
+  const last = steps[steps.length - 1];
+
+  if (!last) return;
+
+  try {
+    const attempts = cloneAttempts(job);
+    const entry = currentAttemptEntry(attempts, job);
+
+    entry.timeline.push(...steps.map((step) => ({ ...step })));
+
+    const results = await Promise.allSettled([
+      job.updateProgress({
+        step: last.id,
+        updatedAt: Date.now(),
+        attempts,
+      } satisfies JobStepProgress),
+      ...steps.map((step) =>
+        job.log(
+          `${new Date(step.endedAt).toISOString()} [attempt ${entry.attempt}] ${step.id}` +
+            (step.detail === undefined ? "" : ` ${JSON.stringify(step.detail)}`)
+        )
+      ),
+    ]);
+
+    for (const result of results) {
+      if (result.status === "rejected") {
+        log.debug({ err: result.reason, jobId: job.id }, "Failed to record completed job steps");
+      }
+    }
+  } catch (err) {
+    log.debug({ err, jobId: job.id }, "Failed to record completed job steps");
+  }
+}
+
+/**
+ * Record which models the current attempt asked, so the job monitor can say
+ * "jev" or "openai" beside the job. Written once, when the attempt settles,
+ * so it never races a step report. Best-effort: never throws.
+ */
+export async function recordModelUses(job: Job, models: ModelUse[]): Promise<void> {
+  try {
+    const now = Date.now();
+    const prev = readStepProgress(job.progress);
+    const attempts = cloneAttempts(job);
+    const entry = currentAttemptEntry(attempts, job);
+
+    entry.models = models.map((use) => ({ ...use }));
+
+    await job.updateProgress({
+      step: prev?.step ?? "",
+      updatedAt: now,
+      attempts,
+    } satisfies JobStepProgress);
+  } catch (err) {
+    log.debug({ err, jobId: job.id }, "Failed to record the job's model uses");
   }
 }

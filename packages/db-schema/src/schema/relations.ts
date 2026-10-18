@@ -1,11 +1,12 @@
 import { relations } from "drizzle-orm";
 
 import { accounts, apiKeys, sessions, users } from "./auth";
+import { cookbookRecipes, cookbooks } from "./cookbooks";
 import { cuisines } from "./cuisines";
 import { groceries } from "./groceries";
 import { householdUsers } from "./household-users";
 import { households } from "./households";
-import { ingredients } from "./ingredients";
+import { ingredientAliases, ingredients } from "./ingredients";
 import { recipeCuisines } from "./recipe-cuisines";
 import { recipeImages } from "./recipe-images";
 import { recipeIngredients } from "./recipe-ingredients";
@@ -31,6 +32,26 @@ export const recipesRelations = relations(recipes, ({ many }) => ({
   images: many(recipeImages),
   videos: many(recipeVideos),
   shares: many(recipeShares),
+  cookbookMemberships: many(cookbookRecipes),
+}));
+
+export const cookbooksRelations = relations(cookbooks, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [cookbooks.userId],
+    references: [users.id],
+  }),
+  members: many(cookbookRecipes),
+}));
+
+export const cookbookRecipesRelations = relations(cookbookRecipes, ({ one }) => ({
+  cookbook: one(cookbooks, {
+    fields: [cookbookRecipes.cookbookId],
+    references: [cookbooks.id],
+  }),
+  recipe: one(recipes, {
+    fields: [cookbookRecipes.recipeId],
+    references: [recipes.id],
+  }),
 }));
 
 export const userRelations = relations(users, ({ many }) => ({
@@ -71,7 +92,14 @@ export const cuisinesRelations = relations(cuisines, ({ many }) => ({
 }));
 
 export const ingredientsRelations = relations(ingredients, ({ many }) => ({
-  recipeIngredients: many(recipeIngredients),
+  aliases: many(ingredientAliases),
+}));
+
+export const ingredientAliasesRelations = relations(ingredientAliases, ({ one }) => ({
+  ingredient: one(ingredients, {
+    fields: [ingredientAliases.ingredientId],
+    references: [ingredients.id],
+  }),
 }));
 
 export const recipeCuisinesRelations = relations(recipeCuisines, ({ one }) => ({
@@ -101,9 +129,9 @@ export const recipeIngredientsRelations = relations(recipeIngredients, ({ one })
     fields: [recipeIngredients.recipeId],
     references: [recipes.id],
   }),
-  ingredient: one(ingredients, {
-    fields: [recipeIngredients.ingredientId],
-    references: [ingredients.id],
+  alias: one(ingredientAliases, {
+    fields: [recipeIngredients.ingredientAliasId],
+    references: [ingredientAliases.id],
   }),
 }));
 

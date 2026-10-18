@@ -26,7 +26,9 @@ vi.mock("@tanstack/react-query", async () => {
 });
 
 vi.mock("@heroui/react", () => ({
-  toast: vi.fn(),
+  toast: Object.assign(vi.fn(), { close: vi.fn() }),
+  // The already-exists toast carries its Open action as a button.
+  Button: () => null,
 }));
 
 vi.mock("next-intl", () => ({
@@ -36,6 +38,18 @@ vi.mock("next-intl", () => ({
 // Mock tRPC provider
 vi.mock("@/app/providers/trpc-provider", () => ({
   useTRPC: () => ({
+    // The Library holds the same recipes in one interleaved list, so the cache
+    // helpers reach it too (ADR-0026).
+    library: {
+      list: {
+        queryKey: () => [["library", "list"], { input: {}, type: "query" }],
+        infiniteQueryOptions: () => ({
+          queryKey: ["library", "list", {}],
+          queryFn: async () => ({ items: [], total: 0, nextCursor: null }),
+          getNextPageParam: () => null,
+        }),
+      },
+    },
     recipes: {
       list: {
         queryKey: (params: unknown) => [["recipes", "list"], { input: params, type: "infinite" }],

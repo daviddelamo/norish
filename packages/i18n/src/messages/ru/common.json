@@ -49,6 +49,7 @@
   "filters": {
     "title": "Фильтры",
     "search": "Поиск",
+    "searchIn": "Искать в",
     "sort": "Сортировка",
     "mode": "Режим",
     "modeAll": "Все",
@@ -113,6 +114,9 @@
       "placeholder": "https://example.com/your-recipe",
       "failed": "Не удалось импортировать рецепт",
       "failedWithAI": "Не удалось импортировать рецепт с помощью ИИ"
+    },
+    "clipboard": {
+      "title": "Импортировать рецепт по скопированной ссылке?"
     },
     "paste": {
       "title": "Импорт из текста",
@@ -235,6 +239,7 @@
     "cache": {
       "heading": "Offline cache",
       "recipes": "Recipes",
+      "cookbooks": "Кулинарные книги",
       "groceries": "Groceries",
       "stores": "Stores",
       "planned": "This week",
@@ -282,5 +287,15 @@
   "queuedOffline": {
     "title": "Вы офлайн",
     "description": "Добавлено в очередь — Norish автоматически завершит это, когда вы снова будете в сети."
+  },
+  "storageUnavailable": {
+    "title": "Не удалось запустить",
+    "description": "Norish не смог прочитать защищённое хранилище и не знает, к какому серверу относится это приложение. Ничего не изменено. Повторите попытку или перезапустите приложение.",
+    "detailsLabel": "Технические подробности"
+  },
+  "aiKeyRejected": {
+    "title": "Ключ ИИ перестал работать",
+    "description": "Провайдер отклоняет API-ключ для {blocks} с {since}. Сохраните новый ключ, чтобы эти функции ИИ снова заработали.",
+    "openSettings": "Открыть настройки"
   }
 }

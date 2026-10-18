@@ -5,13 +5,16 @@ import type {
   AuthProviderGitHubInput,
   AuthProviderGoogleInput,
   AuthProviderOIDCInput,
+  DecisionConfig,
   ImageGenerationConfig,
+  IngredientPermissionPolicy,
   PromptsConfigInput,
   RecipePermissionPolicy,
   ServerConfigKey,
   TimerKeywordsInput,
   VideoConfig,
 } from "@norish/config/zod/server-config";
+import { ServerConfigKeys } from "@norish/config/zod/server-config";
 
 import type { CreateAdminHooksOptions } from "./types";
 
@@ -40,6 +43,7 @@ export type AdminMutationsResult = {
   ) => Promise<{ success: boolean; error?: string }>;
   updateContentIndicators: (json: string) => Promise<{ success: boolean; error?: string }>;
   updateUnits: (json: string) => Promise<{ success: boolean; error?: string }>;
+  updateIngredientWords: (json: string) => Promise<{ success: boolean; error?: string }>;
   updateRecurrenceConfig: (json: string) => Promise<{ success: boolean; error?: string }>;
   updatePrompts: (config: PromptsConfigInput) => Promise<{ success: boolean; error?: string }>;
   updateTimerKeywords: (
@@ -50,11 +54,18 @@ export type AdminMutationsResult = {
   updateImageGenerationConfig: (
     config: ImageGenerationConfig
   ) => Promise<{ success: boolean; error?: string }>;
+  updateDecisionConfig: (config: DecisionConfig) => Promise<{ success: boolean; error?: string }>;
   testAIEndpoint: (
     config: Pick<AIConfig, "provider" | "endpoint" | "apiKey">
   ) => Promise<{ success: boolean; error?: string }>;
+  testDecisionEndpoint: (
+    config: Pick<DecisionConfig, "provider" | "apiKey" | "model" | "endpoint">
+  ) => Promise<{ success: boolean; error?: string }>;
   updateRecipePermissionPolicy: (
     policy: RecipePermissionPolicy
+  ) => Promise<{ success: boolean; error?: string }>;
+  updateIngredientPermissionPolicy: (
+    policy: IngredientPermissionPolicy
   ) => Promise<{ success: boolean; error?: string }>;
   updateSchedulerMonths: (months: number) => Promise<{ success: boolean; error?: string }>;
   restoreDefault: (key: ServerConfigKey) => Promise<{ success: boolean; error?: string }>;
@@ -87,6 +98,9 @@ export function createUseAdminMutations({
       trpc.admin.content.updateContentIndicators.mutationOptions()
     );
     const updateUnitsMutation = useMutation(trpc.admin.content.updateUnits.mutationOptions());
+    const updateIngredientWordsMutation = useMutation(
+      trpc.admin.content.updateIngredientWords.mutationOptions()
+    );
     const updateRecurrenceConfigMutation = useMutation(
       trpc.admin.content.updateRecurrenceConfig.mutationOptions()
     );
@@ -99,9 +113,18 @@ export function createUseAdminMutations({
     const updateImageGenerationConfigMutation = useMutation(
       trpc.admin.updateImageGenerationConfig.mutationOptions()
     );
+    const updateDecisionConfigMutation = useMutation(
+      trpc.admin.updateDecisionConfig.mutationOptions()
+    );
     const testAIEndpointMutation = useMutation(trpc.admin.testAIEndpoint.mutationOptions());
+    const testDecisionEndpointMutation = useMutation(
+      trpc.admin.testDecisionEndpoint.mutationOptions()
+    );
     const updatePermissionPolicyMutation = useMutation(
       trpc.admin.updateRecipePermissionPolicy.mutationOptions()
+    );
+    const updateIngredientPolicyMutation = useMutation(
+      trpc.admin.updateIngredientPermissionPolicy.mutationOptions()
     );
     const updateSchedulerMonthsMutation = useMutation(
       trpc.admin.updateSchedulerMonths.mutationOptions()
@@ -156,7 +179,23 @@ export function createUseAdminMutations({
         return result;
       },
       updateUnits: async (json) => {
-        return withInvalidate(updateUnitsMutation.mutateAsync(json));
+        const result = await withInvalidate(updateUnitsMutation.mutateAsync(json));
+
+        // Every page that reads a name reads it by the units map too.
+        if (result.success) {
+          queryClient.invalidateQueries({ queryKey: trpc.config.units.queryKey() });
+        }
+
+        return result;
+      },
+      updateIngredientWords: async (json) => {
+        const result = await withInvalidate(updateIngredientWordsMutation.mutateAsync(json));
+
+        if (result.success) {
+          queryClient.invalidateQueries({ queryKey: trpc.config.ingredientWords.queryKey() });
+        }
+
+        return result;
       },
       updateRecurrenceConfig: async (json) => {
         return withInvalidate(updateRecurrenceConfigMutation.mutateAsync(json));
@@ -183,17 +222,35 @@ export function createUseAdminMutations({
       updateImageGenerationConfig: async (config) => {
         return withInvalidate(updateImageGenerationConfigMutation.mutateAsync(config));
       },
+      updateDecisionConfig: async (config) => {
+        return withInvalidate(updateDecisionConfigMutation.mutateAsync(config));
+      },
       testAIEndpoint: async (config) => {
         return testAIEndpointMutation.mutateAsync(config);
       },
+      testDecisionEndpoint: async (config) => {
+        return testDecisionEndpointMutation.mutateAsync(config);
+      },
       updateRecipePermissionPolicy: async (policy) => {
         return withInvalidate(updatePermissionPolicyMutation.mutateAsync(policy));
+      },
+      updateIngredientPermissionPolicy: async (policy) => {
+        return withInvalidate(updateIngredientPolicyMutation.mutateAsync(policy));
       },
       updateSchedulerMonths: async (months) => {
         return withInvalidate(updateSchedulerMonthsMutation.mutateAsync(months));
       },
       restoreDefault: async (key) => {
-        return withInvalidate(restoreDefaultMutation.mutateAsync(key));
+        const result = await withInvalidate(restoreDefaultMutation.mutateAsync(key));
+
+        if (result.success && key === ServerConfigKeys.UNITS) {
+          queryClient.invalidateQueries({ queryKey: trpc.config.units.queryKey() });
+        }
+        if (result.success && key === ServerConfigKeys.INGREDIENT_WORDS) {
+          queryClient.invalidateQueries({ queryKey: trpc.config.ingredientWords.queryKey() });
+        }
+
+        return result;
       },
       restartServer: async () => {
         return restartServerMutation.mutateAsync();

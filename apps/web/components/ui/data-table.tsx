@@ -8,6 +8,13 @@ export interface DataTableColumn<Row> {
   label: ReactNode;
   /** Exactly one column should be the row header for accessibility */
   isRowHeader?: boolean;
+  /**
+   * Horizontal alignment for the whole column, heading included. A column of
+   * icon buttons reads as a stray cluster when its cells are pushed one way
+   * and the heading above them stays where the text columns start.
+   */
+  align?: "start" | "center" | "end";
+  /** Cell-only styling. Alignment belongs in `align`, so the heading follows. */
   className?: string;
   /**
    * Drops the column below `sm`. A phone has room for about two columns, and
@@ -29,7 +36,11 @@ interface DataTableProps<Row> {
   onRowAction?: (row: Row) => void;
   /** Rendered inside the table body when there are no rows */
   emptyState?: ReactNode;
+  /** Extra `data-*` attributes for a row, for tests and styling hooks. */
+  rowProps?: (row: Row) => Record<`data-${string}`, string | undefined>;
 }
+
+const ALIGNMENT = { start: null, center: "text-center", end: "text-right" } as const;
 
 /**
  * Shared table look for settings/admin cards (API tokens, site auth
@@ -43,13 +54,17 @@ export default function DataTable<Row>({
   rowKey,
   onRowAction,
   emptyState,
+  rowProps,
 }: DataTableProps<Row>) {
   // Hidden by media query rather than by dropping the column, so the table
   // does not rebuild itself around a breakpoint the server cannot know.
-  const columnClass = (column: DataTableColumn<Row>) =>
-    [column.className, column.hideOnNarrow ? "hidden sm:table-cell" : null]
+  const sharedClass = (column: DataTableColumn<Row>) =>
+    [ALIGNMENT[column.align ?? "start"], column.hideOnNarrow ? "hidden sm:table-cell" : null]
       .filter(Boolean)
       .join(" ") || undefined;
+
+  const columnClass = (column: DataTableColumn<Row>) =>
+    [column.className, sharedClass(column)].filter(Boolean).join(" ") || undefined;
 
   return (
     <Table>
@@ -59,7 +74,7 @@ export default function DataTable<Row>({
             {columns.map((column) => (
               <Table.Column
                 key={column.key}
-                className={column.hideOnNarrow ? "hidden sm:table-cell" : undefined}
+                className={sharedClass(column)}
                 id={column.key}
                 isRowHeader={column.isRowHeader}
               >
@@ -80,6 +95,7 @@ export default function DataTable<Row>({
                 className={onRowAction ? "cursor-pointer" : undefined}
                 id={rowKey(row)}
                 onAction={onRowAction ? () => onRowAction(row) : undefined}
+                {...rowProps?.(row)}
               >
                 {columns.map((column) => (
                   <Table.Cell key={column.key} className={columnClass(column)}>

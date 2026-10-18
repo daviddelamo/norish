@@ -7,16 +7,15 @@ requests. After replacing any capture here, run that script and commit both.
 
 `hero-dish-{light,dark}.jpg` is the odd one out: a photograph rather than a
 capture, the dish in the hero's recipe fragment. It is the recipe's own photo
-at the largest size its site publishes, 440x195 once cropped to the fragment's
-band, and the dark variant is the same frame at 0.87 brightness so it does not
-glare over the dark ground. Because 440 is all there is, the 2x variant the
-optimizer writes is an upscale it sharpens rather than detail — a hero photo
-that has to hold more than about 440 CSS pixels needs a different photograph,
-not a bigger export.
+as the app stores it (480 wide), cut to the fragment's band clear of the
+site's watermark, and the dark variant is the same frame at 0.87 brightness so
+it does not glare over the dark ground. Because 480 is all there is, the 2x
+variant the optimizer writes is an upscale it sharpens rather than detail.
 
 ## The capture spec
 
-Every screen ships four captures, named `<screen>-<web|mobile>-<light|dark>.jpg`:
+Six screens (dashboard, recipe, cooking, calendar, groceries, pantry), and
+every screen ships four captures, named `<screen>-<web|mobile>-<light|dark>.jpg`:
 
 - **web**: 1800x1350 (a 900x675 viewport at 2x); the recipe page alone is
   2400x1800 (a 1200x900 viewport at 2x) — the same 4:3, but physically wider
@@ -28,29 +27,31 @@ The optimizer centre-crops anything with a different aspect and warns, because
 a mismatched size almost always means the capture came from a different
 session than the rest of the set.
 
-`scripts/capture-shots.mjs` takes all twenty in one run against a signed-in
-account (see the header of that file for usage). It also handles the two
-staged details: cooking mode is captured on step 2, whose ingredient chips sit
-under the instruction, and the groceries page is captured with the Unsorted
-group collapsed so the store groups fit the frame.
+`scripts/capture-shots.mjs` takes all twenty-four in one run against a
+signed-in account (see the header of that file for usage). Cooking mode is
+captured on `NORISH_COOK_STEP`, a step whose ingredient chips fit under the
+instruction; the phone pass sends an iPhone user agent, because Norish keeps
+preferences per device kind and the list view is the phone's.
 
 ## One instance, one story
 
-All twenty captures come from one session (2026-08-12, the `mike@vanes.dev`
-account on a local dev instance), so the deck reads as one household using
-one app:
+All twenty-four captures come from one session (2026-10-12, a copy of the
+production library on 0.25), so the deck reads as one household using one
+app: Mike's own recipe library, seen from a household made for the shoot.
 
-- today (Wednesday, August 12) holds two meals: smoky pork & Boston beans
-  one-pot for lunch, a ham & cheese Dutch baby pancake for dinner
-- the recipe page and cooking mode are that same smoky pork one-pot, today's
-  lunch, captured on step 2 with the step's own ingredient chips (the bread
-  and the parsley) under the instruction
+- today (Monday, October 12) holds two meals: Roasted Veggie Pitas with
+  Avocado Dip for lunch, Chicken Cacciatore for dinner
+- the recipe page and cooking mode are that same Chicken Cacciatore,
+  tonight's dinner, captured on step 8 with its ingredient chips (bay leaf,
+  capers, parmesan) under the instruction
 - the hero fragment and its dish photo are that same recipe again
-- the grocery list keeps the week's recipe ingredients under Dirk, each item
-  naming the recipe it came from, with the weekly Coke recurring and due
-  today, some items already ticked, and the Unsorted group collapsed
-- the rest of the week's dinners are already planned, boerenkoolstamppot on
-  Thursday and more through Saturday
+- the grocery list is the Cacciatore's, under one Albert Heijn store sorted
+  by aisle, with the weekly milk due today and the bread already ticked away
+- the Pantry holds what the household keeps in, which is why the olive oil,
+  garlic, bay leaf, oregano and pepper flakes stayed off the grocery list
+- the rest of the week is planned: Thai chicken salad and a salmon traybake
+  on Tuesday, then dhal, boerenkool stamppot, orzo, pizza and beef
+  bourguignon through Sunday
 
 When retaking, keep it to one signed-in account on one day, keep every visible
 recipe photographed, and keep a week planned that tells the same connected

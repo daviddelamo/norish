@@ -1,18 +1,23 @@
 import { initCaldavSync } from "@norish/api/caldav/event-listener";
 import { initRecipeEnrichmentListener } from "@norish/api/recipes/enrichment-listener";
+import { applyNutritionSourcesOnBoot } from "@norish/api/startup/apply-nutrition-sources";
 import { backfillDishColors } from "@norish/api/startup/backfill-dish-color";
+import { backfillIngredientAliases } from "@norish/api/startup/backfill-ingredient-aliases";
 import { createServer } from "@norish/api/startup/http-server";
 import { runStartupMaintenanceCleanup } from "@norish/api/startup/maintenance-cleanup";
 import { migrateGalleryImages } from "@norish/api/startup/migrate-gallery-images";
 import { runMigrations } from "@norish/api/startup/migrations";
+import { recheckUndecidedMintsOnBoot } from "@norish/api/startup/recheck-undecided-mints";
 import { registerApiHandlersForQueue } from "@norish/api/startup/register-queue-api-handlers";
 import { seedServerConfig } from "@norish/api/startup/seed-config";
+import { seedIngredientCatalogueOnFirstBoot } from "@norish/api/startup/seed-ingredient-catalogue";
 import { registerShutdownHandlers } from "@norish/api/startup/shutdown";
 import { initializeVideoProcessing } from "@norish/api/startup/video-processing";
 import { initializeServerConfig, SERVER_CONFIG } from "@norish/config/env-config-server";
 import { initializeQueues } from "@norish/queue/registry";
 import { startWorkers } from "@norish/queue/start-workers";
 import { serverLogger as log, redactUrl } from "@norish/shared-server/logger";
+import { startRealtimeHub } from "@norish/shared-server/realtime/hub";
 
 import { startEmbeddedParser } from "./embedded-parser";
 
@@ -42,6 +47,24 @@ async function main() {
   await backfillDishColors();
   log.info("-".repeat(50));
 
+  // A first boot seeds the catalogue before traffic; later boots leave it to
+  // the refresh job, so an unchanged file never holds the server up.
+  await seedIngredientCatalogueOnFirstBoot();
+  log.info("-".repeat(50));
+
+  // After the seed, so every existing reference is resolved against the
+  // catalogue's foods, as a new import would be (ADR-0037).
+  await backfillIngredientAliases();
+  log.info("-".repeat(50));
+
+  // Old flagged mints, looked at again whenever the resolver's rules change.
+  await recheckUndecidedMintsOnBoot();
+  log.info("-".repeat(50));
+
+  // Ingredient Nutrition's source numbers, when this release carries new ones.
+  await applyNutritionSourcesOnBoot();
+  log.info("-".repeat(50));
+
   await initializeVideoProcessing();
   log.info("-".repeat(50));
 
@@ -49,6 +72,11 @@ async function main() {
   log.info("-".repeat(50));
 
   registerApiHandlersForQueue();
+
+  // The one Redis subscriber connection of this process; every internal
+  // listener and tRPC subscription registers on it.
+  await startRealtimeHub();
+  log.info("-".repeat(50));
 
   initCaldavSync();
   log.info("CalDAV sync service initialized");
@@ -81,7 +109,7 @@ async function main() {
     log.info("-".repeat(50));
     log.info("Server ready:");
     log.info(`  HTTP: http://${hostname}:${port}`);
-    log.info(`  WS:   ws://${hostname}:${port}/ws`);
+    log.info(`  WS:   ws://${hostname}:${port}/trpc`);
     log.info(`  ENV:  ${SERVER_CONFIG.NODE_ENV}`);
     log.info("-".repeat(50));
   });

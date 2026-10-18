@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import type { IngredientRef } from "@norish/db/repositories/ingredient-aliases";
 import type { GroceryDto, GroceryUpdateDto } from "@norish/shared/contracts";
 import { assertHouseholdAccess } from "@norish/auth/permissions";
 import {
@@ -21,13 +22,31 @@ import { listRecurringGroceriesByUsers } from "@norish/db/repositories/recurring
 import {
   findBestIngredientStorePreference,
   getStoreOwnerId,
-  normalizeIngredientName,
   upsertIngredientStorePreference,
 } from "@norish/db/repositories/stores";
+import { resolveGroceryNames } from "@norish/shared-server/ingredients/groceries";
+import { writeResolved } from "@norish/shared-server/ingredients/resolver";
 import { trpcLogger as log } from "@norish/shared-server/logger";
+import { groceries } from "@norish/shared-server/realtime/groceries";
 import { AssignGroceryToStoreInputSchema } from "@norish/shared/contracts/zod";
 
-import { groceryEmitter } from "./emitter";
+import { noticeGroceries } from "../stores/pricing";
+import { assertStoreAccess } from "../stores/stores-helpers";
+
+/**
+ * Remember the Store a member sent a grocery's Ingredient to, so the next
+ * line of that food goes there too. A line with no Ingredient yet (added
+ * offline, or nameless), or sent to no Store, teaches nothing.
+ */
+export async function rememberStorePreference(
+  userId: string,
+  ingredientId: string | null | undefined,
+  storeId: string | null | undefined
+): Promise<void> {
+  if (!ingredientId || !storeId) return;
+  await upsertIngredientStorePreference(userId, ingredientId, storeId);
+  log.debug({ userId, ingredientId, storeId }, "Saved ingredient store preference");
+}
 
 export type GroceryProcedureContext = {
   user: { id: string };
@@ -40,6 +59,7 @@ type GroceryMergeCandidate = {
   name: string | null;
   unit: string | null;
   amount: number | null;
+  purchaseAmount?: number | null;
   isDone: boolean;
   recipeIngredientId: string | null;
   recurringGroceryId: string | null;
@@ -47,7 +67,8 @@ type GroceryMergeCandidate = {
   sortOrder: number;
 };
 
-function normalizeGroceryName(name: string | null): string {
+/** The key two list lines are merged under; not the Product Link's folding. */
+function normalizeForMerge(name: string | null): string {
   return (name ?? "").toLowerCase().trim();
 }
 
@@ -91,7 +112,7 @@ export async function createGroceriesData(
   const existingByKey = new Map<string, GroceryMergeCandidate>();
 
   for (const grocery of existingGroceries) {
-    const normalizedName = normalizeGroceryName(grocery.name);
+    const normalizedName = normalizeForMerge(grocery.name);
 
     if (normalizedName && !grocery.isDone) {
       const recipeKey = grocery.recipeIngredientId ?? "manual";
@@ -109,8 +130,11 @@ export async function createGroceriesData(
     groceries: {
       userId: string;
       name: string | null;
+      ingredientAliasId?: string | null;
+      ingredientId?: string | null;
       unit: string | null;
       amount: number | null;
+      purchaseAmount?: number | null;
       isDone: boolean;
       recipeIngredientId: string | null;
       recurringGroceryId: string | null;
@@ -121,15 +145,25 @@ export async function createGroceriesData(
     [];
   const returnIds: string[] = [];
 
+  // A Store the client files a grocery under is the household's own; the
+  // grocery is priced through it, and another household's Store is not a
+  // heading here.
+  const named = new Set(input.map((grocery) => grocery.storeId).filter((id): id is string => !!id));
+
+  for (const storeId of named) await assertStoreAccess(ctx, storeId);
+
   for (const grocery of input) {
-    const normalizedName = normalizeGroceryName(grocery.name);
+    const normalizedName = normalizeForMerge(grocery.name);
     const recipeKey = grocery.recipeIngredientId ?? "manual";
     const recurringKey = grocery.recurringGroceryId ?? "none";
     const lookupKey = normalizedName ? `${normalizedName}|${recipeKey}|${recurringKey}` : null;
     const existing = lookupKey ? existingByKey.get(lookupKey) : null;
 
     const shouldMerge =
-      existing && (existing.unit === grocery.unit || (!existing.unit && !grocery.unit));
+      existing &&
+      existing.purchaseAmount == null &&
+      grocery.purchaseAmount == null &&
+      (existing.unit === grocery.unit || (!existing.unit && !grocery.unit));
 
     if (shouldMerge && existing) {
       const existingAmount = existing.amount ?? 1;
@@ -153,13 +187,7 @@ export async function createGroceriesData(
     }
 
     const id = grocery.id ?? crypto.randomUUID();
-    let storeId: string | null = grocery.storeId ?? null;
-
-    if (!storeId && grocery.name) {
-      const match = await findBestIngredientStorePreference(ctx.user.id, ctx.userIds, grocery.name);
-
-      storeId = match?.preference.storeId ?? null;
-    }
+    const storeId: string | null = grocery.storeId ?? null;
 
     groceriesToCreate.push({
       id,
@@ -168,6 +196,7 @@ export async function createGroceriesData(
         name: grocery.name,
         unit: grocery.unit,
         amount: grocery.amount,
+        purchaseAmount: grocery.purchaseAmount,
         isDone: grocery.isDone ?? false,
         recipeIngredientId: grocery.recipeIngredientId ?? null,
         recurringGroceryId: grocery.recurringGroceryId ?? null,
@@ -182,6 +211,7 @@ export async function createGroceriesData(
         name: grocery.name,
         unit: grocery.unit,
         amount: grocery.amount,
+        purchaseAmount: grocery.purchaseAmount,
         isDone: false,
         recipeIngredientId: grocery.recipeIngredientId ?? null,
         recurringGroceryId: null,
@@ -191,6 +221,27 @@ export async function createGroceriesData(
     }
   }
 
+  // Each new line's name is resolved to an Ingredient Alias, the way the
+  // household's recipe lines are (ADR-0037). A merged line keeps its own.
+  const fileNewLines = async (aliases: Array<IngredientRef | null>) => {
+    for (const [index, { groceries: grocery }] of groceriesToCreate.entries()) {
+      const alias = aliases[index];
+
+      grocery.ingredientAliasId = alias?.aliasId ?? null;
+      grocery.ingredientId = alias?.ingredientId ?? null;
+
+      // A line added without a Store goes where the household sends its food.
+      if (!grocery.storeId && alias && grocery.name) {
+        const match = await findBestIngredientStorePreference(ctx.user.id, ctx.userIds, {
+          id: alias.ingredientId,
+          name: grocery.name,
+        });
+
+        grocery.storeId = match?.preference.storeId ?? null;
+      }
+    }
+  };
+
   let updatedGroceries: GroceryDto[] = [];
 
   if (groceriesToUpdate.length > 0) {
@@ -198,22 +249,64 @@ export async function createGroceriesData(
     log.info({ userId: ctx.user.id, count: updatedGroceries.length }, "Groceries merged");
 
     if (updatedGroceries.length > 0) {
-      groceryEmitter.emitToHousehold(ctx.householdKey, "updated", {
-        changedGroceries: updatedGroceries,
-      });
+      void groceries.publish(
+        "updated",
+        {
+          changedGroceries: updatedGroceries,
+        },
+        { householdKey: ctx.householdKey }
+      );
     }
   }
 
   let createdGroceries: GroceryDto[] = [];
 
   if (groceriesToCreate.length > 0) {
-    createdGroceries = await createGroceries(groceriesToCreate, ctx.userIds);
+    const made = await writeResolved(
+      () =>
+        resolveGroceryNames(
+          groceriesToCreate.map(({ groceries: grocery }) => grocery),
+          { userId: ctx.user.id }
+        ),
+      async (aliases) => {
+        await fileNewLines(aliases);
+
+        return await createGroceries(groceriesToCreate, ctx.userIds);
+      }
+    );
+
+    createdGroceries = made.created;
     log.info({ userId: ctx.user.id, count: createdGroceries.length }, "Groceries created");
 
     if (createdGroceries.length > 0) {
-      groceryEmitter.emitToHousehold(ctx.householdKey, "created", {
-        groceries: createdGroceries,
-      });
+      void groceries.publish(
+        "created",
+        {
+          groceries: createdGroceries,
+        },
+        { householdKey: ctx.householdKey }
+      );
+    }
+
+    // Making room at the top moved every active sibling's sort order, and
+    // with it its version. A screen that goes on holding the old version has
+    // its next write on that row refused as stale (ADR-0004), so the shifted
+    // rows ride back on the answer and out to the household as an update; a
+    // row merged and then shifted is reported as the shift left it.
+    if (made.shifted.length > 0) {
+      const shiftedIds = new Set(made.shifted.map((grocery) => grocery.id));
+
+      updatedGroceries = [
+        ...updatedGroceries.filter((grocery) => !shiftedIds.has(grocery.id)),
+        ...made.shifted,
+      ];
+      void groceries.publish(
+        "updated",
+        {
+          changedGroceries: made.shifted,
+        },
+        { householdKey: ctx.householdKey }
+      );
     }
   }
 
@@ -227,11 +320,17 @@ export async function createGroceriesData(
     .map((id) => groceriesById.get(id))
     .filter((grocery): grocery is GroceryDto => grocery !== undefined);
 
+  // A name the Store already knows is priced in this same response, with no
+  // outbound request; a name it does not goes to the lookup queue, so adding
+  // six things in a row stays as fast as it was.
+  const prices = await noticeGroceries(ctx, returnedGroceries);
+
   return {
     ids: returnIds,
     createdGroceries,
     updatedGroceries,
     returnedGroceries,
+    prices,
   };
 }
 
@@ -239,9 +338,9 @@ export async function toggleGroceriesData(
   ctx: GroceryProcedureContext,
   input: z.infer<typeof GroceryToggleSchema>
 ) {
-  const { groceries, isDone } = input;
-  const groceryIds = groceries.map((grocery) => grocery.id);
-  const versionById = new Map(groceries.map((grocery) => [grocery.id, grocery.version]));
+  const { groceries: toggles, isDone } = input;
+  const groceryIds = toggles.map((grocery) => grocery.id);
+  const versionById = new Map(toggles.map((grocery) => [grocery.id, grocery.version]));
 
   log.debug({ userId: ctx.user.id, count: groceryIds.length, isDone }, "Toggling groceries");
 
@@ -286,17 +385,25 @@ export async function toggleGroceriesData(
         ? "Stale grocery toggle; requesting client refresh"
         : "Grocery toggle partially applied due to stale versions; requesting client refresh"
     );
-    groceryEmitter.emitToHousehold(ctx.householdKey, "stale", {
-      reason: "Groceries were updated elsewhere",
-    });
+    void groceries.publish(
+      "stale",
+      {
+        reason: "Groceries were updated elsewhere",
+      },
+      { householdKey: ctx.householdKey }
+    );
   }
 
   log.debug({ userId: ctx.user.id, count: updated.length, isDone }, "Groceries toggled");
 
   if (updated.length > 0) {
-    groceryEmitter.emitToHousehold(ctx.householdKey, "updated", {
-      changedGroceries: updated,
-    });
+    void groceries.publish(
+      "updated",
+      {
+        changedGroceries: updated,
+      },
+      { householdKey: ctx.householdKey }
+    );
   }
 
   return updated;
@@ -327,14 +434,22 @@ export async function deleteGroceriesData(
       { userId: ctx.user.id, staleGroceryIds: result.staleIds },
       "Stale grocery delete mutations; requesting client refresh"
     );
-    groceryEmitter.emitToHousehold(ctx.householdKey, "stale", {
-      reason: "Groceries were updated elsewhere",
-    });
+    void groceries.publish(
+      "stale",
+      {
+        reason: "Groceries were updated elsewhere",
+      },
+      { householdKey: ctx.householdKey }
+    );
   }
 
   if (result.deletedIds.length > 0) {
     log.info({ userId: ctx.user.id, count: result.deletedIds.length }, "Groceries deleted");
-    groceryEmitter.emitToHousehold(ctx.householdKey, "deleted", { groceryIds: result.deletedIds });
+    void groceries.publish(
+      "deleted",
+      { groceryIds: result.deletedIds },
+      { householdKey: ctx.householdKey }
+    );
   }
 
   return result;
@@ -380,25 +495,32 @@ export async function assignGroceryToStoreData(
       { userId: ctx.user.id, groceryId, storeId, version },
       "Stale grocery assign-to-store; requesting client refresh"
     );
-    groceryEmitter.emitToHousehold(ctx.householdKey, "stale", {
-      reason: "Grocery was updated elsewhere",
-    });
+    void groceries.publish(
+      "stale",
+      {
+        reason: "Grocery was updated elsewhere",
+      },
+      { householdKey: ctx.householdKey }
+    );
 
     return null;
   }
 
   log.info({ userId: ctx.user.id, groceryId, storeId }, "Grocery assigned to store");
 
-  if (savePreference && storeId && grocery.name) {
-    const normalized = normalizeIngredientName(grocery.name);
+  // Moving a grocery to another Store asks that Store a new question; the old
+  // Store's answer was never about this one.
+  await noticeGroceries(ctx, [updated]);
 
-    await upsertIngredientStorePreference(ctx.user.id, normalized, storeId);
-    log.debug({ userId: ctx.user.id, normalized, storeId }, "Saved ingredient store preference");
-  }
+  if (savePreference) await rememberStorePreference(ctx.user.id, grocery.ingredientId, storeId);
 
-  groceryEmitter.emitToHousehold(ctx.householdKey, "updated", {
-    changedGroceries: [updated],
-  });
+  void groceries.publish(
+    "updated",
+    {
+      changedGroceries: [updated],
+    },
+    { householdKey: ctx.householdKey }
+  );
 
   return updated;
 }

@@ -13,9 +13,11 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/hooks/use-is-mobile", () => ({ useIsMobile: () => true }));
 vi.mock("@/hooks/auto-hide", () => ({ useAutoHide: () => ({ isVisible: true }) }));
-vi.mock("@/context/recipe-page-color-context", () => ({
-  useRecipePageColor: () => [mocks.recipePageColor, () => {}],
-}));
+vi.mock("@/context/device-preferences-context", async () =>
+  (await import("../../helpers/device-preferences-mock")).mockDevicePreferences(() => ({
+    recipePageColor: mocks.recipePageColor,
+  }))
+);
 vi.mock("@/components/timer-dock", () => ({ TimerDock: () => <div /> }));
 vi.mock("@/app/(app)/recipes/[id]/components/wake-lock-context", () => ({
   useWakeLockContext: () => ({
@@ -222,24 +224,6 @@ describe("Cooking mode swipes on a long step", () => {
     swipe(screen.getByTestId("step-scroll"), -120, 0);
 
     expect(screen.getByTestId("cooking-dialog").dataset.activeView).toBe("ingredients");
-  });
-
-  it("does not turn the page on a vertical drag inside the scroll region", () => {
-    render(<CookingMode floating />);
-
-    openCooking();
-    swipe(screen.getByTestId("step-scroll"), 0, -120);
-
-    expect(screen.getByTestId("cooking-dialog").dataset.activeStep).toBe("0");
-  });
-
-  it("still turns the page from the strip beside it", () => {
-    render(<CookingMode floating />);
-
-    openCooking();
-    swipe(screen.getByTestId("swipe-edge"), 0, -120);
-
-    expect(screen.getByTestId("cooking-dialog").dataset.activeStep).toBe("1");
   });
 });
 

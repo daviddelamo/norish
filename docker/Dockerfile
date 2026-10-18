@@ -3,7 +3,7 @@
 ##############################
 # Base image (minimal, no pnpm needed at runtime)
 ##############################
-FROM node:22-alpine3.21 AS base
+FROM node:22-alpine3.24 AS base
 
 # Security: upgrade all packages to latest versions to fix CVEs
 RUN apk upgrade --no-cache && \
@@ -36,7 +36,7 @@ RUN apk add --no-cache python3 make g++ pkgconfig libpq-dev vips-dev
 # Tell sharp to use system libvips
 ENV SHARP_IGNORE_GLOBAL_LIBVIPS=0
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY apps/landing/package.json ./apps/landing/package.json
 COPY apps/mobile/package.json ./apps/mobile/package.json
@@ -117,7 +117,11 @@ RUN pnpm run build && \
   apps/web/.next/standalone/node_modules/ffmpeg-static
 
 # Create isolated production deployment with pnpm deploy.
-RUN pnpm deploy --filter @norish/web --prod /app/deploy && \
+# --legacy: pnpm v10's default deploy requires injectWorkspacePackages, which
+# this repo deliberately does not set (injected copies of packages/* went stale
+# against their sources during development). The workspace copies deploy makes
+# are deleted on the next line regardless, so legacy deploy is equivalent here.
+RUN pnpm deploy --legacy --filter @norish/web --prod /app/deploy && \
   cd /app/deploy/node_modules && \
   # Remove workspace copies (source is in packages/, server code in dist-server/)
   rm -rf @norish && \
@@ -199,7 +203,7 @@ FROM base AS runtime
 LABEL org.opencontainers.image.source="https://github.com/norish-recipes/norish"
 
 # Install runtime-only system deps (base already ran apk upgrade)
-RUN apk add --no-cache libpq ffmpeg vips && \
+RUN apk add --no-cache libpq ffmpeg vips su-exec && \
   # Clean up npm (not needed, we use node directly)
   rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack && \
   rm -rf /var/cache/apk/* /tmp/* /root/.npm
@@ -264,7 +268,12 @@ RUN mkdir -p /app/uploads /app/bin && \
 # Copy pre-downloaded yt-dlp binary from dedicated build stage
 COPY --from=ytdlp --chown=${UID}:${GID} /ytdlp/yt-dlp /app/bin/yt-dlp
 
-USER ${UID}
+# The container starts as root only so the entrypoint can hand the uploads
+# folder to this user; the server itself runs as it.
+ENV NORISH_UID=${UID} \
+  NORISH_GID=${GID}
+
+COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/norish-entrypoint
 
 EXPOSE 3000
 
@@ -272,6 +281,8 @@ VOLUME ["/app/uploads"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/v1/health', r => process.exit(r.statusCode===200?0:1))" || exit 1
+
+ENTRYPOINT ["norish-entrypoint"]
 
 # Run directly with node; the custom server starts the embedded parser API when needed
 CMD ["node", "/app/dist-server/index.mjs"]

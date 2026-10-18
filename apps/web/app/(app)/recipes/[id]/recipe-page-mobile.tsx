@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ActionsMenu from "@/app/(app)/recipes/[id]/components/actions-menu";
 import AddToGroceries from "@/app/(app)/recipes/[id]/components/add-to-groceries-button";
+import CookbooksCard from "@/app/(app)/recipes/[id]/components/cookbooks-card";
 import CookingMode from "@/app/(app)/recipes/[id]/components/cookingmode";
 import IngredientsList from "@/app/(app)/recipes/[id]/components/ingredient-list";
 import IngredientsOptionsMenu from "@/app/(app)/recipes/[id]/components/ingredients-options-menu";
@@ -22,6 +23,8 @@ import DoubleTapContainer from "@/components/shared/double-tap-container";
 import HeartButton from "@/components/shared/heart-button";
 import { useFavoritesMutation, useFavoritesQuery } from "@/hooks/favorites";
 import { useRatingQuery, useRatingsMutation } from "@/hooks/ratings";
+import { useWorkedOutNutrition } from "@/hooks/recipes/use-worked-out-nutrition";
+import { useBackDestination } from "@/hooks/use-back-destination";
 import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
 import { ArrowLeftIcon } from "@heroicons/react/16/solid";
 import { Card } from "@heroui/react";
@@ -52,7 +55,9 @@ export default function RecipePageMobile() {
   const { userRating, averageRating, isLoading: isRatingLoading } = useRatingQuery(recipe.id);
   const { rateRecipe, isRating } = useRatingsMutation();
   const t = useTranslations("recipes.detail");
+  const back = useBackDestination();
   const { showRatings, showFavorites, showNutrition } = useHiddenItemVisibility();
+  const workedOut = useWorkedOutNutrition(recipe);
 
   const isFavorite = checkFavorite(recipe.id);
   const handleToggleFavorite = () => toggleFavorite(recipe.id);
@@ -85,21 +90,23 @@ export default function RecipePageMobile() {
               than with navigation (ADR-0020). */}
           <ReadonlyRecipeMedia
             aspectRatio="4/3"
+            chromeClassName={RECIPE_HERO_CHROME_OFFSET_CLASS}
             className="h-full rounded-none shadow-none"
+            expandControlSlot="topLeft"
             recipe={recipe}
             rounded={false}
             showAuthorFallback={false}
             topLeftContent={
               <Link
-                aria-label={t("backToRecipes")}
-                className={`${RECIPE_HERO_CHROME_OFFSET_CLASS} ${RECIPE_HERO_CHROME_BUTTON_CLASS} no-underline`}
-                href="/"
+                aria-label={back.label}
+                className={`${RECIPE_HERO_CHROME_BUTTON_CLASS} no-underline`}
+                href={back.href}
               >
                 <ArrowLeftIcon className="size-5" />
               </Link>
             }
             topRightContent={
-              <div className={`${RECIPE_HERO_CHROME_OFFSET_CLASS} flex items-center gap-2`}>
+              <>
                 {showFavorites && (
                   <HeartButton
                     showBackground
@@ -110,7 +117,7 @@ export default function RecipePageMobile() {
                   />
                 )}
                 <ActionsMenu buttonClassName={RECIPE_HERO_CHROME_BUTTON_CLASS} id={recipe.id} />
-              </div>
+              </>
             }
           />
         </DoubleTapContainer>
@@ -137,7 +144,12 @@ export default function RecipePageMobile() {
         <RecipeHeaderMobile
           allergies={allergies}
           allergySet={allergySet}
-          recipe={{ ...recipe, servings: currentServings ?? recipe.servings }}
+          recipe={{
+            ...recipe,
+            servings: currentServings ?? recipe.servings,
+            // A total worked out from the lines is restated too, as the card shows it.
+            calories: recipe.calories ?? workedOut?.perServing?.calories ?? null,
+          }}
           showCalories={showNutrition}
         />
 
@@ -156,7 +168,11 @@ export default function RecipePageMobile() {
               </div>
             </div>
 
-            <IngredientsList />
+            {/* The rows' highlight reaches into the card's padding, so they
+                start where the heading does rather than a step in. */}
+            <div className="-mx-3">
+              <IngredientsList />
+            </div>
 
             <AddToGroceries recipeId={recipe.id} />
           </Card.Content>
@@ -165,7 +181,10 @@ export default function RecipePageMobile() {
         <Card className="rounded-2xl">
           <Card.Content className="space-y-4 p-5 text-left">
             <h2 className="text-lg font-semibold">{t("steps")}</h2>
-            <StepsList />
+            {/* As the ingredients: the step numbers line up with the heading. */}
+            <div className="-mx-3">
+              <StepsList />
+            </div>
           </Card.Content>
         </Card>
 
@@ -178,6 +197,9 @@ export default function RecipePageMobile() {
         <ProvenanceCard />
 
         <SourceCard recipe={recipe} />
+
+        {/* The cookbooks this recipe is filed into, last on the page. */}
+        <CookbooksCard />
 
         {showRatings && (
           <Card className="rounded-2xl">

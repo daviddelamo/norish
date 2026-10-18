@@ -19,28 +19,18 @@ export function useRecipeSubscription(recipeId: string | null) {
   const router = useRouter();
 
   useSharedRecipeSubscription(recipeId, {
-    onConverted: (rawPayload) => {
-      const payload = rawPayload as { recipe: { systemUsed: string } };
-
-      toast("Measurements converted", {
-        description: `Recipe converted to ${payload.recipe.systemUsed} units`,
-        variant: "success",
-      });
-    },
     onDeleted: () => {
       toast("Recipe deleted", { description: "This recipe has been removed.", variant: "warning" });
 
       router.push("/");
     },
-    onFailed: (rawPayload) => {
-      const payload = rawPayload as { reason: string; recipeId: string | null };
-
+    onFailed: (payload) => {
       showSafeErrorToast({
         title: tErrors("operationFailed"),
         description: tErrors("technicalDetails"),
         error: payload.reason,
         context: "recipe-subscription:onFailed",
-        metadata: { recipeId, payloadRecipeId: payload.recipeId },
+        metadata: { recipeId, payloadRecipeId: payload.recipeId ?? null },
       });
     },
   });

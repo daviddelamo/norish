@@ -4,9 +4,11 @@ import { createContext, useContext, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useRecipesFiltersContext } from "@/context/recipes-filters-context";
 import { useFavoritesMutation, useFavoritesQuery } from "@/hooks/favorites";
-import { useRecipesMutations, useRecipesQuery } from "@/hooks/recipes";
+import { useLibraryRecipesQuery } from "@/hooks/library";
+import { useRecipesMutations } from "@/hooks/recipes";
 import { sharedDashboardRecipeHooks } from "@/hooks/recipes/shared-recipe-hooks";
 import { useActiveAllergies, useUserAllergiesQuery } from "@/hooks/user";
+import { showActionToast } from "@/lib/ui/action-toast";
 import { toast } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
@@ -44,7 +46,10 @@ type Ctx = {
 
 const sharedRecipesContext = createRecipesContext({
   useRecipesFiltersContext,
-  useRecipesQuery,
+  // The Library is one interleaved list, so the context's list comes from the
+  // union rather than from `recipes.list` beside it (ADR-0026). `total` there
+  // counts both kinds.
+  useRecipesQuery: useLibraryRecipesQuery,
   useRecipesMutations,
   useFavoritesQuery,
   useFavoritesMutation,
@@ -58,18 +63,18 @@ const sharedRecipesContext = createRecipesContext({
     return {
       show: ({ severity, title, description, actionLabel, onActionPress }) => {
         const variant = severity === "primary" || severity === "secondary" ? "accent" : severity;
-        const actionProps = actionLabel
-          ? {
-              children: actionLabel,
-              onPress: onActionPress,
-            }
-          : undefined;
 
-        toast(title, {
-          description,
-          variant,
-          ...(actionProps ? { actionProps } : {}),
-        });
+        if (actionLabel) {
+          showActionToast(title, {
+            description,
+            variant,
+            action: { label: actionLabel, onPress: () => onActionPress?.() },
+          });
+
+          return;
+        }
+
+        toast(title, { description, variant });
       },
       translate: createScopedMessageTranslator({
         common: (messageKey) => tCommon(messageKey as Parameters<typeof tCommon>[0]),
@@ -99,29 +104,17 @@ export function RecipesContextProvider({ children }: { children: React.ReactNode
 
 function RecipesContextAdapter({ children }: { children: React.ReactNode }) {
   const base = sharedRecipesContext.useRecipesContext();
-  const { filters } = useRecipesFiltersContext();
-
   const { allergies } = useActiveAllergies();
 
-  const { recipes, total } = useMemo(() => {
-    if (!filters.showFavoritesOnly) {
-      return { recipes: base.recipes, total: base.total };
-    }
-
-    const favoriteSet = new Set(base.favoriteIds);
-    const filtered = base.recipes.filter((recipe) => favoriteSet.has(recipe.id));
-
-    return { recipes: filtered, total: filtered.length };
-  }, [base.recipes, base.total, base.favoriteIds, filters.showFavoritesOnly]);
-
+  // Favourites are narrowed by the Library query itself now, so there is no
+  // client-side slice left here — one that recomputed `total` from the current
+  // page would make paging lie.
   const value = useMemo<Ctx>(
     () => ({
       ...base,
-      recipes,
-      total,
       allergies,
     }),
-    [base, recipes, total, allergies]
+    [base, allergies]
   );
 
   return <RecipesContext.Provider value={value}>{children}</RecipesContext.Provider>;

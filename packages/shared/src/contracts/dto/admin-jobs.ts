@@ -50,6 +50,8 @@ export interface AdminJobRowDTO {
 export interface AdminJobAttemptDTO {
   /** 1-based attempt number */
   attempt: number;
+  /** How the attempt ended; the latest one follows the job's state */
+  outcome: "done" | "failed" | "running" | "pending";
   /** Error message for this attempt, if it failed */
   message: string | null;
   /** Full stack trace for this attempt, if it failed */
@@ -60,10 +62,21 @@ export interface AdminJobAttemptDTO {
   logs: string[];
 }
 
+/** One model a job asked, as its provider key and model id, and whether it answered. */
+export interface AdminJobModelDTO {
+  provider: string;
+  model: string;
+  outcome: "completed" | "failed";
+  /** The tokens this model's requests took, added up, as the provider reported them; null for none. */
+  tokens: number | null;
+}
+
 export interface AdminJobDetailDTO extends AdminJobRowDTO {
   /** Pretty-printed job payload; long strings truncated */
   dataJson: string;
   returnValueJson: string | null;
+  /** The models the latest attempt that asked one used, each once */
+  models: AdminJobModelDTO[];
   /** One entry per attempt, with its steps, logs, and (if failed) its error */
   attempts: AdminJobAttemptDTO[];
   /** Total log lines recorded (may exceed the sum shown per attempt) */

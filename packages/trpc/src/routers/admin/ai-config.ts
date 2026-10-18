@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type {
   AIConfig,
+  DecisionConfig,
   ImageGenerationConfig,
   VideoConfig,
 } from "@norish/config/zod/server-config";
@@ -10,6 +11,8 @@ import { testAIEndpoint as testAIEndpointFn } from "@norish/auth/connection-test
 import {
   AIConfigInputSchema,
   AIConfigSchema,
+  DecisionConfigSchema,
+  DecisionProviderSchema,
   ImageGenerationConfigSchema,
   ServerConfigKeys,
   TranscriptionProviderSchema,
@@ -24,16 +27,21 @@ import {
   ModelListingError,
 } from "@norish/shared-server/ai/providers/listing";
 import {
+  forgetKeyRejection,
+  listKeyRejections,
+} from "@norish/shared-server/ai/runtime/key-rejections";
+import { testDecisionModel } from "@norish/shared-server/ai/runtime/runtime";
+import {
   getAutomaticEnrichmentConfig,
   getRecipePermissionPolicy,
   isAIEnabled,
   isImageGenerationConfigured,
 } from "@norish/shared-server/config/server-config-loader";
 import { trpcLogger as log } from "@norish/shared-server/logger";
+import { permissions } from "@norish/shared-server/realtime/permissions";
 
 import { adminProcedure } from "../../middleware";
 import { router } from "../../trpc";
-import { permissionsEmitter } from "../permissions/emitter";
 
 type ListedModel = {
   id: string;
@@ -115,6 +123,8 @@ const updateAIConfig = adminProcedure.input(AIConfigSchema).mutation(async ({ in
   await setConfig(ServerConfigKeys.AI_CONFIG, input, ctx.user.id, true, {
     dropSecrets: providerChangedFrom(currentConfig?.provider, input.provider) ? ["apiKey"] : [],
   });
+  // A refused key is presumed fixed by a save; the next refusal says otherwise.
+  forgetKeyRejection(ServerConfigKeys.AI_CONFIG);
 
   // Broadcast permission policy update to all users if AI enabled state changed
   // This allows UI to show/hide recipe convert button
@@ -122,7 +132,7 @@ const updateAIConfig = adminProcedure.input(AIConfigSchema).mutation(async ({ in
     log.info({ enabled: input.enabled }, "AI enabled state changed, broadcasting policy update");
     const recipePolicy = await getRecipePermissionPolicy();
 
-    permissionsEmitter.broadcast("policyUpdated", { recipePolicy });
+    void permissions.publish("policyUpdated", { recipePolicy }, undefined);
   }
 
   return { success: true };
@@ -144,6 +154,7 @@ const updateVideoConfig = adminProcedure
         ? ["transcriptionApiKey"]
         : [],
     });
+    forgetKeyRejection(ServerConfigKeys.VIDEO_CONFIG);
 
     return { success: true };
   });
@@ -163,8 +174,60 @@ const updateImageGenerationConfig = adminProcedure
     await setConfig(ServerConfigKeys.IMAGE_GENERATION_CONFIG, input, ctx.user.id, true, {
       dropSecrets: providerChangedFrom(stored?.provider, input.provider) ? ["apiKey"] : [],
     });
+    forgetKeyRejection(ServerConfigKeys.IMAGE_GENERATION_CONFIG);
 
     return { success: true };
+  });
+
+/**
+ * Update the Decision Model block (ADR-0035): its own provider, key, model,
+ * endpoint and the uses an administrator selected. Sensitive because of the
+ * key; an omitted key preserves the stored one and a provider change drops
+ * it, exactly as the sibling blocks do.
+ */
+const updateDecisionConfig = adminProcedure
+  .input(DecisionConfigSchema)
+  .mutation(async ({ input, ctx }) => {
+    log.info({ userId: ctx.user.id, provider: input.provider }, "Updating Decision Model config");
+
+    const stored = await getConfig<DecisionConfig>(ServerConfigKeys.DECISION_CONFIG);
+
+    await setConfig(ServerConfigKeys.DECISION_CONFIG, input, ctx.user.id, true, {
+      dropSecrets: providerChangedFrom(stored?.provider, input.provider) ? ["apiKey"] : [],
+    });
+    forgetKeyRejection(ServerConfigKeys.DECISION_CONFIG);
+
+    return { success: true };
+  });
+
+/**
+ * Test the Decision Model: one trivial Boolean question through the AI
+ * Runtime, against the settings as typed. A key omitted from the form means
+ * the stored one, as the AI test does, so a saved key can be re-tested
+ * without being retyped. The provider's own reason comes back on failure — a
+ * refused key reads as a refused key.
+ */
+const testDecisionEndpoint = adminProcedure
+  .input(
+    z.object({
+      provider: DecisionProviderSchema,
+      apiKey: z.string().optional(),
+      model: z.string().optional(),
+      endpoint: z.url().optional(),
+    })
+  )
+  .mutation(async ({ input, ctx }) => {
+    log.info({ userId: ctx.user.id, provider: input.provider }, "Testing Decision Model");
+
+    let apiKey = input.apiKey;
+
+    if (!apiKey) {
+      const stored = await getConfig<DecisionConfig>(ServerConfigKeys.DECISION_CONFIG, true);
+
+      apiKey = stored?.provider === input.provider ? stored.apiKey : undefined;
+    }
+
+    return await testDecisionModel({ ...input, apiKey });
   });
 
 /**
@@ -203,6 +266,8 @@ const listAvailableModels = adminProcedure
       provider: AIConfigInputSchema.shape.provider,
       endpoint: z.string().optional(),
       apiKey: z.string().optional(),
+      /** Image Generation's models rather than the AI settings' text models. */
+      purpose: z.enum(["text", "image"]).optional(),
     })
   )
   .query(async ({ input, ctx }) => {
@@ -223,6 +288,7 @@ const listAvailableModels = adminProcedure
       listModels(input.provider, {
         endpoint: input.endpoint,
         apiKey,
+        purpose: input.purpose,
       })
     );
   });
@@ -335,11 +401,17 @@ const imageGenerationSweepCount = adminProcedure.query(async () => {
   return { enabled: true as const, gapOnly: counts.missingImage, overwrite: counts.eligible };
 });
 
+/** The configured keys the provider is refusing, and since when: the admin's warning. */
+const aiKeyRejections = adminProcedure.query(() => listKeyRejections());
+
 export const aiConfigProcedures = router({
+  aiKeyRejections,
   updateAIConfig,
   updateVideoConfig,
   updateImageGenerationConfig,
+  updateDecisionConfig,
   testAIEndpoint,
+  testDecisionEndpoint,
   listAvailableModels,
   listAvailableTranscriptionModels,
   enrichAllRecipes,
