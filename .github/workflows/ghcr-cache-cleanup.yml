@@ -18,6 +18,7 @@ concurrency:
 jobs:
   prune:
     name: Delete untagged versions
+    if: github.repository == 'norish-recipes/norish'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -25,6 +26,7 @@ jobs:
       # an arch tag, so they are never candidates here.
       - name: Prune untagged cache versions
         uses: actions/delete-package-versions@v5
+        continue-on-error: true
         with:
           package-name: norish-buildcache
           package-type: container
