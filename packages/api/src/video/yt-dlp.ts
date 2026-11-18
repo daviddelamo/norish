@@ -135,7 +135,7 @@ let instagramCookiesInitialized = false;
  * If INSTAGRAM_COOKIES env var is set (base64-encoded), decode and write to temp file.
  */
 function getInstagramCookiesPath(): string | null {
-  const cookiesBase64 = SERVER_CONFIG.INSTAGRAM_COOKIES;
+  const cookiesBase64 = process.env.INSTAGRAM_COOKIES;
 
   log.debug(
     { hasInstagramCookies: !!cookiesBase64, cookiesLength: cookiesBase64?.length ?? 0 },
