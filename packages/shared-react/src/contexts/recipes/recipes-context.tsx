@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, use, useCallback, useMemo } from "react";
 
 import type { FullRecipeInsertDTO, FullRecipeUpdateDTO } from "@norish/shared/contracts";
 
@@ -44,7 +44,7 @@ export type SharedRecipesContextValue = {
   importRecipeWithAI: (url: string) => void;
   createRecipe: (input: FullRecipeInsertDTO) => void;
   updateRecipe: (id: string, input: FullRecipeUpdateDTO) => void;
-  deleteRecipe: (id: string, version: number) => void;
+  deleteRecipes: RecipesMutationsResult["deleteRecipes"];
   invalidate: () => void;
   openRecipe: (id: string) => void;
 };
@@ -65,7 +65,7 @@ type CreateRecipesContextOptions = {
   useRecipesQuery: (filters: RecipeFilters, options?: { enabled?: boolean }) => RecipesQueryResult;
   useRecipesMutations: () => Pick<
     RecipesMutationsResult,
-    "importRecipe" | "importRecipeWithAI" | "createRecipe" | "updateRecipe" | "deleteRecipe"
+    "importRecipe" | "importRecipeWithAI" | "createRecipe" | "updateRecipe" | "deleteRecipes"
   >;
   useFavoritesQuery: () => Pick<FavoritesQueryResult, "favoriteIds" | "isFavorite" | "isLoading">;
   useFavoritesMutation: () => Pick<FavoritesMutationResult, "toggleFavorite">;
@@ -91,8 +91,13 @@ export function createRecipesContext({
   queryDefaults,
 }: CreateRecipesContextOptions) {
   const RecipesContext = createContext<SharedRecipesContextValue | null>(null);
+  // Settled once here rather than called with `?.()`: the compiler only
+  // compiles a component whose hooks it sees called unconditionally.
+  const useRatingsSubscriptionOrNone = useRatingsSubscription ?? (() => {});
 
   function RecipesProvider({ children }: { children: React.ReactNode }) {
+    "use memo";
+
     const { filters, clearFilters, isHydrated } = useRecipesFiltersContext();
     const navigation = useNavigationAdapter();
     const toastAdapter = useToastAdapter();
@@ -125,7 +130,7 @@ export function createRecipesContext({
       importRecipeWithAI: importRecipeWithAIMutation,
       createRecipe,
       updateRecipe,
-      deleteRecipe,
+      deleteRecipes,
     } = useRecipesMutations();
     const { favoriteIds, isFavorite, isLoading: isFavoritesLoading } = useFavoritesQuery();
     const { toggleFavorite } = useFavoritesMutation();
@@ -142,7 +147,7 @@ export function createRecipesContext({
     );
 
     useRecipesSubscription(subscriptionToasts);
-    useRatingsSubscription?.(ratingsToasts);
+    useRatingsSubscriptionOrNone(ratingsToasts);
 
     const openRecipe = useCallback(
       (id: string) => {
@@ -209,7 +214,7 @@ export function createRecipesContext({
         importRecipeWithAI,
         createRecipe: wrappedCreateRecipe,
         updateRecipe: wrappedUpdateRecipe,
-        deleteRecipe,
+        deleteRecipes,
         invalidate,
         openRecipe,
       }),
@@ -235,17 +240,19 @@ export function createRecipesContext({
         importRecipeWithAI,
         wrappedCreateRecipe,
         wrappedUpdateRecipe,
-        deleteRecipe,
+        deleteRecipes,
         invalidate,
         openRecipe,
       ]
     );
 
-    return <RecipesContext.Provider value={value}>{children}</RecipesContext.Provider>;
+    return <RecipesContext value={value}>{children}</RecipesContext>;
   }
 
   function useRecipesContext() {
-    const context = useContext(RecipesContext);
+    "use memo";
+
+    const context = use(RecipesContext);
 
     if (!context) {
       throw new Error("useRecipesContext must be used within RecipesProvider");

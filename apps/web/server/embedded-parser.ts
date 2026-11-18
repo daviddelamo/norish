@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { createInterface } from "node:readline";
+import { setTimeout as sleep } from "node:timers/promises";
 import type { ChildProcess } from "node:child_process";
 
 import type { ServerConfig } from "@norish/config/env-config-server";
@@ -12,6 +13,7 @@ import {
   INTERNAL_PARSER_API_URL,
 } from "@norish/config/env-config-server";
 import { parserLogger as log } from "@norish/shared-server/logger";
+import { withTimeout } from "@norish/shared/lib/with-timeout";
 
 const EMBEDDED_PARSER_STARTUP_TIMEOUT_MS = 15_000;
 const EMBEDDED_PARSER_HEALTHCHECK_TIMEOUT_MS = 1_000;
@@ -23,19 +25,14 @@ export type EmbeddedParserHandle = {
 };
 
 async function isParserHealthy(timeoutMs: number): Promise<boolean> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
     const response = await fetch(buildInternalParserApiUrl("/health"), {
-      signal: controller.signal,
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     return response.ok;
   } catch {
     return false;
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -47,9 +44,7 @@ async function waitForParserHealthy(timeoutMs: number): Promise<void> {
       return;
     }
 
-    await new Promise((resolvePromise) => {
-      setTimeout(resolvePromise, EMBEDDED_PARSER_POLL_INTERVAL_MS);
-    });
+    await sleep(EMBEDDED_PARSER_POLL_INTERVAL_MS);
   }
 
   throw new Error(`Embedded parser did not become healthy within ${timeoutMs}ms`);
@@ -73,22 +68,24 @@ function resolveParserAppDir(): string | null {
   return null;
 }
 
-function streamParserLogs(child: ChildProcess): void {
-  if (child.stdout) {
-    const stdout = createInterface({ input: child.stdout });
+/** Log the parser's output, keeping its last lines for a startup failure to report. */
+function streamParserLogs(child: ChildProcess): () => string[] {
+  const recent: string[] = [];
 
-    stdout.on("line", (line) => {
-      log.info({ stream: "stdout" }, line);
+  for (const [stream, input] of [
+    ["stdout", child.stdout],
+    ["stderr", child.stderr],
+  ] as const) {
+    if (!input) continue;
+
+    createInterface({ input }).on("line", (line) => {
+      log.info({ stream }, line);
+      recent.push(line);
+      if (recent.length > 20) recent.shift();
     });
   }
 
-  if (child.stderr) {
-    const stderr = createInterface({ input: child.stderr });
-
-    stderr.on("line", (line) => {
-      log.info({ stream: "stderr" }, line);
-    });
-  }
+  return () => recent;
 }
 
 function signalParserProcess(child: ChildProcess, signal: NodeJS.Signals): void {
@@ -151,12 +148,13 @@ export async function startEmbeddedParser(
 
   const child = spawn(pythonExecutable, args, {
     cwd: parserAppDir,
-    env: globalThis.process.env,
+    // The parser stops itself once this process is gone, however it died (app/main.py).
+    env: { ...globalThis.process.env, PARSER_API_PARENT_PID: String(process.pid) },
     stdio: ["ignore", "pipe", "pipe"],
     detached: process.platform !== "win32",
   });
 
-  streamParserLogs(child);
+  const recentOutput = streamParserLogs(child);
 
   let isReady = false;
   let isStopping = false;
@@ -184,7 +182,10 @@ export async function startEmbeddedParser(
     }
 
     if (!isReady) {
-      log.error({ code, signal }, "Embedded parser exited before startup completed");
+      log.error(
+        { code, signal, output: recentOutput() },
+        "Embedded parser exited before startup completed"
+      );
 
       return;
     }
@@ -219,25 +220,16 @@ export async function startEmbeddedParser(
 
       signalParserProcess(child, "SIGTERM");
 
-      let shutdownTimeout: NodeJS.Timeout | null = null;
-      const exitResult = await Promise.race([
-        exitPromise,
-        new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolvePromise) => {
-          shutdownTimeout = setTimeout(() => {
-            log.warn("Embedded parser shutdown timed out, forcing termination");
-            signalParserProcess(child, "SIGKILL");
-            resolvePromise({ code: null, signal: "SIGKILL" });
-          }, EMBEDDED_PARSER_SHUTDOWN_TIMEOUT_MS);
-        }),
-      ]);
+      await withTimeout(
+        () => exitPromise,
+        EMBEDDED_PARSER_SHUTDOWN_TIMEOUT_MS,
+        "Embedded parser shutdown"
+      ).catch(() => {
+        log.warn("Embedded parser shutdown timed out, forcing termination");
+        signalParserProcess(child, "SIGKILL");
 
-      if (shutdownTimeout) {
-        clearTimeout(shutdownTimeout);
-      }
-
-      if (exitResult.signal === "SIGKILL") {
-        await exitPromise;
-      }
+        return exitPromise;
+      });
     },
   };
 }

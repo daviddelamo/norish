@@ -162,8 +162,7 @@ async function memberTags(
  * One membership join under the same view-policy condition the recipe list
  * applies, so the count and the list agree by construction and two readers
  * may honestly see two different counts (ADR-0027). Images resolve through
- * the same gallery-first SQL recipes use, so the deprecated scalar is never
- * read directly. Ordered by the member's own creation time so the mosaic and
+ * the same gallery-first SQL recipes use. Ordered by the member's own creation time so the mosaic and
  * the derived description are stable between reads.
  */
 async function memberSummaries(
@@ -506,7 +505,17 @@ export async function listCookbookTitlesByRecipeIds(
  * tap changes nothing, and the recipe row is never written (ADR-0027).
  */
 export async function addRecipeToCookbook(cookbookId: string, recipeId: string): Promise<void> {
-  await db.insert(cookbookRecipes).values({ cookbookId, recipeId }).onConflictDoNothing();
+  await addRecipesToCookbook(cookbookId, [recipeId]);
+}
+
+/** File recipes into a cookbook; ones already in it stay as they are. */
+export async function addRecipesToCookbook(cookbookId: string, recipeIds: string[]): Promise<void> {
+  if (recipeIds.length === 0) return;
+
+  await db
+    .insert(cookbookRecipes)
+    .values(recipeIds.map((recipeId) => ({ cookbookId, recipeId })))
+    .onConflictDoNothing();
 }
 
 /** Take a recipe out of a cookbook. Removing what is not there is a no-op. */
@@ -514,9 +523,21 @@ export async function removeRecipeFromCookbook(
   cookbookId: string,
   recipeId: string
 ): Promise<void> {
+  await removeRecipesFromCookbook(cookbookId, [recipeId]);
+}
+
+/** Take recipes out of a cookbook. Removing what is not there is a no-op. */
+export async function removeRecipesFromCookbook(
+  cookbookId: string,
+  recipeIds: string[]
+): Promise<void> {
+  if (recipeIds.length === 0) return;
+
   await db
     .delete(cookbookRecipes)
-    .where(and(eq(cookbookRecipes.cookbookId, cookbookId), eq(cookbookRecipes.recipeId, recipeId)));
+    .where(
+      and(eq(cookbookRecipes.cookbookId, cookbookId), inArray(cookbookRecipes.recipeId, recipeIds))
+    );
 }
 
 /** Which of these recipes this cookbook holds — the membership toggles. */

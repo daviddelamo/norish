@@ -31,6 +31,7 @@ function bareRecipe(name: string) {
     prepTime: null,
     cookTime: null,
     totalTime: null,
+    sourceSystem: "metric",
     recipeIngredient: {
       metric: ["200 g pinto beans", "1 L vegetable stock"],
       us: ["7 oz pinto beans", "4 cups vegetable stock"],
@@ -41,6 +42,7 @@ function bareRecipe(name: string) {
     },
     keywords: null,
     allergyIndications: [],
+    videoUrl: null,
     categories: [],
     nutrition: { calories: null, fat: null, carbs: null, protein: null },
   };
@@ -55,14 +57,14 @@ test.beforeEach(async ({ aiStack, page: fixturePage }) => {
   cookies = aiStack.ownerCookies;
   page = fixturePage;
   await writePromptsRow({});
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack, {});
   await supplyUserAllergies(stack.baseURL, cookies, []);
 });
 
 test.afterEach(async () => {
-  await setAutomaticEnrichment({}).catch(() => undefined);
   await writePromptsRow({}).catch(() => undefined);
   if (stack && cookies) {
+    await setAutomaticEnrichment(stack, {}).catch(() => undefined);
     await supplyUserAllergies(stack.baseURL, cookies, []).catch(() => undefined);
   }
 });
@@ -77,7 +79,7 @@ test("an edited auto-categorization prompt reaches the model", async () => {
   const ai = stack!.ai;
 
   await editPrompts(page, { "Auto-categorization prompt": SENTINEL });
-  await setAutomaticEnrichment({ autoCategorization: true });
+  await setAutomaticEnrichment(stack!, { autoCategorization: true });
 
   ai.control.reset();
   ai.control.enqueue(
@@ -104,7 +106,7 @@ test("an edited allergy-detection prompt reaches the model, with the household's
 
   await supplyUserAllergies(stack!.baseURL, cookies!, ["peanut"]);
   await editPrompts(page, { "Allergy detection prompt": SENTINEL });
-  await setAutomaticEnrichment({ allergyDetection: true });
+  await setAutomaticEnrichment(stack!, { allergyDetection: true });
 
   ai.control.reset();
   ai.control.enqueue(
@@ -133,7 +135,7 @@ test("image extraction runs under its own prompt, and editing the webpage prompt
   const IMAGE_SENTINEL = "THE PHOTOS MAY BE HANDWRITTEN (image extraction sentinel).";
   const ai = stack!.ai;
 
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack!, {});
   await editPrompts(page, {
     "Recipe extraction prompt": EXTRACTION_SENTINEL,
     "Image extraction prompt": IMAGE_SENTINEL,

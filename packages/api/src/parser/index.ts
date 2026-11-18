@@ -1,11 +1,14 @@
 import type { PageSummary } from "@norish/api/parser/page-summary";
 import type { SiteAuthTokenDecryptedDto } from "@norish/shared/contracts/dto/site-auth-tokens";
 import { extractSanitizedBody } from "@norish/api/parser/extraction-sanitizer";
-import { renderPage } from "@norish/api/parser/fetch";
+import { isBotCheck, plainFetch, renderPage } from "@norish/api/parser/fetch";
 import { isParseComplete, isRecipe } from "@norish/api/parser/import-triage";
 import { extractRecipeNodesFromJsonLd } from "@norish/api/parser/jsonld";
 import { summarisePage } from "@norish/api/parser/page-summary";
-import { adaptRecipeScrapersResponse } from "@norish/api/parser/python/adapter";
+import {
+  adaptRecipeScrapersResponse,
+  collectIngredientStrings,
+} from "@norish/api/parser/python/adapter";
 import { callRecipeScrapersParser } from "@norish/api/parser/python/client";
 import { extractRecipeWithAI } from "@norish/api/parser/recipe-extraction";
 import {
@@ -16,13 +19,20 @@ import {
 } from "@norish/shared-server/config/server-config-loader";
 import { parserLogger as log } from "@norish/shared-server/logger";
 import { FullRecipeInsertDTO } from "@norish/shared/contracts/dto/recipe";
+import {
+  NOT_A_RECIPE_REASON,
+  PRIVATE_ADDRESS_REASON,
+} from "@norish/shared/contracts/realtime/recipes";
 import { ErrorWithDetail } from "@norish/shared/lib/error-extensions";
-import { hasRecipeName, isVideoUrl } from "@norish/shared/lib/helpers";
+import { hasRecipeName, hasSteps, isVideoUrl } from "@norish/shared/lib/helpers";
+import { isIngredientHeading } from "@norish/shared/lib/ingredient-text";
 
 export interface ParseRecipeResult {
   recipe: FullRecipeInsertDTO;
   /** Whether AI was used for extraction (affects auto-tagging) */
   usedAI: boolean;
+  /** Import triage scored the structured parse as incomplete, and nothing better came */
+  incomplete?: boolean;
   /**
    * Why the Python parser came up empty when AI extraction stood in for it,
    * so a parser that quietly broke still shows on the job's parsing step.
@@ -59,7 +69,15 @@ interface StructuredParserFailure {
 interface StructuredParseOutcome {
   recipe: FullRecipeInsertDTO | null;
   failure: StructuredParserFailure | null;
+  /** The scraper's ingredient lines, with the "# " headings JSON-LD has no room for. */
+  ingredientLines?: string[];
 }
+
+/**
+ * An honest identity for the plain fetch: Cloudflare challenges a client that claims a
+ * browser its TLS handshake doesn't match, and lets a self-named one through.
+ */
+const PLAIN_FETCH_USER_AGENT = "Norish";
 
 /** Statuses that mean the site turned the request away rather than failed to serve it. */
 const REFUSAL_STATUSES = new Set([401, 403, 429]);
@@ -71,6 +89,13 @@ function siteName(url: string): string {
   } catch {
     return "The site";
   }
+}
+
+/** "ah.nl refused the request (HTTP 403)" for a refusal status, otherwise null. */
+function refusalMessage(url: string, status: number | null): string | null {
+  return status !== null && REFUSAL_STATUSES.has(status)
+    ? `${siteName(url)} refused the request (HTTP ${status})`
+    : null;
 }
 
 const NON_RECIPE_FAILURE_CODES = new Set(["NoSchemaFoundInWildMode", "RecipeSchemaNotFound"]);
@@ -91,11 +116,11 @@ function getStructuredFailureMessage(code: string): string {
  * caught here and answered with null.
  */
 async function tryExtractWithAI(
-  input: string,
+  source: string,
   recipeId: string,
   url: string,
   requireAI: boolean,
-  originalHtml?: string
+  jsonLd: Record<string, unknown>[]
 ): Promise<FullRecipeInsertDTO | null> {
   const enabled = await isAIEnabled();
 
@@ -110,7 +135,7 @@ async function tryExtractWithAI(
   log.info({ url }, "Attempting AI extraction");
 
   try {
-    return await extractRecipeWithAI(input, recipeId, url, originalHtml);
+    return await extractRecipeWithAI(source, recipeId, url, jsonLd);
   } catch (error) {
     log.warn({ url, err: error }, "AI extraction failed");
 
@@ -119,29 +144,33 @@ async function tryExtractWithAI(
 }
 
 /**
- * Try AI extraction with smallest/cleanest input first (JSON-LD),
- * then fall back to full HTML.
+ * Extract with AI from the page and its JSON-LD. `ingredientLines` from the scraper stand in for
+ * the JSON-LD's flat list when they hold the recipe's sections.
  */
 async function extractWithAIPreference(
   html: string,
   recipeId: string,
   url: string,
-  requireAI: boolean
+  requireAI: boolean,
+  ingredientLines: string[] = []
 ): Promise<FullRecipeInsertDTO | null> {
-  const jsonLdNodes = extractRecipeNodesFromJsonLd(html);
+  const jsonLd = extractRecipeNodesFromJsonLd(html);
+  const sectioned = jsonLd.length === 1 && ingredientLines.some(isIngredientHeading);
 
-  if (jsonLdNodes.length > 0) {
-    log.info({ url }, "AI: using extracted JSON-LD as input (fewer tokens)");
-    const jsonLdInput = JSON.stringify(jsonLdNodes, null, 2);
+  return tryExtractWithAI(
+    html,
+    recipeId,
+    url,
+    requireAI,
+    sectioned ? [{ ...jsonLd[0], recipeIngredient: ingredientLines }] : jsonLd
+  );
+}
 
-    const fromJsonLd = await tryExtractWithAI(jsonLdInput, recipeId, url, requireAI, html);
+/** The scraper's ingredient lines with their section headings, or none when it fails. */
+async function scrapedIngredientLines(url: string, html: string): Promise<string[]> {
+  const response = await callRecipeScrapersParser({ url, html }).catch(() => null);
 
-    if (fromJsonLd) return fromJsonLd;
-  }
-
-  log.info({ url }, "AI: using full HTML as input");
-
-  return tryExtractWithAI(html, recipeId, url, requireAI, html);
+  return response?.ok ? collectIngredientStrings(response.recipe) : [];
 }
 
 async function tryStructuredParser(
@@ -166,7 +195,11 @@ async function tryStructuredParser(
     const adapted = await adaptRecipeScrapersResponse(response, recipeId, url);
 
     if (hasRecipeName(adapted)) {
-      return { recipe: adapted, failure: null };
+      return {
+        recipe: adapted,
+        failure: null,
+        ingredientLines: collectIngredientStrings(response.recipe),
+      };
     }
 
     return {
@@ -217,15 +250,38 @@ async function tryHandleVideoUrl(
     throw new Error("Video recipe parsing is not enabled.");
   }
 
-  try {
-    const { processVideoRecipe } = await import("@norish/api/video/processor");
-    const recipe = await processVideoRecipe(url, recipeId, tokens);
+  const { processVideoRecipe } = await import("@norish/api/video/processor");
+  const recipe = await processVideoRecipe(url, recipeId, tokens);
 
-    return { recipe, usedAI: true };
-  } catch (error: unknown) {
-    log.error({ err: error }, "Video processing failed");
-    throw error;
+  return { recipe, usedAI: true };
+}
+
+/**
+ * A plain fetch first: a page whose HTML already holds a JSON-LD recipe needs no browser.
+ * Anything else goes to the Page Renderers, and the plain page stands in when none reads it.
+ */
+async function fetchRecipePage(
+  url: string,
+  tokens?: SiteAuthTokenDecryptedDto[]
+): Promise<{ html: string; status: number | null }> {
+  const plain = await plainFetch(url, PLAIN_FETCH_USER_AGENT, { tokens });
+
+  if (plain.refused) throw new Error(PRIVATE_ADDRESS_REASON);
+
+  if (plain.status === 200 && extractRecipeNodesFromJsonLd(plain.html).length > 0) {
+    log.info({ url }, "Plain fetch found a recipe, skipping the browser");
+
+    return { html: plain.html, status: plain.status };
   }
+
+  const rendered = await renderPage(url, tokens);
+  // The solver reports no status, so the plain fetch's refusal stays readable.
+  const status = rendered.status ?? plain.status;
+
+  if (rendered.html) return { html: rendered.html, status };
+  if (isBotCheck(plain.html)) return { html: "", status };
+
+  return { html: plain.html, status: plain.status };
 }
 
 export async function parseRecipeFromUrl(
@@ -238,14 +294,19 @@ export async function parseRecipeFromUrl(
 
   if (videoResult) return videoResult;
 
-  const { html, status } = await renderPage(url, tokens);
+  const { html, status } = await fetchRecipePage(url, tokens);
 
-  if (!html) throw new Error("Cannot fetch recipe page.");
+  if (!html) throw new Error(refusalMessage(url, status) ?? "Cannot fetch recipe page.");
 
   const useAIOnly = Boolean(forceAI || (await shouldAlwaysUseAI()));
 
   if (useAIOnly) {
-    const recipe = await extractWithAIPreference(html, recipeId, url, true);
+    // JSON-LD has no room for ingredient sections; the scraper's groups keep their headings (#685).
+    const ingredientLines =
+      extractRecipeNodesFromJsonLd(html).length === 1
+        ? await scrapedIngredientLines(url, html)
+        : [];
+    const recipe = await extractWithAIPreference(html, recipeId, url, true, ingredientLines);
 
     if (!recipe) throw new Error("AI extraction failed");
 
@@ -256,28 +317,34 @@ export async function parseRecipeFromUrl(
   const aiEnabled = await isAIEnabled();
 
   if (structured.recipe) {
-    // Import triage, question 3: a parse the Decision Model scores as
-    // incomplete goes through AI extraction as `alwaysUseAI` would, and the
-    // parse is kept when extraction has nothing better. No Decision Model,
-    // or no opinion, and success means what it always has: a name.
-    if (aiEnabled && (await isParseComplete(structured.recipe)) === false) {
+    // Import triage, question 3: an incomplete parse goes through AI extraction, and stays
+    // flagged when it is kept or replaced by a recipe without steps.
+    const incomplete = (await isParseComplete(structured.recipe)) === false;
+
+    if (incomplete && aiEnabled) {
       log.info({ url }, "Structured parse judged incomplete, attempting AI extraction");
 
-      const recipe = await extractWithAIPreference(html, recipeId, url, false);
+      const recipe = await extractWithAIPreference(
+        html,
+        recipeId,
+        url,
+        false,
+        structured.ingredientLines
+      );
 
-      if (recipe) return { recipe, usedAI: true };
+      if (recipe) return { recipe, usedAI: true, ...(hasSteps(recipe) ? {} : { incomplete }) };
     }
 
-    return { recipe: structured.recipe, usedAI: false };
+    return { recipe: structured.recipe, usedAI: false, ...(incomplete ? { incomplete } : {}) };
   }
 
   // A site that turned the request away served a page with nothing to read,
   // and saying so beats blaming the parser for it. Only when the parser also
   // came up empty: a bot check that answers 403 and then hands over the real
   // page parses fine and never gets here.
-  if (structured.failure && status !== null && REFUSAL_STATUSES.has(status)) {
-    const refusal = `${siteName(url)} refused the request (HTTP ${status})`;
+  const refusal = structured.failure ? refusalMessage(url, status) : null;
 
+  if (structured.failure && refusal) {
     log.warn({ url, status, failureCode: structured.failure.code }, "Site refused the request");
     throw new ErrorWithDetail(
       refusal,
@@ -285,6 +352,9 @@ export async function parseRecipeFromUrl(
     );
   }
 
+  // Import triage, question 1, asked once: a clear "no" names why the import
+  // failed, and anything else proceeds to the AI fallback's own gate.
+  const pageIsRecipe = await isRecipe(extractSanitizedBody(html));
   // Why AI extraction did or did not stand in, so the job monitor answers
   // "did it even try?" beside the parser's reply.
   let aiFallback: AIFallback = "disabled";
@@ -292,7 +362,7 @@ export async function parseRecipeFromUrl(
   if (aiEnabled) {
     aiFallback = "skipped: the page does not look like a recipe";
 
-    if (await isPageWorthExtracting(html)) {
+    if (pageIsRecipe ?? (await isPageLikelyRecipe(html))) {
       log.info(
         {
           url,
@@ -320,7 +390,7 @@ export async function parseRecipeFromUrl(
   if (structured.failure) {
     log.error({ url, failureCode: structured.failure.code }, "Structured parsing failed");
     throw new ErrorWithDetail(
-      structured.failure.message,
+      pageIsRecipe === false ? NOT_A_RECIPE_REASON : structured.failure.message,
       diagnose(structured.failure, html, aiFallback)
     );
   }
@@ -338,16 +408,10 @@ function diagnose(
 }
 
 /**
- * Import triage, question 1: whether a page the structured parser found
- * nothing on is worth an AI extraction. The Decision Model's answer where
- * there is one — a clear "no" refuses the import with the message the parser
- * already uses, anything else proceeds — and the content-indicator rule
- * otherwise. The keyword list keeps its meaning and its admin editor.
+ * The content-indicator rule: whether a page the structured parser found
+ * nothing on is worth an AI extraction when the Decision Model has no
+ * opinion. The keyword list keeps its meaning and its admin editor.
  */
-async function isPageWorthExtracting(html: string): Promise<boolean> {
-  return (await isRecipe(extractSanitizedBody(html))) ?? (await isPageLikelyRecipe(html));
-}
-
 export async function isPageLikelyRecipe(html: string): Promise<boolean> {
   const lowered = html.toLowerCase();
   const indicators = await getContentIndicators();

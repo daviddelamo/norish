@@ -9,7 +9,7 @@
  * presenting the resolved amounts.
  *
  * Only the AI provider's HTTP boundary is faked. The real Norish server,
- * database, Redis, BullMQ workers, repositories, authorized mutation layer,
+ * database, Valkey, BullMQ workers, repositories, authorized mutation layer,
  * realtime connection, and UI are all exercised.
  */
 import type { BrowserContext, Page } from "@playwright/test";
@@ -32,6 +32,7 @@ function linkableRecipe(name: string) {
     prepTime: null,
     cookTime: null,
     totalTime: null,
+    sourceSystem: "metric",
     recipeIngredient: {
       metric: ["5 g salt", "3 g pepper", "2 g paprika", "50 ml water"],
       us: ["1 tsp salt", "0.5 tsp pepper", "0.5 tsp paprika", "0.25 cup water"],
@@ -42,6 +43,7 @@ function linkableRecipe(name: string) {
     },
     keywords: null,
     allergyIndications: [],
+    videoUrl: null,
     categories: [],
     nutrition: { calories: null, fat: null, carbs: null, protein: null },
   };
@@ -79,7 +81,7 @@ test.beforeEach(({ aiStack, context: fixtureContext, page: fixturePage }) => {
 });
 
 test.afterEach(async () => {
-  await setAutomaticEnrichment({}).catch(() => undefined);
+  await setAutomaticEnrichment(stack, {}).catch(() => undefined);
 });
 
 async function openRecipe(name: string): Promise<void> {
@@ -128,7 +130,7 @@ async function eventuallyOnRecipe(assertion: () => Promise<void>): Promise<void>
 }
 
 async function createLinkedRecipe(name: string): Promise<void> {
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack, {});
   await importRecipe(name);
   await openRecipe(name);
   await runManualLinking();
@@ -155,7 +157,7 @@ test("a manual run links an aggregate step and computes the fractional amount", 
   // ingredient line order; the untouched "Serve." step stays bare. The paste
   // import numbers step rows from 1 and ingredient lines from 0 — the join is
   // by value, so the base never matters, only consistency.
-  const stored = await readStoredStepIngredients("Linked Spice Stew");
+  const stored = await readStoredStepIngredients(stack, "Linked Spice Stew");
   const metric = stored.filter((row) => row.systemUsed === "metric");
   const us = stored.filter((row) => row.systemUsed === "us");
 
@@ -272,7 +274,7 @@ test("attaching from the picker asks for the amount, and Escape keeps the whole 
   await expect
     .poll(
       async () =>
-        (await readStoredStepIngredients(recipeName)).filter(
+        (await readStoredStepIngredients(stack, recipeName)).filter(
           (row) => row.systemUsed === "metric" && row.stepOrder === 2
         ),
       { timeout: 30_000, intervals: [250, 500, 1_000] }
@@ -284,7 +286,7 @@ test("attaching from the picker asks for the amount, and Escape keeps the whole 
 });
 
 test("gap-filling leaves a hand-attached chip untouched while bare steps are filled", async () => {
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack, {});
 
   await importRecipe("Hand Linked Stew");
 
@@ -305,7 +307,7 @@ test("gap-filling leaves a hand-attached chip untouched while bare steps are fil
     await expect(page.getByText("25 milliliters water").first()).toBeVisible({ timeout: 3_000 });
   });
 
-  const stored = await readStoredStepIngredients("Hand Linked Stew");
+  const stored = await readStoredStepIngredients(stack, "Hand Linked Stew");
   const metricAggregate = stored.filter(
     (row) => row.systemUsed === "metric" && row.stepOrder === 1
   );

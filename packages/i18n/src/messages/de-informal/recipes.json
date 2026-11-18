@@ -50,7 +50,8 @@
     "viewGroceries": "Einkaufsliste anzeigen",
     "addToCalendar": "Zum Kalender hinzufügen",
     "deleteRecipe": "Rezept löschen",
-    "recipeOptions": "Rezeptoptionen"
+    "recipeOptions": "Rezeptoptionen",
+    "pantryCoverage": "{percent} der Zutaten zu Hause"
   },
   "detail": {
     "viewOriginal": "Originalrezept anzeigen",
@@ -76,7 +77,8 @@
     "source": "Quelle",
     "addedBy": "Hinzugefügt von {name}",
     "decreaseServings": "Weniger Portionen",
-    "increaseServings": "Mehr Portionen"
+    "increaseServings": "Mehr Portionen",
+    "multiplier": "Faktor"
   },
   "actions": {
     "plan": "Planen",
@@ -162,7 +164,9 @@
   "deleteModal": {
     "title": "Rezept löschen",
     "confirmMessage": "Bist du sicher, dass du \"{recipeName}\" löschen möchtest?",
-    "warning": "Diese Aktion kann nicht rückgängig gemacht werden."
+    "warning": "Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirmCount": "{count, plural, one {# Rezept} other {# Rezepte}} löschen?",
+    "keptCount": "{count, plural, one {# Rezept bleibt} other {# Rezepte bleiben}}, weil du {count, plural, one {es} other {sie}} nicht löschen darfst."
   },
   "form": {
     "createTitle": "Rezept erstellen",
@@ -199,7 +203,7 @@
     "calories": "Kalorien",
     "fat": "Fett (g)",
     "carbs": "Kohlenhydrate (g)",
-    "protein": "Protein (g)",
+    "protein": "Eiweiß (g)",
     "provenance": "Herkunft",
     "provenanceHelp": "Woher dieses Rezept stammt.",
     "originCountry": "Land",
@@ -255,7 +259,7 @@
     "calories": "Kalorien",
     "fat": "Fett",
     "carbs": "Kohlenhydrate",
-    "protein": "Protein",
+    "protein": "Eiweiß",
     "showingPortions": "Zeige Werte für {count} {count, plural, one {Portion} other {Portionen}}",
     "noInfo": "Keine Nährwertinformationen verfügbar",
     "estimateWithAI": "Mit KI schätzen",
@@ -319,10 +323,14 @@
     "imported": "Rezept importiert",
     "failed": "Rezept-Operation fehlgeschlagen",
     "failedDescription": "Beim Verarbeiten deines Rezepts ist ein Fehler aufgetreten. Schau in die Browser-Konsole für technische Details.",
+    "incomplete": "Dieses Rezept ist möglicherweise unvollständig. Vergleiche es mit der Quelle.",
+    "notARecipe": "Diese Seite scheint kein Rezept zu sein.",
+    "privateAddress": "Importe von privaten Netzwerkadressen sind auf diesem Server nicht erlaubt.",
     "batchImported": "Rezepte importiert",
     "batchImportedDescription": "{count} Rezepte aus Archiv importiert",
     "view": "Anzeigen",
-    "open": "Öffnen"
+    "open": "Öffnen",
+    "deleteKept": "{count, plural, one {# Rezept wurde} other {# Rezepte wurden}} von jemand anderem geändert und behalten."
   },
   "tags": {
     "panel": {
@@ -423,5 +431,23 @@
     "removeImage": "Bild entfernen",
     "imageUploadFailed": "Das Bild konnte nicht hochgeladen werden.",
     "imageNeedsConnection": "Bilder kannst du ändern, sobald du wieder online bist."
+  },
+  "print": {
+    "title": "Rezept drucken",
+    "includePhoto": "Foto mitdrucken",
+    "textSize": "Textgröße",
+    "print": "Drucken / Als PDF speichern",
+    "continued": "Fortsetzung",
+    "perServing": "Pro Portion"
+  },
+  "selection": {
+    "toolbar": "Ausgewählte Rezepte",
+    "count": "{count} ausgewählt",
+    "clear": "Auswahl aufheben",
+    "addToCookbook": "Zum Kochbuch hinzufügen",
+    "remove": "Entfernen",
+    "newCookbook": "Neues Kochbuch",
+    "filedInto": "{count, plural, one {# Rezept} other {# Rezepte}} zu {title} hinzugefügt",
+    "filedIntoMany": "{count, plural, one {# Rezept} other {# Rezepte}} zu {cookbooks} Kochbüchern hinzugefügt"
   }
 }

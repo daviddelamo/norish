@@ -1,102 +1,26 @@
-import { execFile, execSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { decode } from "html-entities";
 
 import type { SiteAuthTokenDecryptedDto } from "@norish/shared/contracts/dto/site-auth-tokens";
 import { SERVER_CONFIG } from "@norish/config/env-config-server";
 import { getVideoConfig } from "@norish/shared-server/config/server-config-loader";
 import { videoLogger as log } from "@norish/shared-server/logger";
+import { getFfmpegPath } from "@norish/shared-server/media/ffmpeg";
 
 import type { VideoMetadata, VideoStream } from "./types";
 import { MediaUnavailableError } from "./errors";
 
 const execFileAsync = promisify(execFile);
 
-// Resolve ffmpeg path at runtime
-// In production (Docker), uses system ffmpeg from Alpine packages
-// In development, uses ffmpeg-static npm package
-function getFfmpegPath(): string | null {
-  const binaryName = process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg";
-
-  // Method 1: Check if system ffmpeg is available (production Docker)
-  try {
-    const systemPath = execSync("which ffmpeg", { encoding: "utf8" }).trim();
-
-    if (systemPath && fsSync.existsSync(systemPath)) {
-      log.debug({ ffmpegPath: systemPath }, "Found system ffmpeg");
-
-      return systemPath;
-    }
-  } catch (_err) {
-    // System ffmpeg not found, try npm package
-  }
-
-  // Method 2: Check standard node_modules location (development)
-  const projectRoot = process.cwd();
-  const standardPath = path.join(projectRoot, "node_modules", "ffmpeg-static", binaryName);
-
-  if (fsSync.existsSync(standardPath)) {
-    log.debug({ ffmpegPath: standardPath }, "Found ffmpeg via node_modules");
-
-    return standardPath;
-  }
-
-  // Method 3: Scan pnpm directory for any ffmpeg-static version
-  const pnpmDir = path.join(projectRoot, "node_modules", ".pnpm");
-
-  if (fsSync.existsSync(pnpmDir)) {
-    try {
-      const entries = fsSync.readdirSync(pnpmDir);
-      const ffmpegDir = entries.find((e) => e.startsWith("ffmpeg-static@"));
-
-      if (ffmpegDir) {
-        const pnpmPath = path.join(pnpmDir, ffmpegDir, "node_modules", "ffmpeg-static", binaryName);
-
-        if (fsSync.existsSync(pnpmPath)) {
-          log.debug({ ffmpegPath: pnpmPath }, "Found ffmpeg via pnpm");
-
-          return pnpmPath;
-        }
-      }
-    } catch (err) {
-      log.debug({ err }, "pnpm directory scan failed");
-    }
-  }
-
-  // Method 4: Try the default export from ffmpeg-static
-  try {
-    const ffmpegStatic = require("ffmpeg-static");
-
-    if (typeof ffmpegStatic === "string" && fsSync.existsSync(ffmpegStatic)) {
-      log.debug({ ffmpegPath: ffmpegStatic }, "Found ffmpeg via ffmpeg-static export");
-
-      return ffmpegStatic;
-    }
-  } catch (err) {
-    log.debug({ err }, "ffmpeg-static export failed");
-  }
-
-  // Method 5: Resolve package.json location
-  try {
-    const packageJsonPath = require.resolve("ffmpeg-static/package.json");
-    const packageDir = path.dirname(packageJsonPath);
-    const binaryPath = path.join(packageDir, binaryName);
-
-    if (fsSync.existsSync(binaryPath)) {
-      log.debug({ ffmpegPath: binaryPath }, "Found ffmpeg via package.json resolution");
-
-      return binaryPath;
-    }
-  } catch (err) {
-    log.debug({ err }, "ffmpeg-static package.json resolution failed");
-  }
-
-  log.error("ffmpeg binary not found - video processing will fail");
-
-  return null;
+/** A file name no other download picks, under `prefix`. */
+function uniqueName(prefix: string): string {
+  return `${prefix}-${Date.now()}-${randomUUID()}`;
 }
 
 /** What the binary is called on disk — not what the release calls it. */
@@ -251,7 +175,27 @@ function getInstagramCookiesPath(): string | null {
   return null;
 }
 
-async function execYtDlp(args: string[], cwd?: string): Promise<string> {
+/**
+ * The command line for running yt-dlp on one URL.
+ *
+ * The URL comes from imported pages and pasted JSON-LD, so it goes last, behind
+ * `--`: in front of the options, a value starting with `-` was read as one
+ * (`--update-to=<repo>` swapped the binary, GHSA-732x-jh4x-wg8j). Anything but
+ * an http(s) URL never reaches the binary.
+ */
+export function ytDlpArgs(url: string, options: readonly string[]): string[] {
+  const protocol = URL.parse(url)?.protocol;
+
+  if (protocol !== "http:" && protocol !== "https:") {
+    throw new Error("Unsupported URL: yt-dlp only fetches http(s) URLs");
+  }
+
+  return [...options, "--", url];
+}
+
+async function execYtDlp(url: string, options: string[], cwd?: string): Promise<string> {
+  const args = ytDlpArgs(url, options);
+
   try {
     // --dump-json prints a whole info dict per media entry, so a long playlist
     // answers with several megabytes on stdout.
@@ -276,7 +220,7 @@ async function execYtDlp(args: string[], cwd?: string): Promise<string> {
       details.push(`Stdout:\n${stdout}`);
     }
 
-    throw new Error(details.join("\n\n"));
+    throw new Error(details.join("\n\n"), { cause: error });
   }
 }
 
@@ -354,34 +298,6 @@ async function downloadYtDlpBinary(targetPath: string, version: string): Promise
   }
 }
 
-/**
- * Whether the binary already on disk is a zipapp we would no longer download.
- *
- * Development checkouts made before Norish picked platform builds hold the
- * zipapp, and `ensureYtDlpBinary` never looks at a file that exists — so
- * without this those checkouts keep the Python dependency, and the machines
- * broken by it stay broken, forever. A zipapp is a script: it opens `#!`.
- */
-async function isSupersededZipapp(): Promise<boolean> {
-  if (hostYtDlpAsset() === ZIPAPP_ASSET) return false;
-
-  try {
-    const handle = await fs.open(ytDlpPath, "r");
-
-    try {
-      const { buffer, bytesRead } = await handle.read(Buffer.alloc(2), 0, 2, 0);
-
-      return bytesRead === 2 && buffer.toString("latin1") === "#!";
-    } finally {
-      await handle.close();
-    }
-  } catch (err) {
-    log.debug({ err, ytDlpPath }, "Could not read the binary's first bytes");
-
-    return false;
-  }
-}
-
 export async function ensureYtDlpBinary(): Promise<void> {
   log.debug({ ytDlpPath }, "Checking for binary");
   await fs.mkdir(path.dirname(ytDlpPath), { recursive: true });
@@ -392,23 +308,16 @@ export async function ensureYtDlpBinary(): Promise<void> {
     .catch(() => false);
 
   if (present) {
-    // An image ships whatever it was built with; only development ever
-    // replaces a binary it already has.
-    if (process.env.NODE_ENV === "production" || !(await isSupersededZipapp())) {
-      log.debug({ ytDlpPath }, "Binary found");
+    log.debug({ ytDlpPath }, "Binary found");
 
-      return; // Binary exists, we're good
-    }
+    return;
+  }
 
-    log.info({ ytDlpPath }, "Replacing the Python zipapp with this platform's yt-dlp build");
-  } else {
-    // Binary doesn't exist
-    log.error({ ytDlpPath }, "Binary NOT found");
-    if (process.env.NODE_ENV === "production") {
-      throw new Error(
-        `yt-dlp binary not found at ${ytDlpPath}. It should be pre-downloaded during Docker build.`
-      );
-    }
+  log.error({ ytDlpPath }, "Binary NOT found");
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      `yt-dlp binary not found at ${ytDlpPath}. It should be pre-downloaded during Docker build.`
+    );
   }
 
   try {
@@ -417,12 +326,14 @@ export async function ensureYtDlpBinary(): Promise<void> {
     await downloadYtDlpBinary(ytDlpPath, ytDlpVersion);
 
     if (process.platform !== "win32") {
-      await fs.chmod(ytDlpPath, 0o755);
+      await fs.chmod(ytDlpPath, 0o700);
     }
   } catch (downloadError) {
     log.error({ err: downloadError, ytDlpPath }, "Could not download the yt-dlp binary");
 
-    throw new Error("Failed to download yt-dlp binary. Video processing is unavailable.");
+    throw new Error("Failed to download yt-dlp binary. Video processing is unavailable.", {
+      cause: downloadError,
+    });
   }
 }
 
@@ -493,10 +404,7 @@ export async function buildAuthArgs(
       );
     }
 
-    cookieFilePath = path.join(
-      os.tmpdir(),
-      `norish-cookies-${Date.now()}-${Math.random().toString(36).substring(7)}.txt`
-    );
+    cookieFilePath = path.join(os.tmpdir(), `${uniqueName("norish-cookies")}.txt`);
     await fs.writeFile(cookieFilePath, lines.join("\n"), "utf-8");
     args.push("--cookies", cookieFilePath);
   }
@@ -536,8 +444,8 @@ const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "heic", "gif"]);
  * with newline-delimited objects rather than a single document - both shapes
  * reach `toInfo`, which flattens them.
  */
-async function fetchVideoInfo(args: string[]): Promise<unknown> {
-  const stdout = await execYtDlp([...args, ...METADATA_PROBE_ARGS]);
+async function fetchVideoInfo(url: string, options: string[]): Promise<unknown> {
+  const stdout = await execYtDlp(url, [...options, ...METADATA_PROBE_ARGS]);
 
   try {
     return JSON.parse(stdout) as unknown;
@@ -607,7 +515,7 @@ export async function getVideoMetadata(
   const auth = tokens?.length ? await buildAuthArgs(tokens, url) : null;
 
   try {
-    const execArgs: string[] = [url];
+    const execArgs: string[] = [];
 
     // Add cookies for Instagram authentication
     if (isInstagramUrl(url)) {
@@ -622,7 +530,11 @@ export async function getVideoMetadata(
     }
 
     const proxyArgs = await getProxyArgs();
-    const rawInfo = await fetchVideoInfo([...execArgs, ...(auth?.args ?? []), ...proxyArgs]);
+    const rawInfo = await fetchVideoInfo(url, [
+      ...execArgs,
+      ...(auth?.args ?? []),
+      ...proxyArgs,
+    ]);
     const container = toInfo(rawInfo);
     const primary = selectMediaEntry(container);
 
@@ -653,16 +565,16 @@ export async function getVideoMetadata(
 
     // Provide more specific error messages
     if (errorMessage.includes("Unsupported URL")) {
-      throw new Error("Video platform not supported or URL is invalid.");
+      throw new Error("Video platform not supported or URL is invalid.", { cause: error });
     }
     if (errorMessage.includes("Video unavailable") || errorMessage.includes("private")) {
-      throw new Error("Video is unavailable or private.");
+      throw new Error("Video is unavailable or private.", { cause: error });
     }
     if (errorMessage.includes("Sign in to confirm")) {
-      throw new Error("Video requires authentication or age verification.");
+      throw new Error("Video requires authentication or age verification.", { cause: error });
     }
 
-    throw new Error(`Failed to fetch video information: ${errorMessage}`);
+    throw new Error(`Failed to fetch video information: ${errorMessage}`, { cause: error });
   } finally {
     await auth?.cleanup();
   }
@@ -675,9 +587,7 @@ export async function downloadVideoAudio(
   await ensureYtDlpBinary();
   await fs.mkdir(outputDir, { recursive: true });
 
-  const timestamp = Date.now();
-  const randomId = Math.random().toString(36).substring(7);
-  const outputBase = `audio-${timestamp}-${randomId}`;
+  const outputBase = uniqueName("audio");
   const outputFiles = TRANSCRIPTION_AUDIO_FALLBACKS.map(({ format }) =>
     path.join(outputDir, `${outputBase}.${format}`)
   );
@@ -698,7 +608,6 @@ export async function downloadVideoAudio(
       const outputFilename = `${outputBase}.${attempt.format}`;
       const outputFile = path.join(outputDir, outputFilename);
       const args = [
-        url,
         "-x", // Extract audio
         "--audio-format",
         attempt.format,
@@ -730,7 +639,7 @@ export async function downloadVideoAudio(
       }
 
       try {
-        await execYtDlp(args, outputDir);
+        await execYtDlp(url, args, outputDir);
 
         const stats = await fs.stat(outputFile);
 
@@ -772,13 +681,18 @@ export async function downloadVideoAudio(
   }
 }
 
+export async function getMaxVideoLengthSeconds(): Promise<number> {
+  const videoConfig = await getVideoConfig();
+
+  return videoConfig?.maxLengthSeconds ?? SERVER_CONFIG.VIDEO_MAX_LENGTH_SECONDS;
+}
+
 export async function validateVideoLength(
   url: string,
   tokens?: SiteAuthTokenDecryptedDto[]
 ): Promise<void> {
   const metadata = await getVideoMetadata(url, tokens);
-  const videoConfig = await getVideoConfig();
-  const maxLength = videoConfig?.maxLengthSeconds ?? SERVER_CONFIG.VIDEO_MAX_LENGTH_SECONDS;
+  const maxLength = await getMaxVideoLengthSeconds();
 
   if (metadata.duration > maxLength) {
     const actualMinutes = Math.floor(metadata.duration / 60);
@@ -818,9 +732,7 @@ export async function downloadCaptions(
   await ensureYtDlpBinary();
   await fs.mkdir(outputDir, { recursive: true });
 
-  const timestamp = Date.now();
-  const randomId = Math.random().toString(36).substring(7);
-  const outputTemplate = `caption-${timestamp}-${randomId}`;
+  const outputTemplate = uniqueName("caption");
 
   const auth = tokens?.length ? await buildAuthArgs(tokens, url) : null;
 
@@ -830,7 +742,6 @@ export async function downloadCaptions(
 
   try {
     const args = [
-      url,
       "--write-auto-sub", // Download auto-generated subtitles
       "--skip-download", // Don't download the video itself
       "--sub-langs",
@@ -845,13 +756,11 @@ export async function downloadCaptions(
       ...(await getProxyArgs()),
     ];
 
-    await execYtDlp(args, outputDir);
+    await execYtDlp(url, args, outputDir);
 
     // Find the downloaded VTT file (yt-dlp adds language suffix)
     const files = await fs.readdir(outputDir);
-    const captionFile = files.find(
-      (f) => f.startsWith(`caption-${timestamp}-${randomId}`) && f.endsWith(".vtt")
-    );
+    const captionFile = files.find((f) => f.startsWith(outputTemplate) && f.endsWith(".vtt"));
 
     if (captionFile) {
       const filePath = path.join(outputDir, captionFile);
@@ -882,6 +791,19 @@ export async function parseVttFile(filePath: string): Promise<string> {
   const content = await fs.readFile(filePath, "utf-8");
 
   return parseVttContent(content);
+}
+
+/** VTT tags removed until none is left, so a nested one (`<<b>b>`) leaves no tag behind. */
+function stripTags(text: string): string {
+  let stripped = text;
+  let previous: string;
+
+  do {
+    previous = stripped;
+    stripped = stripped.replace(/<[^<>]+>/g, "");
+  } while (stripped !== previous);
+
+  return stripped;
 }
 
 /**
@@ -915,12 +837,8 @@ export function parseVttContent(content: string): string {
     // If we're in a cue, this is caption text
     if (inCue) {
       // Remove VTT formatting tags like <c>, </c>, <b>, etc.
-      const cleanText = trimmed
-        .replace(/<[^>]+>/g, "") // Remove HTML-like tags
-        .replace(/&nbsp;/g, " ") // Replace non-breaking spaces
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
+      const cleanText = decode(stripTags(trimmed))
+        .replace(/\u00a0/g, " ") // Non-breaking spaces
         .trim();
 
       if (cleanText && !textLines.includes(cleanText)) {
@@ -951,10 +869,9 @@ export async function downloadVideo(
   await ensureYtDlpBinary();
   await fs.mkdir(outputDir, { recursive: true });
 
-  const timestamp = Date.now();
-  const randomId = Math.random().toString(36).substring(7);
+  const basePattern = uniqueName("video");
   // Use a template that yt-dlp will fill in with the actual extension
-  const outputTemplate = `video-${timestamp}-${randomId}.%(ext)s`;
+  const outputTemplate = `${basePattern}.%(ext)s`;
 
   const auth = tokens?.length ? await buildAuthArgs(tokens, url) : null;
 
@@ -965,7 +882,6 @@ export async function downloadVideo(
     log.debug({ ffmpegDir, ffmpegBinary }, "Using ffmpeg for video download");
 
     const args = [
-      url,
       "-o",
       outputTemplate,
       // Prefer progressive MP4 first, then H.264 MP4 DASH, then generic MP4
@@ -982,10 +898,9 @@ export async function downloadVideo(
       args.push("--ffmpeg-location", ffmpegDir);
     }
 
-    await execYtDlp(args, outputDir);
+    await execYtDlp(url, args, outputDir);
 
     // Find the actual output file (yt-dlp fills in the extension)
-    const basePattern = `video-${timestamp}-${randomId}`;
     const files = await fs.readdir(outputDir);
     const downloadedFile = files.find((f) => f.startsWith(basePattern));
 

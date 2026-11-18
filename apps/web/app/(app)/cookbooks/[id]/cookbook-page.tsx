@@ -1,7 +1,8 @@
 "use client";
 
+import type { CookbookQueryResult } from "@/hooks/cookbooks";
+import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CookbookAddRecipesPanel } from "@/components/cookbooks/cookbook-add-recipes-panel";
 import { CookbookEditPanel, DeleteCookbookModal } from "@/components/cookbooks/cookbook-panels";
@@ -9,7 +10,9 @@ import RecipeViewModeToggle, {
   RecipeViewModeTabs,
 } from "@/components/dashboard/recipe-view-mode-toggle";
 import SearchInput from "@/components/dashboard/search-input";
+import { BackLink } from "@/components/page-transition";
 import { NotFoundView } from "@/components/shared/not-found-view";
+import RecipeGridSkeleton from "@/components/skeleton/recipe-grid-skeleton";
 import { usePermissionsContext } from "@/context/permissions-context";
 import { useCookbookQuery, useCookbooksMutations } from "@/hooks/cookbooks";
 import { useBackDestination } from "@/hooks/use-back-destination";
@@ -20,7 +23,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@heroicons/react/16/solid";
-import { Button, Dropdown, Label, Spinner, Tabs } from "@heroui/react";
+import { Button, Dropdown, Label, Skeleton, Tabs } from "@heroui/react";
 import { useTranslations } from "next-intl";
 import { twMerge } from "tailwind-merge";
 
@@ -31,9 +34,88 @@ import {
   cssHeaderIconControl,
 } from "@norish/web/config/css-tokens";
 
-import CookbookMembers from "./cookbook-members";
+import CookbookMembers, { CookbookSelection } from "./cookbook-members";
 
 const COOKBOOK_HEADING_ID = "cookbook-heading";
+
+/**
+ * The page's header: the way back, the title over its count, the view toggle
+ * and the cookbook's actions, and the search. Grey until the cookbook is read.
+ */
+function CookbookHeader({
+  cookbook,
+  actions,
+}: {
+  cookbook?: CookbookQueryResult["cookbook"];
+  actions?: ReactNode;
+}) {
+  const t = useTranslations("recipes.cookbooks");
+  const back = useBackDestination();
+
+  return (
+    <div className="flex shrink-0 flex-col gap-4">
+      {/* A cookbook is reached from the Library and from a recipe that is
+          in it, so the way back names wherever that was. */}
+      <div className="w-fit">
+        <BackLink
+          className="text-muted hover:text-foreground flex items-center gap-1 text-base no-underline"
+          href={back.href}
+        >
+          <ArrowLeftIcon className="h-4 w-4" />
+          {cookbook ? back.label : <Skeleton className="my-1 h-4 w-28 rounded-md" />}
+        </BackLink>
+      </div>
+
+      <div className="flex min-h-10 flex-wrap items-center justify-between gap-3">
+        {/* The count under the title, as Today's date sits under Today, so a
+            long title keeps the row instead of giving way to it */}
+        {cookbook ? (
+          <div className="min-w-0">
+            <h1
+              className="text-foreground text-2xl leading-8 font-semibold break-words"
+              id={COOKBOOK_HEADING_ID}
+            >
+              {cookbook.title}
+            </h1>
+            <p className="text-muted mt-1 text-sm">
+              {t("recipeCount", { count: cookbook.memberCount })}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 py-1">
+            <Skeleton className="h-6 w-48 rounded-lg" />
+            <Skeleton className="h-4 w-20 rounded-md" />
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <RecipeViewModeToggle />
+          {actions}
+        </div>
+      </div>
+
+      <div className="min-w-0">
+        <SearchInput />
+      </div>
+    </div>
+  );
+}
+
+/** The cookbook page before its cookbook is read: its header and the Library's grid skeleton. */
+export function CookbookSkeleton() {
+  return (
+    <section className="flex min-h-0 flex-1 flex-col">
+      <RecipeViewModeTabs>
+        <CookbookHeader />
+        {(["grid", "list"] as const).map((variant) => (
+          <Tabs.Panel key={variant} className="mt-0 min-h-0 flex-1 p-0" id={variant}>
+            <RecipeGridSkeleton variant={variant} />
+          </Tabs.Panel>
+        ))}
+      </RecipeViewModeTabs>
+    </section>
+  );
+}
 
 /**
  * A cookbook's own page: its own address, so it can be linked, bookmarked and
@@ -51,7 +133,6 @@ export default function CookbookPage({ cookbookId }: { cookbookId: string }) {
   const { cookbook, isNotFound } = useCookbookQuery(cookbookId);
   const { deleteCookbook } = useCookbooksMutations();
   const { canEditRecipe, canDeleteRecipe } = usePermissionsContext();
-  const back = useBackDestination();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -68,13 +149,7 @@ export default function CookbookPage({ cookbookId }: { cookbookId: string }) {
     return <NotFoundView message={t("notFoundHint")} title={t("notFound")} />;
   }
 
-  if (!cookbook) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Spinner color="accent" size="lg" />
-      </div>
-    );
-  }
+  if (!cookbook) return <CookbookSkeleton />;
 
   // Cookbooks answer to the recipe permission policy (ADR-0027).
   const canEdit = cookbook.userId ? canEditRecipe(cookbook.userId) : true;
@@ -82,38 +157,11 @@ export default function CookbookPage({ cookbookId }: { cookbookId: string }) {
 
   return (
     <section aria-labelledby={COOKBOOK_HEADING_ID} className="flex min-h-0 flex-1 flex-col">
-      <RecipeViewModeTabs>
-        <div className="flex shrink-0 flex-col gap-4">
-          {/* A cookbook is reached from the Library and from a recipe that is
-              in it, so the way back names wherever that was. */}
-          <div className="w-fit">
-            <Link
-              className="text-muted hover:text-foreground flex items-center gap-1 text-base no-underline"
-              href={back.href}
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-              {back.label}
-            </Link>
-          </div>
-
-          <div className="flex min-h-10 flex-wrap items-center justify-between gap-3">
-            {/* The count under the title, as Today's date sits under Today, so a
-                long title keeps the row instead of giving way to it */}
-            <div className="min-w-0">
-              <h1
-                className="text-foreground text-2xl leading-8 font-semibold break-words"
-                id={COOKBOOK_HEADING_ID}
-              >
-                {cookbook.title}
-              </h1>
-              <p className="text-muted mt-1 text-sm">
-                {t("recipeCount", { count: cookbook.memberCount })}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <RecipeViewModeToggle />
-              {(canEdit || canDelete) && (
+      <CookbookSelection cookbook={cookbook}>
+        <RecipeViewModeTabs>
+          <CookbookHeader
+            actions={
+              (canEdit || canDelete) && (
                 <Dropdown isOpen={menuOpen} onOpenChange={setMenuOpen}>
                   <Button
                     isIconOnly
@@ -206,22 +254,19 @@ export default function CookbookPage({ cookbookId }: { cookbookId: string }) {
                     </Dropdown.Menu>
                   </Dropdown.Popover>
                 </Dropdown>
-              )}
-            </div>
-          </div>
+              )
+            }
+            cookbook={cookbook}
+          />
 
-          <div className="min-w-0">
-            <SearchInput />
-          </div>
-        </div>
-
-        <Tabs.Panel className="mt-0 min-h-0 flex-1 p-0" id="grid">
-          <CookbookMembers cookbookId={cookbookId} variant="grid" />
-        </Tabs.Panel>
-        <Tabs.Panel className="mt-0 min-h-0 flex-1 p-0" id="list">
-          <CookbookMembers cookbookId={cookbookId} variant="list" />
-        </Tabs.Panel>
-      </RecipeViewModeTabs>
+          <Tabs.Panel className="mt-0 min-h-0 flex-1 p-0" id="grid">
+            <CookbookMembers cookbookId={cookbookId} variant="grid" />
+          </Tabs.Panel>
+          <Tabs.Panel className="mt-0 min-h-0 flex-1 p-0" id="list">
+            <CookbookMembers cookbookId={cookbookId} variant="list" />
+          </Tabs.Panel>
+        </RecipeViewModeTabs>
+      </CookbookSelection>
 
       <CookbookEditPanel cookbook={cookbook} open={editOpen} onOpenChange={setEditOpen} />
 

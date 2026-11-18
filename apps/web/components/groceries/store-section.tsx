@@ -36,6 +36,7 @@ interface StoreSectionProps {
   defaultExpanded?: boolean;
   onMarkAllDone?: () => void;
   onDeleteDone?: () => void;
+  onClearAll?: () => void;
   getRecipeNameForGrocery?: (grocery: GroceryDto) => string | null;
 }
 
@@ -53,6 +54,7 @@ function StoreSectionComponent({
   defaultExpanded = true,
   onMarkAllDone,
   onDeleteDone,
+  onClearAll,
   getRecipeNameForGrocery,
 }: StoreSectionProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -66,12 +68,12 @@ function StoreSectionComponent({
   const containerId = store?.id ?? UNSORTED_CONTAINER;
 
   // Track items that are transitioning (just toggled) - delay their reorder
-  const [transitioningIds, setTransitioningIds] = useState<Set<string>>(new Set());
-  const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const [transitioningIds, setTransitioningIds] = useState<Set<string>>(() => new Set());
+  const timeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Cleanup timeouts on unmount
   useEffect(() => {
-    const timeouts = timeoutRefs.current;
+    const timeouts = timeoutsRef.current;
 
     return () => {
       timeouts.forEach((timeout) => clearTimeout(timeout));
@@ -89,7 +91,7 @@ function StoreSectionComponent({
         setTransitioningIds((prev) => new Set(prev).add(id));
 
         // Clear any existing timeout for this id
-        const existingTimeout = timeoutRefs.current.get(id);
+        const existingTimeout = timeoutsRef.current.get(id);
 
         if (existingTimeout) clearTimeout(existingTimeout);
 
@@ -102,10 +104,10 @@ function StoreSectionComponent({
 
             return next;
           });
-          timeoutRefs.current.delete(id);
+          timeoutsRef.current.delete(id);
         }, REORDER_DELAY);
 
-        timeoutRefs.current.set(id, timeout);
+        timeoutsRef.current.set(id, timeout);
       }
     },
     [onToggle]
@@ -191,7 +193,7 @@ function StoreSectionComponent({
   // The heading, handed to the container so a drop on it lands in the Store
   const headerElement = (
     <StoreHeading
-      actions={groceries.length > 0 ? { onMarkAllDone, onDeleteDone } : undefined}
+      actions={groceries.length > 0 ? { onMarkAllDone, onDeleteDone, onClearAll } : undefined}
       activeCount={activeCount}
       doneCount={doneCount}
       dot={store !== null}

@@ -16,14 +16,17 @@
  * a setting that lies in wait.
  */
 import type { Locator, Page } from "@playwright/test";
-import { Client } from "pg";
 
 import type { AIE2EStack } from "./fixture";
-import { databaseUrl } from "./database";
+import { deleteEveryRecipe } from "../harness/reset";
 import { expect, test } from "./fixture";
 import { submitPasteImport } from "./import-support";
 import { findCuisineIdByName, readStoredProvenance, supplyProvenance } from "./provenance-support";
-import { readStoredCategories, setAutomaticEnrichment } from "./recipe-enrichment-support";
+import {
+  readStoredCategories,
+  setAutomaticEnrichment,
+  updateAIConfig,
+} from "./recipe-enrichment-support";
 
 test.describe.configure({ mode: "serial" });
 
@@ -37,6 +40,7 @@ function bareRecipe(name: string) {
     prepTime: null,
     cookTime: null,
     totalTime: null,
+    sourceSystem: "metric",
     recipeIngredient: {
       metric: ["200 g pinto beans", "1 L vegetable stock"],
       us: ["7 oz pinto beans", "4 cups vegetable stock"],
@@ -47,6 +51,7 @@ function bareRecipe(name: string) {
     },
     keywords: null,
     allergyIndications: [],
+    videoUrl: null,
     categories: [],
     nutrition: { calories: null, fat: null, carbs: null, protein: null },
   };
@@ -63,36 +68,6 @@ function suppliedRecipe(name: string) {
 
 let stack: AIE2EStack;
 let page: Page;
-
-/** Flip the stored AI enablement directly, the way setAutomaticEnrichment does. */
-async function setAIEnabled(enabled: boolean): Promise<void> {
-  const db = new Client({ connectionString: databaseUrl() });
-
-  await db.connect();
-
-  try {
-    await db.query(
-      `update server_config
-         set value = jsonb_set(value, '{enabled}', $1::jsonb, true)
-       where key = 'ai_config'`,
-      [JSON.stringify(enabled)]
-    );
-  } finally {
-    await db.end();
-  }
-}
-
-async function deleteAllRecipes(): Promise<void> {
-  const database = new Client({ connectionString: databaseUrl() });
-
-  await database.connect();
-
-  try {
-    await database.query("delete from recipes");
-  } finally {
-    await database.end();
-  }
-}
 
 /** Import one recipe through the real AI paste path while automation is off. */
 async function importRecipe(name: string, extraction: unknown): Promise<void> {
@@ -130,23 +105,23 @@ async function openBulkPanel(): Promise<Locator> {
 test.beforeEach(async ({ aiStack, page: fixturePage }) => {
   stack = aiStack;
   page = fixturePage;
-  await deleteAllRecipes();
-  await setAIEnabled(true);
+  await deleteEveryRecipe();
+  await updateAIConfig(stack, { enabled: true });
   // Two recipes imported while every automatic switch is off, so creation-time
   // enrollment cannot contribute any of the requests asserted below.
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack, {});
   await importRecipe("Bulk Gap Stew", bareRecipe("Bulk Gap Stew"));
   await importRecipe("Bulk Supplied Stew", suppliedRecipe("Bulk Supplied Stew"));
 });
 
 test.afterEach(async () => {
-  await setAIEnabled(true).catch(() => undefined);
-  await setAutomaticEnrichment({}).catch(() => undefined);
+  await updateAIConfig(stack, { enabled: true }).catch(() => undefined);
+  await setAutomaticEnrichment(stack, {}).catch(() => undefined);
 });
 
 test("with AI disabled the action refuses before queueing anything", async () => {
-  await setAutomaticEnrichment({ autoCategorization: true });
-  await setAIEnabled(false);
+  await setAutomaticEnrichment(stack, { autoCategorization: true });
+  await updateAIConfig(stack, { enabled: false });
 
   const ai = stack!.ai;
 
@@ -155,16 +130,16 @@ test("with AI disabled the action refuses before queueing anything", async () =>
 
   const panel = await openBulkPanel();
 
-  await panel.getByRole("button", { name: "Enrich all recipes" }).click();
+  await panel.getByRole("button", { name: "Enrich", exact: true }).click();
   await expect(page.getByText("Run enrichment on all recipes?")).toBeVisible();
-  await page.getByRole("button", { name: "Run on all recipes" }).click();
+  await page.getByRole("button", { name: "Run", exact: true }).click();
 
   await expect(page.getByText("AI is disabled on this server. Enable AI first.")).toBeVisible({
     timeout: 15_000,
   });
   expect(ai.control.requestCount).toBe(0);
 
-  await setAIEnabled(true);
+  await updateAIConfig(stack, { enabled: true });
 });
 
 test("cancelling the confirmation runs nothing", async () => {
@@ -175,7 +150,7 @@ test("cancelling the confirmation runs nothing", async () => {
 
   const panel = await openBulkPanel();
 
-  await panel.getByRole("button", { name: "Enrich all recipes" }).click();
+  await panel.getByRole("button", { name: "Enrich", exact: true }).click();
   await expect(page.getByText("Run enrichment on all recipes?")).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).click();
 
@@ -187,7 +162,7 @@ test("cancelling the confirmation runs nothing", async () => {
 });
 
 test("a confirmed run fills gaps through enabled kinds and defers to supplied data", async () => {
-  await setAutomaticEnrichment({ autoCategorization: true });
+  await setAutomaticEnrichment(stack, { autoCategorization: true });
 
   const ai = stack!.ai;
 
@@ -196,8 +171,8 @@ test("a confirmed run fills gaps through enabled kinds and defers to supplied da
 
   const panel = await openBulkPanel();
 
-  await panel.getByRole("button", { name: "Enrich all recipes" }).click();
-  await page.getByRole("button", { name: "Run on all recipes" }).click();
+  await panel.getByRole("button", { name: "Enrich", exact: true }).click();
+  await page.getByRole("button", { name: "Run", exact: true }).click();
 
   // The mutation reports what the coordinator decided: of two recipes, only
   // the one with a category gap enrolled the one enabled kind.
@@ -207,7 +182,7 @@ test("a confirmed run fills gaps through enabled kinds and defers to supplied da
 
   // The queued worker completes the gap recipe from the controlled response.
   await expect
-    .poll(async () => readStoredCategories("Bulk Gap Stew"), {
+    .poll(async () => readStoredCategories(stack, "Bulk Gap Stew"), {
       timeout: 60_000,
       intervals: [1_000, 2_000, 5_000],
     })
@@ -215,7 +190,7 @@ test("a confirmed run fills gaps through enabled kinds and defers to supplied da
 
   // Supplied Recipe Data won: the supplied recipe kept its category and the
   // provider was asked exactly once — for the gap recipe.
-  expect(await readStoredCategories("Bulk Supplied Stew")).toEqual(["Breakfast"]);
+  expect(await readStoredCategories(stack, "Bulk Supplied Stew")).toEqual(["Breakfast"]);
   expect(ai.control.requestCount).toBe(1);
 });
 
@@ -223,7 +198,7 @@ test("overwriting redoes the supplied recipe instead of deferring to it", async 
   // The destructive variant of the same sweep: the switch in the confirmation
   // suspends the Supplied Recipe Data skips, so the recipe that was left alone
   // above is enrolled and its stored category is replaced.
-  await setAutomaticEnrichment({ autoCategorization: true });
+  await setAutomaticEnrichment(stack, { autoCategorization: true });
 
   const ai = stack!.ai;
 
@@ -232,12 +207,12 @@ test("overwriting redoes the supplied recipe instead of deferring to it", async 
 
   const panel = await openBulkPanel();
 
-  await panel.getByRole("button", { name: "Enrich all recipes" }).click();
+  await panel.getByRole("button", { name: "Enrich", exact: true }).click();
   // Keyboard, as the grocery checkbox does: the control span sits over the
   // input, so a click never reaches its hit target.
   await page.getByRole("switch", { name: "Overwrite existing data" }).press("Space");
   await expect(page.getByText("This cannot be undone.", { exact: false })).toBeVisible();
-  await page.getByRole("button", { name: "Overwrite all recipes" }).click();
+  await page.getByRole("button", { name: "Replace", exact: true }).click();
 
   // Both recipes enrolled this time: having a category no longer suppresses it.
   await expect(panel.getByText("2 runs queued across 2 recipes")).toBeVisible({
@@ -248,8 +223,8 @@ test("overwriting redoes the supplied recipe instead of deferring to it", async 
   await expect
     .poll(
       async () => [
-        await readStoredCategories("Bulk Supplied Stew"),
-        await readStoredCategories("Bulk Gap Stew"),
+        await readStoredCategories(stack, "Bulk Supplied Stew"),
+        await readStoredCategories(stack, "Bulk Gap Stew"),
       ],
       { timeout: 60_000, intervals: [1_000, 2_000, 5_000] }
     )
@@ -258,7 +233,7 @@ test("overwriting redoes the supplied recipe instead of deferring to it", async 
 });
 
 test("the overwrite choice is not remembered by the next confirmation", async () => {
-  await setAutomaticEnrichment({ autoCategorization: true });
+  await setAutomaticEnrichment(stack, { autoCategorization: true });
 
   const ai = stack!.ai;
 
@@ -268,7 +243,7 @@ test("the overwrite choice is not remembered by the next confirmation", async ()
   const panel = await openBulkPanel();
   const replaceSwitch = page.getByRole("switch", { name: "Overwrite existing data" });
 
-  await panel.getByRole("button", { name: "Enrich all recipes" }).click();
+  await panel.getByRole("button", { name: "Enrich", exact: true }).click();
   await replaceSwitch.press("Space");
   await expect(replaceSwitch).toBeChecked();
   await page.getByRole("button", { name: "Cancel" }).click();
@@ -276,24 +251,24 @@ test("the overwrite choice is not remembered by the next confirmation", async ()
 
   // Reopening starts from gap-filling, so a later sweep cannot inherit a
   // destructive choice nobody made this time.
-  await panel.getByRole("button", { name: "Enrich all recipes" }).click();
+  await panel.getByRole("button", { name: "Enrich", exact: true }).click();
   await expect(replaceSwitch).not.toBeChecked();
-  await expect(page.getByRole("button", { name: "Run on all recipes" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Run", exact: true })).toBeVisible();
 });
 
 test("a provenance run fills the gaps around a supplied Cuisine and skips a complete group", async () => {
   // The gap-fill contract at the coordinator seam (ADR-0018): one recipe
   // carries nothing but a supplied Cuisine — the case that used to suppress
   // the whole group — and the other a complete group with nothing left to ask.
-  await supplyProvenance("Bulk Gap Stew", {
-    cuisineIds: [await findCuisineIdByName("Italian")],
+  await supplyProvenance(stack, "Bulk Gap Stew", {
+    cuisineIds: [await findCuisineIdByName(stack, "Italian")],
   });
-  await supplyProvenance("Bulk Supplied Stew", {
+  await supplyProvenance(stack, "Bulk Supplied Stew", {
     originCountry: "NL",
     provenanceNote: "Set by an editor.",
-    cuisineIds: [await findCuisineIdByName("French")],
+    cuisineIds: [await findCuisineIdByName(stack, "French")],
   });
-  await setAutomaticEnrichment({ recipeProvenance: true });
+  await setAutomaticEnrichment(stack, { recipeProvenance: true });
 
   const ai = stack!.ai;
 
@@ -310,8 +285,8 @@ test("a provenance run fills the gaps around a supplied Cuisine and skips a comp
 
   const panel = await openBulkPanel();
 
-  await panel.getByRole("button", { name: "Enrich all recipes" }).click();
-  await page.getByRole("button", { name: "Run on all recipes" }).click();
+  await panel.getByRole("button", { name: "Enrich", exact: true }).click();
+  await page.getByRole("button", { name: "Run", exact: true }).click();
 
   // Of two recipes, only the one with gaps enrolled the one enabled kind.
   await expect(panel.getByText("1 run queued across 2 recipes")).toBeVisible({
@@ -320,12 +295,12 @@ test("a provenance run fills the gaps around a supplied Cuisine and skips a comp
 
   // The worker fills the missing slots and keeps the supplied Cuisine.
   await expect
-    .poll(async () => (await readStoredProvenance("Bulk Gap Stew")).originCountry, {
+    .poll(async () => (await readStoredProvenance(stack, "Bulk Gap Stew")).originCountry, {
       timeout: 60_000,
       intervals: [1_000, 2_000, 5_000],
     })
     .toBe("IT");
-  expect(await readStoredProvenance("Bulk Gap Stew")).toEqual({
+  expect(await readStoredProvenance(stack, "Bulk Gap Stew")).toEqual({
     originCountry: "IT",
     originCountryName: "Italia",
     originRegion: "Lazio",
@@ -335,7 +310,7 @@ test("a provenance run fills the gaps around a supplied Cuisine and skips a comp
 
   // The complete group was skipped outright — the provider was asked exactly
   // once — and gained nothing, not even the region it never had.
-  expect(await readStoredProvenance("Bulk Supplied Stew")).toEqual({
+  expect(await readStoredProvenance(stack, "Bulk Supplied Stew")).toEqual({
     originCountry: "NL",
     originCountryName: null,
     originRegion: null,

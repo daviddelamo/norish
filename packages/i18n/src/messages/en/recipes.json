@@ -50,7 +50,8 @@
     "viewGroceries": "View groceries",
     "addToCalendar": "Add to calendar",
     "deleteRecipe": "Delete recipe",
-    "recipeOptions": "Recipe options"
+    "recipeOptions": "Recipe options",
+    "pantryCoverage": "{percent} of the ingredients at home"
   },
   "detail": {
     "viewOriginal": "View original recipe",
@@ -76,7 +77,8 @@
     "source": "Source",
     "addedBy": "Added by {name}",
     "decreaseServings": "Fewer servings",
-    "increaseServings": "More servings"
+    "increaseServings": "More servings",
+    "multiplier": "Multiplier"
   },
   "actions": {
     "plan": "Plan",
@@ -162,7 +164,9 @@
   "deleteModal": {
     "title": "Delete Recipe",
     "confirmMessage": "Are you sure you want to delete \"{recipeName}\"?",
-    "warning": "This action cannot be undone."
+    "warning": "This action cannot be undone.",
+    "confirmCount": "Delete {count, plural, one {# recipe} other {# recipes}}?",
+    "keptCount": "{count, plural, one {# recipe stays} other {# recipes stay}}, because you may not delete {count, plural, one {it} other {them}}."
   },
   "form": {
     "createTitle": "Create Recipe",
@@ -319,10 +323,14 @@
     "imported": "Recipe imported",
     "failed": "Recipe operation failed",
     "failedDescription": "Something went wrong while processing your recipe. Check the browser console for technical details.",
+    "incomplete": "This recipe may be incomplete. Check it against the source.",
+    "notARecipe": "This page doesn't look like a recipe.",
+    "privateAddress": "Imports from private network addresses are not allowed on this server.",
     "batchImported": "Recipes imported",
     "batchImportedDescription": "{count} recipes imported from archive",
     "view": "View",
-    "open": "Open"
+    "open": "Open",
+    "deleteKept": "{count, plural, one {# recipe was} other {# recipes were}} changed by someone else and kept."
   },
   "tags": {
     "panel": {
@@ -423,5 +431,23 @@
     "removeImage": "Remove image",
     "imageUploadFailed": "The image could not be uploaded.",
     "imageNeedsConnection": "Images can be changed once you are back online."
+  },
+  "print": {
+    "title": "Print recipe",
+    "includePhoto": "Include photo",
+    "textSize": "Text size",
+    "print": "Print / Save PDF",
+    "continued": "continued",
+    "perServing": "Per serving"
+  },
+  "selection": {
+    "toolbar": "Selected recipes",
+    "count": "{count} selected",
+    "clear": "Clear selection",
+    "addToCookbook": "Add to cookbook",
+    "remove": "Remove",
+    "newCookbook": "New cookbook",
+    "filedInto": "{count, plural, one {# recipe} other {# recipes}} added to {title}",
+    "filedIntoMany": "{count, plural, one {# recipe} other {# recipes}} added to {cookbooks} cookbooks"
   }
 }

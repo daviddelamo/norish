@@ -1,19 +1,23 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { GroceryCheckbox, isCheckboxEvent } from "@/components/groceries/grocery-checkbox";
 import { MiniCalendar, MiniGroceries } from "@/components/Panel/consumers";
 import OriginFlag from "@/components/recipes/origin-flag";
 import HeartButton from "@/components/shared/heart-button";
 import SmartMarkdownRenderer from "@/components/shared/smart-markdown-renderer";
 import { usePermissionsContext } from "@/context/permissions-context";
+import { useRecipeSelection } from "@/context/recipe-selection-context";
 import { useRecipePrefetch } from "@/hooks/recipes/use-recipe-prefetch";
 import { useMountedOnceOpened } from "@/hooks/use-mounted-once-opened";
 import { useHiddenItemVisibility } from "@/hooks/user/use-hidden-item-visibility";
 import { withOrigin } from "@/lib/back-destination";
 import { useAppStore } from "@/stores/useAppStore";
 import {
+  ArchiveBoxIcon,
   CalendarDaysIcon,
   ClockIcon,
   EllipsisHorizontalIcon,
@@ -25,10 +29,12 @@ import {
 } from "@heroicons/react/20/solid";
 import { PhotoIcon } from "@heroicons/react/24/outline";
 import { Button, Card, Chip, Tooltip, useOverlayState } from "@heroui/react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { useLongPress } from "react-aria";
 
 import { RecipeDashboardDTO } from "@norish/shared/contracts";
 import { RECIPE_DASHBOARD_KEYS } from "@norish/shared/contracts/zod";
+import { addBasePath } from "@norish/shared/lib/base-path";
 import {
   formatMinutesHM,
   isAllergenTag,
@@ -48,10 +54,22 @@ type RecipeCardProps = {
   allergies: string[];
   variant?: "grid" | "list";
   onToggleFavorite: (recipeId: string) => void;
-  onDelete: (recipeId: string, version: number) => void;
+  onDelete: (recipes: Array<{ id: string; version: number }>) => void;
   /** Inside a cookbook, the card's last action takes the recipe out of it instead of deleting it. */
   onRemoveFromCookbook?: (recipeId: string) => void;
 };
+
+type ClickModifiers = Pick<MouseEvent, "button" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">;
+
+/** A plain left click; a modified or middle click is the browser's, to open the link elsewhere. */
+function isPlainClick(event: ClickModifiers) {
+  return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+}
+
+/** The card is a real link (#555): plain clicks stay with its handlers, and no button opens a tab. */
+function keepClicksInPage(event: MouseEvent) {
+  if (isPlainClick(event) || (event.target as Element).closest("button")) event.preventDefault();
+}
 
 type RecipeTagValue = RecipeDashboardDTO["tags"][number] | string | null | undefined;
 
@@ -138,20 +156,59 @@ function RecipeCardComponent({
   } = useOverlayState();
   const t = useTranslations("recipes.card");
   const tCookbooks = useTranslations("recipes.cookbooks");
+  const format = useFormatter();
   const { showRatings, showFavorites } = useHiddenItemVisibility();
 
   // Automatically prefetch recipe when card enters viewport
-  const cardRef = useRecipePrefetch(recipe.id);
+  const cardRef = useRecipePrefetch<HTMLAnchorElement>(recipe.id);
+
+  const selection = useRecipeSelection();
+  const isSelecting = selection?.isSelecting ?? false;
+  const isSelected = selection?.isSelected(recipe.id) ?? false;
+  // A press that began before the overlay appeared, like the long press that
+  // started selecting, must not toggle the card again on release.
+  const overlayPressArmedRef = useRef(false);
+  // useLongPress cancels only when the finger leaves the card, so a slow swipe would select it.
+  const pressOriginRef = useRef({ x: 0, y: 0 });
+  const pressMovedRef = useRef(false);
+  const { longPressProps } = useLongPress({
+    isDisabled: !selection || isSelecting,
+    onLongPress: () => {
+      if (pressMovedRef.current) return;
+      rowRef.current?.closeRow();
+      selection?.toggle(recipe);
+    },
+  });
+
+  // A bulk delete plays the single delete's animation, and the card stays
+  // hidden from its end until the list drops it.
+  const isLeaving = selection?.isLeaving(recipe.id) ?? false;
+  const [hasLeft, setHasLeft] = useState(false);
+
+  useEffect(() => {
+    if (isLeaving) rowRef.current?.triggerDeleteAnimation(() => setHasLeft(true));
+  }, [isLeaving]);
+
+  // Shift-click selects a range from the last card, or starts with this one;
+  // Cmd/Ctrl-click stays the link's, opening a new tab (#555).
+  const handleShiftClick = (event: MouseEvent) => {
+    if (!selection || !event.shiftKey) return;
+    event.preventDefault();
+    event.stopPropagation();
+    selection.selectRange(recipe);
+  };
 
   const averageRating = recipe.averageRating ?? null;
+
+  const recipeHref = withOrigin(`/recipes/${recipe.id}`, pathname);
 
   const handleNavigate = useCallback(() => {
     if (recipe.id && !open && !mobileSearchOpen) {
       // Navigate immediately - skeleton shows while data loads
       // Prefetch is already happening via useRecipePrefetch hook
-      router.push(withOrigin(`/recipes/${recipe.id}`, pathname));
+      router.push(recipeHref);
     }
-  }, [router, recipe.id, open, mobileSearchOpen, pathname]);
+  }, [router, recipe.id, open, mobileSearchOpen, recipeHref]);
 
   const totalMinutes =
     recipe.totalMinutes ?? ((recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0) || undefined);
@@ -181,7 +238,7 @@ function RecipeCardComponent({
   const description = recipe.description?.trim() || "";
 
   // The resolved primary image: the list projection serves the first gallery
-  // image, with the deprecated legacy scalar only as a fallback.
+  // image.
   const thumbnailImage = recipe.image;
   const showImage = thumbnailImage && failedImage !== thumbnailImage;
 
@@ -206,7 +263,7 @@ function RecipeCardComponent({
     onDeleteModalClose();
     // Trigger the delete animation, then delete the recipe
     rowRef.current?.triggerDeleteAnimation(() => {
-      onDelete(recipe.id, recipe.version);
+      onDelete([{ id: recipe.id, version: recipe.version }]);
     });
   }, [onDelete, recipe.id, recipe.version, onDeleteModalClose]);
 
@@ -286,8 +343,9 @@ function RecipeCardComponent({
       <img
         alt={recipe.name}
         className={`pointer-events-none h-full w-full object-cover transition-transform duration-300 ease-in-out ${open ? "scale-100" : hoverScaleClass} `}
+        draggable={false}
         loading="lazy"
-        src={thumbnailImage}
+        src={addBasePath(thumbnailImage)}
         onError={() => setFailedImage(thumbnailImage)}
       />
     ) : (
@@ -298,8 +356,22 @@ function RecipeCardComponent({
       </div>
     );
 
+  const pantryPercent =
+    recipe.pantryCoverage === undefined
+      ? null
+      : format.number(recipe.pantryCoverage, { style: "percent" });
+
   const facts = (
     <>
+      {pantryPercent && (
+        <CardFact
+          icon={ArchiveBoxIcon}
+          iconClassName={recipe.pantryCoverage === 1 ? "text-success" : "text-muted"}
+        >
+          <span aria-hidden>{pantryPercent}</span>
+          <span className="sr-only">{t("pantryCoverage", { percent: pantryPercent })}</span>
+        </CardFact>
+      )}
       {typeof averageRating === "number" && averageRating > 0 && showRatings && (
         <CardFact icon={StarIcon} iconClassName="text-warning">
           {Math.round(averageRating)}
@@ -373,16 +445,19 @@ function RecipeCardComponent({
 
   const cardContent =
     variant === "list" ? (
-      <div
+      <Link
         ref={cardRef}
         data-recipe-card
-        className={`relative h-[128px] w-full overflow-hidden transition-all duration-300 ${open ? "rounded-none opacity-70" : "rounded-2xl"} `}
-        role="button"
+        className={`relative block h-[128px] w-full overflow-hidden transition-all duration-300 ${open ? "rounded-none opacity-70" : "rounded-2xl"} `}
+        href={recipeHref}
+        prefetch={false}
         tabIndex={open ? 0 : -1}
-        onClick={() => {
+        onClick={(e) => {
+          if (!isPlainClick(e)) return;
           if (open) rowRef.current?.closeRow();
           else handleNavigate();
         }}
+        onClickCapture={keepClicksInPage}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -394,7 +469,12 @@ function RecipeCardComponent({
         <div className="group/row relative h-full w-full">
           <Card className="border-border bg-surface relative h-full w-full overflow-hidden rounded-2xl border p-0">
             <div className="flex h-full min-w-0 items-stretch">
-              <div role="presentation" onClick={stopParentActivation}>
+              <div
+                role="presentation"
+                onClick={(e) => {
+                  if (isPlainClick(e)) e.stopPropagation();
+                }}
+              >
                 <DoubleTapContainer
                   className="bg-surface-secondary relative h-full w-[112px] shrink-0 cursor-pointer overflow-hidden"
                   disabled={open || mobileSearchOpen}
@@ -438,22 +518,26 @@ function RecipeCardComponent({
                 </div>
 
                 <div className="mt-3">{metadataChips}</div>
-                <div className="absolute top-1/2 right-3 -translate-y-1/2">{optionsButton}</div>
+                {!isSelecting && (
+                  <div className="absolute top-1/2 right-3 -translate-y-1/2">{optionsButton}</div>
+                )}
               </Card.Content>
             </div>
           </Card>
         </div>
-      </div>
+      </Link>
     ) : (
-      <div
+      <Link
         ref={cardRef}
         data-recipe-card
-        className={`relative h-[286px] w-full overflow-hidden transition-all duration-300 sm:h-[378px] ${open ? "rounded-none opacity-70" : "rounded-3xl"} `}
-        role="button"
+        className={`relative block h-[286px] w-full overflow-hidden transition-all duration-300 sm:h-[378px] ${open ? "rounded-none opacity-70" : "rounded-3xl"} `}
+        href={recipeHref}
+        prefetch={false}
         tabIndex={open ? 0 : -1}
         onClick={() => {
           if (open) rowRef.current?.closeRow();
         }}
+        onClickCapture={keepClicksInPage}
         onKeyDown={(e) => {
           if ((e.key === "Enter" || e.key === " ") && open) {
             e.preventDefault();
@@ -481,10 +565,15 @@ function RecipeCardComponent({
 
               <RecipeMetadata
                 isFavorite={recipeIsFavorite}
-                onOptionsPress={() => {
-                  if (rowRef.current?.isOpen()) rowRef.current?.closeRow();
-                  else rowRef.current?.openRow();
-                }}
+                // The selection badge takes this corner while selecting.
+                onOptionsPress={
+                  isSelecting
+                    ? undefined
+                    : () => {
+                        if (rowRef.current?.isOpen()) rowRef.current?.closeRow();
+                        else rowRef.current?.openRow();
+                      }
+                }
                 onToggleFavorite={showFavorites ? handleToggleFavorite : undefined}
               />
 
@@ -493,7 +582,9 @@ function RecipeCardComponent({
 
             <Card.Content
               className="flex h-[124px] cursor-pointer flex-col overflow-hidden px-3 pt-2.5 pb-3 sm:h-[140px] sm:px-4 sm:pt-3"
-              onClick={handleNavigate}
+              onClick={(e) => {
+                if (isPlainClick(e)) handleNavigate();
+              }}
             >
               <h3
                 className={`text-foreground line-clamp-2 shrink-0 text-sm font-semibold sm:text-base ${open ? "" : "group-hover/row:underline"} `}
@@ -517,19 +608,63 @@ function RecipeCardComponent({
             </Card.Content>
           </Card>
         </div>
-      </div>
+      </Link>
     );
 
   return (
     <>
-      <SwipeableRow
-        ref={rowRef}
-        actions={actions}
-        disableSwipeOnDesktop={true}
-        onOpenChange={setOpen}
+      <div
+        className={`relative select-none [-webkit-touch-callout:none] ${hasLeft ? "invisible" : ""}`}
+        onClickCapture={handleShiftClick}
+        {...longPressProps}
+        onPointerDownCapture={(event) => {
+          pressOriginRef.current = { x: event.clientX, y: event.clientY };
+          pressMovedRef.current = false;
+        }}
+        onPointerMoveCapture={(event) => {
+          const { x, y } = pressOriginRef.current;
+
+          if (Math.hypot(event.clientX - x, event.clientY - y) > 10) pressMovedRef.current = true;
+        }}
       >
-        {cardContent}
-      </SwipeableRow>
+        <div inert={isSelecting}>
+          <SwipeableRow
+            ref={rowRef}
+            actions={actions}
+            disableSwipeOnDesktop={true}
+            onOpenChange={setOpen}
+          >
+            {cardContent}
+          </SwipeableRow>
+        </div>
+
+        {isSelecting && (
+          // The checkbox is the control; the rest of the card is a bigger target for a pointer.
+          <div
+            className="absolute inset-0 z-30 cursor-pointer"
+            data-selected={isSelected}
+            data-testid="recipe-select-toggle"
+            role="presentation"
+            onClick={(event) => {
+              if (isCheckboxEvent(event) || !overlayPressArmedRef.current) return;
+              overlayPressArmedRef.current = false;
+              selection?.toggle(recipe);
+            }}
+            onPointerDown={(event) => {
+              overlayPressArmedRef.current = !isCheckboxEvent(event);
+            }}
+          >
+            <span className="absolute top-4 right-4 drop-shadow-md">
+              <GroceryCheckbox
+                aria-label={recipe.name}
+                className="[--border-width-field:2px] [--default:rgb(0_0_0/0.3)] [--field-border-hover:white] [--field-border:white]"
+                isSelected={isSelected}
+                onChange={() => selection?.toggle(recipe)}
+              />
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Calendar panel */}
       {calendarMounted && (

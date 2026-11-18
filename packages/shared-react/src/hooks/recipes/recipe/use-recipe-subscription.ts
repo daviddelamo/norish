@@ -27,6 +27,8 @@ export function createUseRecipeSubscription(
     recipeId: string | null,
     callbacks: RecipeSubscriptionCallbacks = {}
   ) {
+    "use memo";
+
     const trpc = useTRPC();
     const { setRecipeData, invalidate } = dependencies.useRecipeQuery(recipeId);
 
@@ -53,7 +55,7 @@ export function createUseRecipeSubscription(
     useRealtimeSubscription<Payload<"deleted">>(trpc.recipes.onDeleted, {
       ...common,
       onEvent: (payload) => {
-        if (payload.id !== recipeId) return;
+        if (!recipeId || !payload.ids.includes(recipeId)) return;
 
         callbacks.onDeleted?.(payload);
       },

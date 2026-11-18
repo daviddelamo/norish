@@ -22,6 +22,8 @@ import {
 import { observable } from "@trpc/server/observable";
 import superjson from "superjson";
 
+import { BASE_PATH } from "@norish/shared/lib/base-path";
+
 import { createOperationIdLink } from "./operation-id-link";
 import { createBatchRequestHeadersResolver, createRequestHeadersResolver } from "./request-headers";
 
@@ -203,30 +205,40 @@ function createHttpTransportLink(
       true: createHttpFormDataMutationLink(getBaseUrl, getHeaders),
       false: createHttpMutationLink(getBaseUrl, getHeaders),
     }),
-    false: httpBatchLink({
-      url: `${getBaseUrl()}/api/trpc`,
-      headers: createBatchRequestHeadersResolver(getHeaders),
-      transformer: superjson,
+    false: splitLink({
+      // These reads can carry a key being typed, which must not reach a URL and access logs.
+      condition: (op) => op.path.startsWith("admin.listAvailable"),
+      true: httpLink({
+        url: `${getBaseUrl()}/api/trpc`,
+        headers: createRequestHeadersResolver(getHeaders),
+        transformer: superjson,
+        methodOverride: "POST",
+      }),
+      false: httpBatchLink({
+        url: `${getBaseUrl()}/api/trpc`,
+        headers: createBatchRequestHeadersResolver(getHeaders),
+        transformer: superjson,
+      }),
     }),
   });
 }
 
 export const defaultGetBaseUrl = () => {
   if (typeof window !== "undefined") {
-    return "";
+    return BASE_PATH;
   }
 
-  return `http://localhost:${process.env.PORT ?? 3000}`;
+  return `http://localhost:${process.env.PORT ?? 3000}${BASE_PATH}`;
 };
 
 export const defaultGetWsUrl = () => {
   if (typeof window !== "undefined") {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 
-    return `${protocol}//${window.location.host}/trpc`;
+    return `${protocol}//${window.location.host}${BASE_PATH}/trpc`;
   }
 
-  return `ws://localhost:${process.env.PORT ?? 3000}/trpc`;
+  return `ws://localhost:${process.env.PORT ?? 3000}${BASE_PATH}/trpc`;
 };
 
 export const defaultGetHeaders = (): HTTPHeaders => ({});

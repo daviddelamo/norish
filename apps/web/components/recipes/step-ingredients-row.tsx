@@ -1,6 +1,7 @@
 "use client";
 
 import { IngredientIcon } from "@/components/ingredients/ingredient-icon";
+import { useDevicePreference } from "@/context/device-preferences-context";
 import { useAmountDisplayPreference } from "@/hooks/use-amount-display-preference";
 import { useUnitFormatter } from "@/hooks/use-unit-formatter";
 import { Chip } from "@heroui/react";
@@ -8,7 +9,7 @@ import { useLocale } from "next-intl";
 
 import type { UnitsMap } from "@norish/config/zod/server-config";
 import type { StepIngredientRefLike } from "@norish/shared/lib/step-ingredients";
-import { useUnitFormatter as useSharedUnitFormatter } from "@norish/shared-react/hooks";
+import { createUnitFormatter } from "@norish/shared-react/hooks";
 import { formatAmount } from "@norish/shared/lib/format-amount";
 import { namesNoFood } from "@norish/shared/lib/ingredient-text";
 import { resolveStepIngredients } from "@norish/shared/lib/step-ingredients";
@@ -103,7 +104,8 @@ function StepIngredientsRowWithConfiguredUnits(
   props: StepIngredientsRowProps & { units: UnitsMap }
 ) {
   const locale = useLocale();
-  const { formatUnitOnly } = useSharedUnitFormatter({ locale, units: props.units });
+  const [unitStyle] = useDevicePreference("unitStyle");
+  const { formatUnitOnly } = createUnitFormatter({ locale, units: props.units, unitStyle });
 
   return <StepIngredientsRowContent {...props} formatUnitOnly={formatUnitOnly} />;
 }

@@ -7,12 +7,13 @@
  * rendered recipe updating in place.
  *
  * Only the AI provider's HTTP boundary is faked. The real Norish server,
- * database, Redis, BullMQ workers, repositories, authorized mutation layer,
+ * database, Valkey, BullMQ workers, repositories, authorized mutation layer,
  * realtime connection, and UI are all exercised.
  */
 import type { BrowserContext, Page } from "@playwright/test";
 
 import type { AIE2EStack } from "./fixture";
+import { settled } from "../harness/settled";
 import { expect, test } from "./fixture";
 import { submitPasteImport } from "./import-support";
 import { findCuisineIdByName, readStoredProvenance, supplyProvenance } from "./provenance-support";
@@ -30,6 +31,7 @@ function bareRecipe(name: string) {
     prepTime: null,
     cookTime: null,
     totalTime: null,
+    sourceSystem: "metric",
     recipeIngredient: {
       metric: ["200 g pinto beans", "1 L vegetable stock"],
       us: ["7 oz pinto beans", "4 cups vegetable stock"],
@@ -40,6 +42,7 @@ function bareRecipe(name: string) {
     },
     keywords: null,
     allergyIndications: [],
+    videoUrl: null,
     categories: [],
     nutrition: { calories: null, fat: null, carbs: null, protein: null },
   };
@@ -68,7 +71,7 @@ test.beforeEach(({ aiStack, context: fixtureContext, page: fixturePage }) => {
 });
 
 test.afterEach(async () => {
-  await setAutomaticEnrichment({}).catch(() => undefined);
+  await setAutomaticEnrichment(stack, {}).catch(() => undefined);
 });
 
 async function openRecipe(name: string): Promise<void> {
@@ -119,7 +122,7 @@ function requestProvenance(): Promise<void> {
 }
 
 test("an import enters automatic provenance inference and the result is stored and rendered", async () => {
-  await setAutomaticEnrichment({ recipeProvenance: true });
+  await setAutomaticEnrichment(stack, { recipeProvenance: true });
 
   await importAndOpen("Automatic Provenance Stew", [
     bareRecipe("Automatic Provenance Stew"),
@@ -140,7 +143,7 @@ test("an import enters automatic provenance inference and the result is stored a
   });
 
   // Stored as a code, a written name, and a resolved vocabulary row.
-  const stored = await readStoredProvenance("Automatic Provenance Stew");
+  const stored = await readStoredProvenance(stack, "Automatic Provenance Stew");
 
   expect(stored.originCountry).toBe("IT");
   expect(stored.originCountryName).toBe("Italia");
@@ -149,7 +152,7 @@ test("an import enters automatic provenance inference and the result is stored a
 });
 
 test("the provenance heading speaks the recipe's language, not the country's or the reader's", async () => {
-  await setAutomaticEnrichment({ recipeProvenance: true });
+  await setAutomaticEnrichment(stack, { recipeProvenance: true });
 
   // A Dutch recipe about a Turkish dish: the model writes the note in Dutch
   // and names the country in Dutch too. The reader's locale is English and the
@@ -174,29 +177,29 @@ test("the provenance heading speaks the recipe's language, not the country's or 
     });
   });
 
-  const stored = await readStoredProvenance("Turkse Linzensoep");
+  const stored = await readStoredProvenance(stack, "Turkse Linzensoep");
 
   expect(stored.originCountry).toBe("TR");
   expect(stored.originCountryName).toBe("Turkije");
 });
 
 test("a complete supplied group survives other recipes' automatic runs untouched", async () => {
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack, {});
 
   // Import with automation off, then supply a complete group the way an editor
   // would: a country, a note, and a Cuisine leave a run nothing to fill
   // (ADR-0018).
   await importRecipe("Supplied Provenance Stew", [bareRecipe("Supplied Provenance Stew")]);
-  await supplyProvenance("Supplied Provenance Stew", {
+  await supplyProvenance(stack, "Supplied Provenance Stew", {
     originCountry: "NL",
     provenanceNote: "Set by an editor.",
-    cuisineIds: [await findCuisineIdByName("French")],
+    cuisineIds: [await findCuisineIdByName(stack, "French")],
   });
 
   // Now import a second recipe with automation on. Only the extraction
   // directive is queued, so an enrolled provenance job would call the provider
   // and the null default would fail loudly.
-  await setAutomaticEnrichment({ recipeProvenance: true });
+  await setAutomaticEnrichment(stack, { recipeProvenance: true });
   await importAndOpen("Second Provenance Stew", [
     bareRecipe("Second Provenance Stew"),
     provenanceClaim(),
@@ -207,7 +210,7 @@ test("a complete supplied group survives other recipes' automatic runs untouched
 
   // The supplied recipe was never touched: the whole group is what a person
   // set. Its gaps — the written name, the region — stayed honest blanks.
-  const stored = await readStoredProvenance("Supplied Provenance Stew");
+  const stored = await readStoredProvenance(stack, "Supplied Provenance Stew");
 
   expect(stored).toEqual({
     originCountry: "NL",
@@ -219,13 +222,13 @@ test("a complete supplied group survives other recipes' automatic runs untouched
 });
 
 test("a manual run replaces the entire group", async () => {
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack, {});
 
   await importAndOpen("Manual Provenance Stew", [bareRecipe("Manual Provenance Stew")]);
-  await supplyProvenance("Manual Provenance Stew", {
+  await supplyProvenance(stack, "Manual Provenance Stew", {
     originCountry: "NL",
     provenanceNote: "An earlier claim.",
-    cuisineIds: [await findCuisineIdByName("French")],
+    cuisineIds: [await findCuisineIdByName(stack, "French")],
   });
 
   // A manual request is a deliberate refresh: it runs while the automatic
@@ -239,7 +242,7 @@ test("a manual run replaces the entire group", async () => {
     await expect(page.getByText("Italia").first()).toBeVisible({ timeout: 3_000 });
   });
 
-  const stored = await readStoredProvenance("Manual Provenance Stew");
+  const stored = await readStoredProvenance(stack, "Manual Provenance Stew");
 
   expect(stored).toEqual({
     originCountry: "IT",
@@ -252,7 +255,7 @@ test("a manual run replaces the entire group", async () => {
 });
 
 test("an automatic failure is quiet and leaves the recipe untouched and unmarked", async () => {
-  await setAutomaticEnrichment({ recipeProvenance: true });
+  await setAutomaticEnrichment(stack, { recipeProvenance: true });
 
   const ai = stack!.ai;
 
@@ -295,7 +298,7 @@ test("an automatic failure is quiet and leaves the recipe untouched and unmarked
   await expect(page.getByText("Enrichment failed")).toHaveCount(0);
 
   // And the recipe is genuinely untouched and unmarked, not merely un-errored.
-  const stored = await readStoredProvenance("Quiet Provenance Stew");
+  const stored = await readStoredProvenance(stack, "Quiet Provenance Stew");
 
   expect(stored).toEqual({
     originCountry: null,
@@ -308,7 +311,7 @@ test("an automatic failure is quiet and leaves the recipe untouched and unmarked
 });
 
 test("a genuinely unplaceable dish keeps an empty country, titled by the section itself", async () => {
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack, {});
 
   await importAndOpen("Unplaceable Fusion Bowl", [bareRecipe("Unplaceable Fusion Bowl")]);
 
@@ -338,7 +341,7 @@ test("a genuinely unplaceable dish keeps an empty country, titled by the section
     ).toBeVisible({ timeout: 3_000 });
   });
 
-  const stored = await readStoredProvenance("Unplaceable Fusion Bowl");
+  const stored = await readStoredProvenance(stack, "Unplaceable Fusion Bowl");
 
   expect(stored).toEqual({
     originCountry: null,
@@ -350,7 +353,7 @@ test("a genuinely unplaceable dish keeps an empty country, titled by the section
 });
 
 test("a rendered recipe updates in place when provenance arrives", async () => {
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack, {});
 
   await importAndOpen("Live Provenance Stew", [bareRecipe("Live Provenance Stew")]);
 
@@ -385,7 +388,7 @@ test("a manually picked country reaches the dashboard card without a reload", as
   // fields and forgot originCountry, so a card only gained its flag after a
   // full refresh — the detail cache got the full write, the list cache never
   // (see RECIPE_DASHBOARD_KEYS).
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack, {});
 
   const name = "Dashboard Flag Rigatoni";
 
@@ -416,8 +419,19 @@ test("a manually picked country reaches the dashboard card without a reload", as
 
   await expect(async () => {
     await expect(country).toBeVisible({ timeout: 5_000 });
+    // Any page scroll closes the open popover: typing scrolls an off-screen field into view,
+    // and a click retried on the still-opening option scrolls it to the top.
+    await country.scrollIntoViewIfNeeded();
+    await settled(page, () => country.boundingBox());
     await country.fill("Italy");
+    await expect(page.locator("[data-slot='combo-box-popover']")).not.toHaveAttribute(
+      "data-entering",
+      { timeout: 5_000 }
+    );
     await page.getByRole("option", { name: "Italy", exact: true }).click({ timeout: 5_000 });
+    // A scroll-closed popover swallows the click silently; only the kept text proves the pick.
+    await expect(country).toHaveAttribute("aria-expanded", "false");
+    await expect(country).toHaveValue("Italy", { timeout: 1_000 });
   }).toPass({ timeout: 60_000, intervals: [1_000, 2_000, 5_000] });
 
   await page.getByRole("button", { name: "Save Changes" }).click();

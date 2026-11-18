@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { SettingsCard } from "@/app/(app)/settings/components/settings-card";
+import { ActionButton, ActionButtonGroup } from "@/components/shared/action-button";
 import { Note } from "@/components/shared/note";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/16/solid";
 import { ServerIcon } from "@heroicons/react/24/outline";
 import {
-  Button,
   Description,
   Input,
   InputGroup,
@@ -19,25 +19,35 @@ import {
 } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
-import type { CalDavCalendarInfo } from "@norish/shared/contracts";
-
 import { useCalDavSettingsContext } from "../context";
+import { useConnectionTest } from "../use-connection-test";
 import CalDavConfigEditModal from "./caldav-config-edit-modal";
 import CalDavConfigSummary from "./caldav-config-summary";
+import { UntrustedCertificateNote } from "./untrusted-certificate-note";
 
 export default function CalDavConfigCard() {
   const t = useTranslations("settings.caldav.setup");
-  const { config, saveConfig, testConnection } = useCalDavSettingsContext();
+  const tActions = useTranslations("common.actions");
+  const tSecret = useTranslations("common.secret");
+  const { config, saveConfig, isSavingConfig: saving } = useCalDavSettingsContext();
   const {
     isOpen: isEditModalOpen,
-    onOpen: onEditModalOpen,
-    onClose: onEditModalClose,
+    open: onEditModalOpen,
+    close: onEditModalClose,
   } = useOverlayState();
 
   // Initial setup form state (only used when no config exists)
   const [serverUrl, setServerUrl] = useState("");
   const [calendarUrl, setCalendarUrl] = useState<string | null>(null);
-  const [calendars, setCalendars] = useState<CalDavCalendarInfo[]>([]);
+  const {
+    calendars,
+    testResult,
+    setTestResult,
+    testing,
+    runTest,
+    trustedCertificate,
+    trustAndRetest,
+  } = useConnectionTest(setCalendarUrl);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -45,95 +55,22 @@ export default function CalDavConfigCard() {
   const [lunchTime, setLunchTime] = useState("12:00-13:00");
   const [dinnerTime, setDinnerTime] = useState("18:00-19:00");
   const [snackTime, setSnackTime] = useState("15:00-16:00");
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{
-    success: boolean;
-    message: string;
-  } | null>(null);
 
-  // Track if we've already auto-tested to avoid duplicate calls
-  const hasAutoTestedRef = useRef(false);
-  const handleTestConnection = async () => {
-    setTesting(true);
-    setTestResult(null);
-    setCalendars([]);
-    try {
-      const result = await testConnection(serverUrl, username, password);
-      setTestResult(result);
-
-      // Store returned calendars for selection
-      if (result.success && result.calendars && result.calendars.length > 0) {
-        setCalendars(result.calendars);
-        // Auto-select first calendar
-        if (!calendarUrl) {
-          const firstCalendar = result.calendars[0];
-          if (firstCalendar) {
-            setCalendarUrl(firstCalendar.url);
-          }
-        }
-      }
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  // Auto-test connection when all credentials are filled
-  useEffect(() => {
-    // Skip if already testing or if we've already auto-tested
-    if (testing || hasAutoTestedRef.current) return;
-    if (serverUrl && username && password) {
-      hasAutoTestedRef.current = true;
-      // Use a local function to avoid dependency issues
-      const runAutoTest = async () => {
-        setTesting(true);
-        setTestResult(null);
-        setCalendars([]);
-        try {
-          const result = await testConnection(serverUrl, username, password);
-          setTestResult(result);
-
-          // Store returned calendars for selection
-          if (result.success && result.calendars && result.calendars.length > 0) {
-            setCalendars(result.calendars);
-            // Auto-select first calendar
-            if (!calendarUrl) {
-              const firstCalendar = result.calendars[0];
-              if (firstCalendar) {
-                setCalendarUrl(firstCalendar.url);
-              }
-            }
-          }
-        } finally {
-          setTesting(false);
-        }
-      };
-      runAutoTest();
-    }
-    // Reset auto-test flag if credentials change after a test
-    if (!serverUrl || !username || !password) {
-      hasAutoTestedRef.current = false;
-    }
-  }, [serverUrl, username, password, testing, testConnection, calendarUrl]);
+  const handleTestConnection = () => runTest(serverUrl, username, password, calendarUrl);
   const handleInitialSetup = async () => {
-    setSaving(true);
     setTestResult(null);
-    try {
-      await saveConfig({
-        serverUrl,
-        calendarUrl,
-        username,
-        password,
-        enabled: true,
-        breakfastTime,
-        lunchTime,
-        dinnerTime,
-        snackTime,
-      });
-      setPassword(""); // Clear password after save
-    } finally {
-      setSaving(false);
-    }
+    await saveConfig({
+      serverUrl,
+      calendarUrl,
+      username,
+      password,
+      enabled: true,
+      breakfastTime,
+      lunchTime,
+      dinnerTime,
+      snackTime,
+      trustedCertificate,
+    }).then(() => setPassword("")); // Clear password after save
   };
 
   // If config exists, show summary
@@ -156,24 +93,22 @@ export default function CalDavConfigCard() {
         <ul className="ml-4 list-disc space-y-1">
           <li>
             <Link
-              isExternal
               href="https://docs.nextcloud.com/server/latest/user_manual/en/groupware/calendar.html"
-              size="sm"
+              rel="noopener noreferrer"
               target="_blank"
             >
               Nextcloud Calendar
             </Link>
           </li>
           <li>
-            <Link isExternal href="https://radicale.org/" size="sm" target="_blank">
+            <Link href="https://radicale.org/" rel="noopener noreferrer" target="_blank">
               Radicale
             </Link>
           </li>
           <li>
             <Link
-              isExternal
               href="https://support.apple.com/guide/calendar/set-up-accounts-icl4308d6701/mac"
-              size="sm"
+              rel="noopener noreferrer"
               target="_blank"
             >
               Apple Calendar
@@ -207,6 +142,7 @@ export default function CalDavConfigCard() {
             <InputGroup.Input placeholder={t("passwordPlaceholder")} />
             <InputGroup.Suffix>
               <button
+                aria-label={showPassword ? tSecret("hide") : tSecret("reveal")}
                 className="focus:outline-none"
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -276,32 +212,40 @@ export default function CalDavConfigCard() {
         </TextField>
       </div>
 
-      {testResult && (
-        <div
-          className={`rounded-lg p-3 text-base ${testResult.success ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}
-        >
-          {testResult.message}
-        </div>
+      {testResult?.untrustedCertificate ? (
+        <UntrustedCertificateNote
+          certificate={testResult.untrustedCertificate}
+          isPending={testing}
+          onTrust={() => trustAndRetest(serverUrl, username, password, calendarUrl)}
+        />
+      ) : (
+        testResult && (
+          <div
+            className={`rounded-lg p-3 text-base ${testResult.success ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}
+          >
+            {testResult.message}
+          </div>
+        )
       )}
 
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          isDisabled={!canSave}
-          onPress={handleTestConnection}
-          variant="secondary"
+      <ActionButtonGroup>
+        <ActionButton
+          action="test"
+          isDisabled={!serverUrl || !username || !password}
           isPending={testing}
+          onPress={handleTestConnection}
         >
-          {t("testConnection")}
-        </Button>
-        <Button
+          {tActions("test")}
+        </ActionButton>
+        <ActionButton
+          action="save"
           isDisabled={!canSave}
-          onPress={handleInitialSetup}
-          variant="primary"
           isPending={saving}
+          onPress={handleInitialSetup}
         >
-          {t("saveConfiguration")}
-        </Button>
-      </div>
+          {tActions("save")}
+        </ActionButton>
+      </ActionButtonGroup>
     </SettingsCard>
   );
 }

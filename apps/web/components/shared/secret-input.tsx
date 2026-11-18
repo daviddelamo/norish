@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/16/solid";
+import { useCallback, useState } from "react";
+import { usePending } from "@/hooks/use-pending";
+import { EyeIcon, EyeSlashIcon, XMarkIcon } from "@heroicons/react/16/solid";
 import { Description, InputGroup, Label, TextField } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
@@ -17,9 +18,12 @@ interface SecretInputProps {
   isConfigured: boolean;
   /**
    * Fetches the stored secret so it can be shown. Its answer is displayed and
-   * never handed to the caller: looking at a key is not editing it.
+   * never handed to the caller: looking at a key is not editing it. Without it
+   * a stored secret is never shown.
    */
-  onReveal: () => Promise<string | null>;
+  onReveal?: () => Promise<string | null>;
+  /** Removes the stored secret on save, where a form has something to fall back to. */
+  onClear?: () => void;
   placeholder?: string;
   description?: string;
   isDisabled?: boolean;
@@ -31,7 +35,7 @@ interface SecretInputProps {
 const STORED_PLACEHOLDER = "••••••••••••";
 
 /**
- * A password field with a show/hide button — nothing more.
+ * A password field with a show/hide button, and a remove button where `onClear` is given.
  *
  * The field is always typable. An empty field means "keep what is stored",
  * which is exactly what the server does with an omitted secret, so the two
@@ -46,6 +50,7 @@ export default function SecretInput({
   onValueChange,
   isConfigured,
   onReveal,
+  onClear,
   placeholder = "Enter value",
   description,
   isDisabled = false,
@@ -55,31 +60,36 @@ export default function SecretInput({
   const t = useTranslations("common.secret");
   const [storedSecret, setStoredSecret] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, whileLoading] = usePending();
+  const [wasConfigured, setWasConfigured] = useState(isConfigured);
 
   // A secret that was deleted, or a provider that changed under the form, is no
   // longer the one on screen.
-  useEffect(() => {
+  if (isConfigured !== wasConfigured) {
+    setWasConfigured(isConfigured);
+
     if (!isConfigured) {
       setStoredSecret(null);
       setIsVisible(false);
     }
-  }, [isConfigured]);
+  }
 
   // What is typed wins over what is stored; with neither, the field is empty
   // and its placeholder says a value is already saved.
   const hasTypedValue = value !== "";
   const displayValue = hasTypedValue ? value : (storedSecret ?? "");
-  const hasSomethingToShow = hasTypedValue || isConfigured;
+  const hasSomethingToShow = hasTypedValue || (isConfigured && onReveal !== undefined);
+  const canClear = isConfigured && !hasTypedValue && onClear !== undefined;
 
   const handleChange = useCallback(
     (next: string) => {
       // Editing a revealed secret makes it the caller's value, so the reveal
-      // stops standing in for it.
+      // stops standing in for it. Deleting it all is asking for it to go.
+      if (next === "" && storedSecret !== null) onClear?.();
       setStoredSecret(null);
       onValueChange(next);
     },
-    [onValueChange]
+    [onClear, onValueChange, storedSecret]
   );
 
   const handleToggleVisibility = useCallback(async () => {
@@ -89,16 +99,11 @@ export default function SecretInput({
       return;
     }
 
-    if (!hasTypedValue && isConfigured && storedSecret === null) {
-      setIsLoading(true);
-      try {
-        setStoredSecret(await onReveal());
-      } finally {
-        setIsLoading(false);
-      }
+    if (!hasTypedValue && isConfigured && storedSecret === null && onReveal) {
+      await whileLoading(() => onReveal().then(setStoredSecret));
     }
     setIsVisible(true);
-  }, [hasTypedValue, isConfigured, isVisible, onReveal, storedSecret]);
+  }, [hasTypedValue, isConfigured, isVisible, onReveal, storedSecret, whileLoading]);
 
   // Two sentences that have to read as two: a caller's description written
   // without a full stop otherwise runs straight into the hint after it.
@@ -124,18 +129,32 @@ export default function SecretInput({
         <InputGroup.Input
           placeholder={isConfigured && !hasTypedValue ? STORED_PLACEHOLDER : placeholder}
         />
-        {hasSomethingToShow && (
-          <InputGroup.Suffix>
-            <button
-              aria-label={isVisible ? t("hide") : t("reveal")}
-              className="text-muted hover:text-foreground focus:outline-none disabled:opacity-50"
-              disabled={isDisabled || isLoading}
-              title={isVisible ? t("hide") : t("reveal")}
-              type="button"
-              onClick={handleToggleVisibility}
-            >
-              {isVisible ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-            </button>
+        {(hasSomethingToShow || canClear) && (
+          <InputGroup.Suffix className="flex items-center gap-2">
+            {canClear && (
+              <button
+                aria-label={t("clear")}
+                className="text-muted hover:text-foreground focus:outline-none disabled:opacity-50"
+                disabled={isDisabled}
+                title={t("clear")}
+                type="button"
+                onClick={onClear}
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            )}
+            {hasSomethingToShow && (
+              <button
+                aria-label={isVisible ? t("hide") : t("reveal")}
+                className="text-muted hover:text-foreground focus:outline-none disabled:opacity-50"
+                disabled={isDisabled || isLoading}
+                title={isVisible ? t("hide") : t("reveal")}
+                type="button"
+                onClick={handleToggleVisibility}
+              >
+                {isVisible ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              </button>
+            )}
           </InputGroup.Suffix>
         )}
       </InputGroup>

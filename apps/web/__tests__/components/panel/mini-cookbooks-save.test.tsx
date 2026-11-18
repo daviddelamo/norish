@@ -8,7 +8,7 @@
 import type { ReactNode } from "react";
 import MiniCookbooks from "@/components/Panel/consumers/mini-cookbooks";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const setMembership = vi.fn();
 const createCookbook = vi.fn(() => Promise.resolve("new-id"));
@@ -95,14 +95,10 @@ vi.mock("@heroui/react", () => {
 });
 
 function renderPanel() {
-  return render(<MiniCookbooks open recipeId="recipe-1" onOpenChange={vi.fn()} />);
+  return render(<MiniCookbooks open recipeIds={["recipe-1"]} onOpenChange={vi.fn()} />);
 }
 
 describe("MiniCookbooks", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("writes nothing until Save", () => {
     renderPanel();
 
@@ -113,7 +109,11 @@ describe("MiniCookbooks", () => {
     fireEvent.click(screen.getByTestId("save-cookbook-membership"));
 
     expect(setMembership).toHaveBeenCalledWith(
-      expect.objectContaining({ cookbookId: "cookbook-1", recipeId: "recipe-1", isMember: true })
+      expect.objectContaining({
+        cookbookId: "cookbook-1",
+        recipeIds: ["recipe-1"],
+        isMember: true,
+      })
     );
   });
 
@@ -153,6 +153,6 @@ describe("MiniCookbooks", () => {
 
     fireEvent.click(screen.getByTestId("save-cookbook-membership"));
 
-    expect(createCookbook).toHaveBeenCalledWith({ title: "Christmas", recipeId: "recipe-1" });
+    expect(createCookbook).toHaveBeenCalledWith({ title: "Christmas", recipeIds: ["recipe-1"] });
   });
 });

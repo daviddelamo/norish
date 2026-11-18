@@ -18,13 +18,17 @@ type Dependencies = CreateCookbookHooksOptions & {
 export function createUseCookbooksMutations({
   useTRPC,
   shouldPreserveOptimisticUpdate: preserve,
-  usePromoteCreatedCookbook,
   useCurrentUserId,
   useCookbooksCacheHelpers,
 }: Dependencies) {
+  // Settled once here rather than called with `?.()`: the compiler only
+  // compiles a hook whose hooks it sees called unconditionally.
+  const useCurrentUserIdOrNone = useCurrentUserId ?? (() => undefined);
+
   return function useCookbooksMutations(): CookbooksMutationsResult {
+    "use memo";
+
     const trpc = useTRPC();
-    const promoteCreatedCookbook = usePromoteCreatedCookbook?.();
     const {
       setAllCookbooksData,
       invalidate,
@@ -33,18 +37,23 @@ export function createUseCookbooksMutations({
       patchRecipeMembership,
       seedCookbook,
     } = useCookbooksCacheHelpers();
-    const currentUserId = useCurrentUserId?.();
+    const currentUserId = useCurrentUserIdOrNone();
 
     const createMutation = useMutation(trpc.cookbooks.create.mutationOptions());
+    const { mutate: mutateCreate } = createMutation;
     const updateMutation = useMutation(trpc.cookbooks.update.mutationOptions());
+    const { mutate: mutateUpdate } = updateMutation;
     const deleteMutation = useMutation(trpc.cookbooks.remove.mutationOptions());
+    const { mutate: mutateDelete } = deleteMutation;
     const membershipMutation = useMutation(trpc.cookbooks.setMembership.mutationOptions());
+    const { mutate: mutateMembership } = membershipMutation;
     const uploadImageMutation = useMutation(trpc.cookbooks.uploadImage.mutationOptions());
+    const { mutateAsync: mutateUploadImageAsync } = uploadImageMutation;
 
     const invalidateUnlessQueued = invalidateUnlessPreserved(invalidate, preserve);
 
     const createCookbook = useCallback(
-      ({ title, recipeId }: { title: string; recipeId?: string }) => {
+      ({ title, recipeIds = [] }: { title: string; recipeIds?: string[] }) => {
         // Minted here, so filing queued behind an Offline create still points
         // at the right cookbook once replayed (ADR-0003).
         const id = createClientId();
@@ -59,7 +68,7 @@ export function createUseCookbooksMutations({
           createdAt: now,
           updatedAt: now,
           version: 1,
-          memberCount: recipeId ? 1 : 0,
+          memberCount: recipeIds.length,
           image: null,
           coverImages: [],
           // Everything a card derives from the members is left empty: the
@@ -71,26 +80,18 @@ export function createUseCookbooksMutations({
           minServings: null,
         };
 
-        /**
-         * Seed the cookbook's own read and hold it at the offline cache's
-         * lifetime, so it is in the guaranteed floor from the moment it exists
-         * and its page opens straight away — Offline included (ADR-0008).
-         * Promotion alone cannot do this: there is nothing to promote until
-         * something has written the entry.
-         */
-        const adopt = (cookbook: CookbookSummaryDTO) => {
-          seedCookbook(cookbook);
-          promoteCreatedCookbook?.(cookbook.id);
-        };
-
         return new Promise<string>((resolve, reject) => {
-          createMutation.mutate(
-            { id, title, recipeId },
+          mutateCreate(
+            { id, title, recipeIds },
             {
               onSuccess: (cookbook) => {
                 invalidate();
-                if (recipeId) invalidateMembership(recipeId);
-                adopt(cookbook ?? tentative);
+                for (const recipeId of recipeIds) invalidateMembership(recipeId);
+                // Seeding the cookbook's own read opens its page straight away,
+                // Offline included; the web client holds that read at the
+                // offline cache's lifetime, so it is in the floor from the
+                // moment it exists (ADR-0008).
+                seedCookbook(cookbook ?? tentative);
                 resolve(id);
               },
               onError: (error) => {
@@ -117,7 +118,7 @@ export function createUseCookbooksMutations({
                       ],
                     };
                   });
-                  adopt(tentative);
+                  seedCookbook(tentative);
                   resolve(id);
 
                   return;
@@ -137,13 +138,11 @@ export function createUseCookbooksMutations({
         invalidateMembership,
         setAllCookbooksData,
         seedCookbook,
-        promoteCreatedCookbook,
-        preserve,
       ]
     );
 
     /**
-     * File a recipe into a cookbook, or take it out. The same call both ways,
+     * File recipes into a cookbook, or take them out. The same call both ways,
      * so undoing a mistake is not a hunt for a different control.
      *
      * The toggle is applied tentatively — including the member count, which is
@@ -162,12 +161,12 @@ export function createUseCookbooksMutations({
     const setMembership = useCallback(
       ({
         cookbookId,
-        recipeId,
+        recipeIds,
         isMember,
         cookbook,
       }: {
         cookbookId: string;
-        recipeId: string;
+        recipeIds: string[];
         isMember: boolean;
         /** The row as the caller has it, for the tentative patch. */
         cookbook?: CookbookSummaryDTO;
@@ -186,7 +185,10 @@ export function createUseCookbooksMutations({
 
                 const next = {
                   ...entry,
-                  memberCount: Math.max(0, entry.memberCount + (isMember ? 1 : -1)),
+                  memberCount: Math.max(
+                    0,
+                    entry.memberCount + (isMember ? recipeIds.length : -recipeIds.length)
+                  ),
                   // Filing keeps them: every member they describe is still in
                   // here, so they are merely incomplete until the echo adds the
                   // newcomer. Unfiling cannot say that.
@@ -210,14 +212,14 @@ export function createUseCookbooksMutations({
         });
 
         if (patched) {
-          patchRecipeMembership(recipeId, patched, isMember);
+          for (const recipeId of recipeIds) patchRecipeMembership(recipeId, patched, isMember);
         }
 
-        membershipMutation.mutate(
-          { cookbookId, recipeId, isMember },
+        mutateMembership(
+          { cookbookId, recipeIds, isMember },
           {
             onSuccess: () => {
-              invalidateMembership(recipeId);
+              for (const recipeId of recipeIds) invalidateMembership(recipeId);
               invalidateCookbook(cookbookId);
               // The lists too, rather than waiting on the echo for them: the
               // derived facts this cleared above are the server's to answer,
@@ -271,7 +273,7 @@ export function createUseCookbooksMutations({
           };
         });
 
-        updateMutation.mutate(
+        mutateUpdate(
           { id, title, image, version },
           {
             onSuccess: () => invalidateCookbook(id),
@@ -301,7 +303,7 @@ export function createUseCookbooksMutations({
           };
         });
 
-        deleteMutation.mutate({ id, version }, { onError: invalidateUnlessQueued });
+        mutateDelete({ id, version }, { onError: invalidateUnlessQueued });
       },
       [deleteMutation, setAllCookbooksData, invalidateUnlessQueued]
     );
@@ -314,7 +316,7 @@ export function createUseCookbooksMutations({
         formData.append("cookbookId", cookbookId);
         formData.append("image", file);
 
-        const result = await uploadImageMutation.mutateAsync(formData);
+        const result = await mutateUploadImageAsync(formData);
 
         if (!result.success) throw new Error(result.error);
 

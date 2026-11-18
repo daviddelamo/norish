@@ -1,18 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActionButton, ActionButtonGroup } from "@/components/shared/action-button";
 import SecretInput from "@/components/shared/secret-input";
 import { useAvailableModelsQuery } from "@/hooks/admin";
-import {
-  Button,
-  ComboBox,
-  Description,
-  Input,
-  Label,
-  ListBox,
-  Select,
-  TextField,
-} from "@heroui/react";
+import { usePending } from "@/hooks/use-pending";
+import { ComboBox, Description, Input, Label, ListBox, Select, TextField } from "@heroui/react";
 import { useTranslations } from "next-intl";
 
 import type { ImageGenerationProvider } from "@norish/config/zod/server-config";
@@ -54,15 +47,19 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
   const [model, setModel] = useState(imageGenerationConfig?.model ?? "");
   const [endpoint, setEndpoint] = useState(imageGenerationConfig?.endpoint ?? "");
   const [apiKey, setApiKey] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [isApiKeyCleared, setIsApiKeyCleared] = useState(false);
+  const [saving, whileSaving] = usePending();
 
-  useEffect(() => {
+  const [prevImageGenerationConfig, setPrevImageGenerationConfig] = useState(imageGenerationConfig);
+
+  if (imageGenerationConfig !== prevImageGenerationConfig) {
+    setPrevImageGenerationConfig(imageGenerationConfig);
     if (imageGenerationConfig) {
       setProvider(imageGenerationConfig.provider);
       setModel(imageGenerationConfig.model ?? "");
       setEndpoint(imageGenerationConfig.endpoint ?? "");
     }
-  }, [imageGenerationConfig]);
+  }
 
   const enabled = provider !== "disabled";
   const needsEndpoint = enabled && imageGenerationProviderNeedsEndpoint(provider);
@@ -77,7 +74,9 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
   // then offered to reveal a secret that was never stored here, and refused
   // to be typed into because it believed it was already filled.
   const hasOwnApiKey =
-    !!imageGenerationConfig?.apiKey && imageGenerationConfig.provider === provider;
+    !isApiKeyCleared &&
+    !!imageGenerationConfig?.apiKey &&
+    imageGenerationConfig.provider === provider;
   const inheritsAiApiKey = !hasOwnApiKey && aiProviderMatches && !!aiConfig?.apiKey;
 
   const canFetchModels =
@@ -118,7 +117,8 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
       provider !== (stored?.provider ?? "disabled") ||
       model !== (stored?.model ?? "") ||
       endpoint !== (stored?.endpoint ?? "") ||
-      apiKey.trim() !== ""
+      apiKey.trim() !== "" ||
+      isApiKeyCleared
     );
   }, [imageGenerationConfig, provider, model, endpoint, apiKey]);
 
@@ -129,18 +129,21 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
   // The key worth showing is the one a request would actually run with: this
   // block's own, or the AI configuration's when that is what it borrows.
   const handleRevealApiKey = useCallback(async () => {
-    const own = await fetchConfigSecret(ServerConfigKeys.IMAGE_GENERATION_CONFIG, "apiKey");
+    const own = isApiKeyCleared
+      ? null
+      : await fetchConfigSecret(ServerConfigKeys.IMAGE_GENERATION_CONFIG, "apiKey");
 
     if (own) return own;
 
     return inheritsAiApiKey ? await fetchConfigSecret(ServerConfigKeys.AI_CONFIG, "apiKey") : null;
-  }, [fetchConfigSecret, inheritsAiApiKey]);
+  }, [fetchConfigSecret, inheritsAiApiKey, isApiKeyCleared]);
 
   const handleProviderChange = (newProvider: ImageGenerationProvider) => {
     if (newProvider === provider) return;
     setProvider(newProvider);
     // Model names and keys never carry across providers.
     setApiKey("");
+    setIsApiKeyCleared(false);
     setModel("");
     if (!imageGenerationProviderNeedsEndpoint(newProvider) && newProvider !== "azure") {
       setEndpoint("");
@@ -148,19 +151,18 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      await updateImageGenerationConfig({
+    await whileSaving(() =>
+      updateImageGenerationConfig({
         provider,
         model: model || undefined,
         endpoint: endpoint || undefined,
-        // An empty key preserves the stored one on the server.
-        apiKey: apiKey || undefined,
-      });
-      setApiKey("");
-    } finally {
-      setSaving(false);
-    }
+        // Empty removes the stored key, so the AI key is used; omitted keeps it.
+        apiKey: apiKey || (isApiKeyCleared ? "" : undefined),
+      }).then(() => {
+        setApiKey("");
+        setIsApiKeyCleared(false);
+      })
+    );
   };
 
   return (
@@ -230,6 +232,7 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
           label={t("apiKey")}
           placeholder={t("apiKeyPlaceholder")}
           value={apiKey}
+          onClear={hasOwnApiKey ? () => setIsApiKeyCleared(true) : undefined}
           onReveal={handleRevealApiKey}
           onValueChange={setApiKey}
         />
@@ -241,7 +244,7 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
           inputValue={model}
           isDisabled={!canFetchModels}
           onInputChange={setModel}
-          onSelectionChange={(key) => key && setModel(key as string)}
+          onChange={(key) => key && setModel(key as string)}
         >
           <Label>{t("model")}</Label>
           <ComboBox.InputGroup>
@@ -265,11 +268,16 @@ export default function ImageGenerationForm({ onDirtyChange }: ImageGenerationFo
         </ComboBox>
       )}
 
-      <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
-        <Button isDisabled={!hasChanges} onPress={handleSave} variant="primary" isPending={saving}>
+      <ActionButtonGroup className="pt-2">
+        <ActionButton
+          action="save"
+          isDisabled={!hasChanges}
+          isPending={saving}
+          onPress={handleSave}
+        >
           {tActions("save")}
-        </Button>
-      </div>
+        </ActionButton>
+      </ActionButtonGroup>
     </div>
   );
 }

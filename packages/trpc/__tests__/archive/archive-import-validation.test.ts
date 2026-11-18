@@ -1,6 +1,6 @@
 // @vitest-environment node
 import JSZip from "jszip";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { archiveRouter } from "@norish/trpc/routers/archive/archive";
 
@@ -56,10 +56,6 @@ vi.mock("@norish/shared-server/config/server-config-loader", () => ({
 }));
 
 describe("archiveRouter.importArchive", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("accepts .paprikarecipes files", async () => {
     const caller = archiveRouter.createCaller({
       user: {
@@ -314,12 +310,12 @@ describe("archiveRouter.importArchive", () => {
     expect(cookbooks.publish).toHaveBeenCalledWith("created", { cookbook: made }, target);
     expect(cookbooks.publish).toHaveBeenCalledWith(
       "membershipChanged",
-      { cookbookId: made.id, recipeId: "recipe-1", isMember: true },
+      { cookbookId: made.id, recipeIds: ["recipe-1"], isMember: true },
       target
     );
     expect(cookbooks.publish).toHaveBeenCalledWith(
       "membershipChanged",
-      { cookbookId: made.id, recipeId: "recipe-2", isMember: true },
+      { cookbookId: made.id, recipeIds: ["recipe-2"], isMember: true },
       target
     );
   });

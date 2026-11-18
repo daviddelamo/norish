@@ -50,7 +50,8 @@
     "viewGroceries": "Zobacz zakupy",
     "addToCalendar": "Dodaj do kalendarza",
     "deleteRecipe": "Usuń przepis",
-    "recipeOptions": "Opcje przepisu"
+    "recipeOptions": "Opcje przepisu",
+    "pantryCoverage": "{percent} składników w domu"
   },
   "detail": {
     "viewOriginal": "Zobacz oryginalny przepis",
@@ -76,7 +77,8 @@
     "source": "Źródło",
     "addedBy": "Dodane przez {name}",
     "decreaseServings": "Mniej porcji",
-    "increaseServings": "Więcej porcji"
+    "increaseServings": "Więcej porcji",
+    "multiplier": "Mnożnik"
   },
   "actions": {
     "plan": "Zaplanuj",
@@ -162,7 +164,9 @@
   "deleteModal": {
     "title": "Usuń przepis",
     "confirmMessage": "Czy na pewno chcesz usunąć \"{recipeName}\"?",
-    "warning": "Tej akcji nie można cofnąć."
+    "warning": "Tej akcji nie można cofnąć.",
+    "confirmCount": "Usunąć {count, plural, one {# przepis} few {# przepisy} many {# przepisów} other {# przepisu}}?",
+    "keptCount": "Pozostaje {count, plural, one {# przepis} few {# przepisy} many {# przepisów} other {# przepisu}}, ponieważ nie możesz {count, plural, one {go} few {ich} many {ich} other {ich}} usunąć."
   },
   "form": {
     "createTitle": "Utwórz przepis",
@@ -319,10 +323,14 @@
     "imported": "Przepis zaimportowany",
     "failed": "Operacja na przepisie nie powiodła się",
     "failedDescription": "Coś poszło nie tak. Sprawdź konsolę przeglądarki.",
+    "incomplete": "Ten przepis może być niekompletny. Porównaj go ze źródłem.",
+    "notARecipe": "Ta strona nie wygląda na przepis.",
+    "privateAddress": "Importowanie z prywatnych adresów sieciowych jest na tym serwerze niedozwolone.",
     "batchImported": "Przepisy zaimportowane",
     "batchImportedDescription": "{count} przepisów zaimportowanych z archiwum",
     "view": "Zobacz",
-    "open": "Otwórz"
+    "open": "Otwórz",
+    "deleteKept": "Ktoś inny zmienił {count, plural, one {# przepis} few {# przepisy} many {# przepisów} other {# przepisu}}, więc {count, plural, one {został zachowany} few {zostały zachowane} many {zostały zachowane} other {zostały zachowane}}."
   },
   "tags": {
     "panel": {
@@ -423,5 +431,23 @@
     "removeImage": "Usuń obraz",
     "imageUploadFailed": "Nie udało się przesłać obrazu.",
     "imageNeedsConnection": "Obrazy możesz zmienić, gdy znów będziesz online."
+  },
+  "print": {
+    "title": "Drukuj przepis",
+    "includePhoto": "Dołącz zdjęcie",
+    "textSize": "Rozmiar tekstu",
+    "print": "Drukuj / Zapisz PDF",
+    "continued": "ciąg dalszy",
+    "perServing": "Na porcję"
+  },
+  "selection": {
+    "toolbar": "Zaznaczone przepisy",
+    "count": "Zaznaczono: {count}",
+    "clear": "Wyczyść zaznaczenie",
+    "addToCookbook": "Dodaj do książki kucharskiej",
+    "remove": "Usuń z książki",
+    "newCookbook": "Nowa książka kucharska",
+    "filedInto": "Dodano {count, plural, one {# przepis} few {# przepisy} many {# przepisów} other {# przepisu}} do {title}",
+    "filedIntoMany": "Dodano {count, plural, one {# przepis} few {# przepisy} many {# przepisów} other {# przepisu}} do {cookbooks} książek kucharskich"
   }
 }

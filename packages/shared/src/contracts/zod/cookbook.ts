@@ -60,17 +60,13 @@ export const CookbookCreateInputSchema = z.object({
   // at the right cookbook once replayed (ADR-0003).
   id: clientMintedId,
   title: CookbookTitleSchema,
-  /**
-   * File this recipe into the new cookbook in one step, so "these two belong
-   * together" is one decision rather than two. Needs view rights on the
-   * recipe and nothing more (ADR-0027).
-   */
-  recipeId: z.uuid().optional(),
+  /** Filed in the same step; view rights on each suffice (ADR-0027), gone or unseen ones are left out. */
+  recipeIds: z.array(z.uuid()).default([]),
 });
 
 export const CookbookMembershipInputSchema = z.object({
   cookbookId: z.uuid(),
-  recipeId: z.uuid(),
+  recipeIds: z.array(z.uuid()).min(1),
   /** Where the toggle has been left: in the cookbook, or out of it. */
   isMember: z.boolean(),
 });
@@ -78,6 +74,11 @@ export const CookbookMembershipInputSchema = z.object({
 export const CookbookForRecipeInputSchema = z.object({
   recipeId: z.uuid(),
 });
+
+const PantryOnlySchema = z
+  .boolean()
+  .default(false)
+  .describe("Restrict to recipes the household's Pantry covers every food of. Recipes only.");
 
 /**
  * A cookbook's members, read through the recipe list's own input so the page
@@ -89,6 +90,7 @@ export const CookbookRecipesInputSchema = RecipeListInputSchema.extend({
     .boolean()
     .default(false)
     .describe("Restrict to the caller's favourites, as the Library's own list does."),
+  pantryOnly: PantryOnlySchema,
 });
 
 export const CookbookUpdateInputSchema = z
@@ -178,6 +180,7 @@ export const LibraryListInputSchema = RecipeListInputSchema.extend({
     .boolean()
     .default(false)
     .describe("Restrict to the caller's favourites. Recipes only."),
+  pantryOnly: PantryOnlySchema,
 });
 
 export const LibraryListResultSchema = z.object({

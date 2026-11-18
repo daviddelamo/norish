@@ -27,6 +27,10 @@ export const sourceNutritionSchema = z
 
 export type SourceNutrition = z.infer<typeof sourceNutritionSchema>;
 
+/** How a list keeps the sections the source splits it into. */
+const SECTION_RULE =
+  'A section heading the source gives, like "For the sauce", is a line of its own starting with "# ".';
+
 /**
  * Dual-system recipe schema for AI extraction.
  * Extracts both metric and US measurements simultaneously.
@@ -53,20 +57,33 @@ export const recipeExtractionSchema = z
       .nullable()
       .describe("Cooking time in ISO 8601 duration format (e.g., PT1H)"),
     totalTime: z.string().nullable().describe("Total time in ISO 8601 duration format"),
+    sourceSystem: z
+      .enum(["metric", "us"])
+      .describe("The measurement system the source writes its amounts in"),
     recipeIngredient: z
       .object({
         metric: z
           .array(z.string())
-          .describe("Ingredients with metric measurements (g, ml, kg, L, °C)"),
+          .describe(`Ingredients with metric measurements (g, ml, kg, L, °C). ${SECTION_RULE}`),
         us: z
           .array(z.string())
-          .describe("Ingredients with US measurements (cups, tbsp, tsp, oz, lb, °F)"),
+          .describe(
+            `Ingredients with US measurements (cups, tbsp, tsp, oz, lb, °F). ${SECTION_RULE}`
+          ),
       })
       .strict(),
     recipeInstructions: z
       .object({
-        metric: z.array(z.string()).describe("Cooking steps with metric measurements"),
-        us: z.array(z.string()).describe("Cooking steps with US measurements"),
+        metric: z
+          .array(z.string())
+          .describe(
+            `Cooking steps with metric measurements. Empty when the source states none; never invent steps. ${SECTION_RULE}`
+          ),
+        us: z
+          .array(z.string())
+          .describe(
+            `Cooking steps with US measurements. Empty when the source states none; never invent steps. ${SECTION_RULE}`
+          ),
       })
       .strict(),
     keywords: z
@@ -84,6 +101,12 @@ export const recipeExtractionSchema = z
         "Meal categories the source explicitly states, from: Breakfast, Lunch, Dinner, Snack. Empty when the source states none."
       ),
     nutrition: sourceNutritionSchema,
+    videoUrl: z
+      .string()
+      .nullable()
+      .describe(
+        "The URL from the VIDEOS ON THE PAGE list that shows this recipe, copied exactly. Null when none does."
+      ),
   })
   .strict();
 

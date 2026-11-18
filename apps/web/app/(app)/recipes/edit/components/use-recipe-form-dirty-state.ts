@@ -7,6 +7,7 @@ import { useMemo } from "react";
 
 import type { UnitsMap } from "@norish/config/zod/server-config";
 import type { FullRecipeDTO, MeasurementSystem, RecipeCategory } from "@norish/shared/contracts";
+import type { UnitStyle } from "@norish/shared/contracts/zod/device-preferences";
 import { useDirtyState } from "@norish/shared-react/hooks";
 import { formatUnit } from "@norish/shared/lib/unit-localization";
 
@@ -17,7 +18,7 @@ interface RecipeFormState {
   description: string;
   notes: string;
   url: string;
-  servings: number;
+  servings: number | null;
   prepMinutes: number | null;
   cookMinutes: number | null;
   totalMinutes: number | null;
@@ -41,9 +42,11 @@ interface UseRecipeFormDirtyStateOptions {
   locale: string;
   mode: "create" | "edit";
   units: UnitsMap;
+  unitStyle: UnitStyle;
 }
 
-function buildInitialMedia(initialData?: FullRecipeDTO): RecipeGalleryMedia[] {
+/** A recipe's images and videos as the media editor holds them, in one order. */
+export function buildInitialMedia(initialData?: FullRecipeDTO): RecipeGalleryMedia[] {
   const media: RecipeGalleryMedia[] = [];
 
   if (initialData?.images && initialData.images.length > 0) {
@@ -56,8 +59,6 @@ function buildInitialMedia(initialData?: FullRecipeDTO): RecipeGalleryMedia[] {
         version: img.version,
       });
     });
-  } else if (initialData?.image) {
-    media.push({ type: "image", src: initialData.image, order: 0 });
   }
 
   if (initialData?.videos && initialData.videos.length > 0) {
@@ -84,6 +85,7 @@ export function useRecipeFormDirtyState({
   locale,
   mode,
   units,
+  unitStyle,
 }: UseRecipeFormDirtyStateOptions): boolean {
   const initial = useMemo<RecipeFormState>(() => {
     const filteredIngredients =
@@ -111,7 +113,7 @@ export function useRecipeFormDirtyState({
         version: ing.version,
         ingredientName: ing.ingredientName,
         amount: ing.amount,
-        unit: ing.unit ? formatUnit(ing.unit, locale, units, ing.amount) : null,
+        unit: ing.unit ? formatUnit(ing.unit, locale, units, ing.amount, unitStyle) : null,
         order: ing.order,
         systemUsed: ing.systemUsed,
       })),
@@ -137,7 +139,7 @@ export function useRecipeFormDirtyState({
         cuisineIds: initialData?.cuisines.map((cuisine) => cuisine.id) ?? [],
       },
     };
-  }, [initialData, locale, mode, units]);
+  }, [initialData, locale, mode, units, unitStyle]);
 
   const isDirty = useDirtyState(current, initial);
   const isReady = mode !== "edit" || !initialData || initializedRecipeId === initialData.id;

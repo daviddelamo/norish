@@ -50,7 +50,8 @@
     "viewGroceries": "Näytä ostokset",
     "addToCalendar": "Lisää kalenteriin",
     "deleteRecipe": "Poista resepti",
-    "recipeOptions": "Reseptin asetukset"
+    "recipeOptions": "Reseptin asetukset",
+    "pantryCoverage": "{percent} aineksista kotona"
   },
   "detail": {
     "viewOriginal": "Näytä alkuperäinen resepti",
@@ -76,7 +77,8 @@
     "source": "Lähde",
     "addedBy": "Lisännyt {name}",
     "decreaseServings": "Vähemmän annoksia",
-    "increaseServings": "Enemmän annoksia"
+    "increaseServings": "Enemmän annoksia",
+    "multiplier": "Kerroin"
   },
   "actions": {
     "plan": "Suunnittele",
@@ -162,7 +164,9 @@
   "deleteModal": {
     "title": "Poista resepti",
     "confirmMessage": "Haluatko varmasti poistaa reseptin \"{recipeName}\"?",
-    "warning": "Tätä toimintoa ei voi kumota."
+    "warning": "Tätä toimintoa ei voi kumota.",
+    "confirmCount": "Poistetaanko {count, plural, one {# resepti} other {# reseptiä}}?",
+    "keptCount": "{count, plural, one {# resepti jää} other {# reseptiä jää}}, koska sinulla ei ole oikeutta poistaa {count, plural, one {sitä} other {niitä}}."
   },
   "form": {
     "createTitle": "Luo resepti",
@@ -319,10 +323,14 @@
     "imported": "Resepti tuotu",
     "failed": "Reseptitoiminto epäonnistui",
     "failedDescription": "Reseptin käsittelyssä meni jokin pieleen. Tekniset tiedot löytyvät selaimen konsolista.",
+    "incomplete": "Tämä resepti voi olla puutteellinen. Vertaa sitä lähteeseen.",
+    "notARecipe": "Tämä sivu ei näytä reseptiltä.",
+    "privateAddress": "Tuonnit yksityisistä verkko-osoitteista eivät ole sallittuja tällä palvelimella.",
     "batchImported": "Reseptit tuotu",
     "batchImportedDescription": "{count} reseptiä tuotu arkistosta",
     "view": "Näytä",
-    "open": "Avaa"
+    "open": "Avaa",
+    "deleteKept": "{count, plural, one {Joku muu muutti # reseptiä, ja se säilytettiin} other {Joku muu muutti # reseptiä, ja ne säilytettiin}}."
   },
   "tags": {
     "panel": {
@@ -423,5 +431,23 @@
     "removeImage": "Poista kuva",
     "imageUploadFailed": "Kuvan lataaminen epäonnistui.",
     "imageNeedsConnection": "Kuvia voi vaihtaa, kun olet taas verkossa."
+  },
+  "print": {
+    "title": "Tulosta resepti",
+    "includePhoto": "Sisällytä kuva",
+    "textSize": "Tekstin koko",
+    "print": "Tulosta / Tallenna PDF",
+    "continued": "jatkuu",
+    "perServing": "Annosta kohden"
+  },
+  "selection": {
+    "toolbar": "Valitut reseptit",
+    "count": "{count} valittu",
+    "clear": "Tyhjennä valinta",
+    "addToCookbook": "Lisää keittokirjaan",
+    "remove": "Poista",
+    "newCookbook": "Uusi keittokirja",
+    "filedInto": "{count, plural, one {# resepti lisätty} other {# reseptiä lisätty}} kohteeseen {title}",
+    "filedIntoMany": "{count, plural, one {# resepti lisätty} other {# reseptiä lisätty}} {cookbooks} keittokirjaan"
   }
 }

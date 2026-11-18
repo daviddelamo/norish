@@ -7,10 +7,8 @@
  *
  * 1. A clean install shows the shipped defaults in the admin form without
  *    pinning a copy of them in the database.
- * 2. An upgrade boot releases a pre-0.20 row frozen by the old row-level
- *    isOverridden flag — the admin form and the model both get the current
- *    defaults — while the one prompt the administrator actually wrote
- *    survives and keeps reaching the model.
+ * 2. A prompt the administrator wrote survives a restart and keeps reaching
+ *    the model, while every other prompt follows the shipped default.
  * 3. Saving the form stores only real edits, and reverting a prompt to the
  *    default text un-pins it, so a save can never freeze prompts again.
  */
@@ -34,18 +32,6 @@ function currentDefault(file: string): string {
   return readFileSync(join(PROMPTS_DIR, `${file}.txt`), "utf-8").trim();
 }
 
-/** The oldest default a release ever shipped for a field — what a long-lived deployment's database still holds. */
-function oldestRetiredDefault(field: string): string {
-  const retired = JSON.parse(
-    readFileSync(join(PROMPTS_DIR, "retired-defaults.json"), "utf-8")
-  ) as Record<string, string[] | undefined>;
-  const oldest = retired[field]?.at(-1);
-
-  if (!oldest) throw new Error(`retired-defaults.json records no retired default for "${field}".`);
-
-  return oldest;
-}
-
 const FIELD_LABELS = {
   recipeExtraction: "Recipe extraction prompt",
   unitConversion: "Unit conversion prompt",
@@ -63,6 +49,7 @@ function bareRecipe(name: string) {
     prepTime: null,
     cookTime: null,
     totalTime: null,
+    sourceSystem: "metric",
     recipeIngredient: {
       metric: ["200 g pinto beans", "1 L vegetable stock"],
       us: ["7 oz pinto beans", "4 cups vegetable stock"],
@@ -73,6 +60,7 @@ function bareRecipe(name: string) {
     },
     keywords: null,
     allergyIndications: [],
+    videoUrl: null,
     categories: [],
     nutrition: { calories: null, fat: null, carbs: null, protein: null },
   };
@@ -90,11 +78,11 @@ test.beforeEach(async ({ aiStack, page: fixturePage }) => {
   ai = aiStack.ai;
   page = fixturePage;
   await writePromptsRow({});
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack, {});
 });
 
 test.afterEach(async () => {
-  await setAutomaticEnrichment({}).catch(() => undefined);
+  await setAutomaticEnrichment(stack, {}).catch(() => undefined);
   await writePromptsRow({}).catch(() => undefined);
 });
 
@@ -129,44 +117,24 @@ test("a clean install shows the shipped defaults without pinning them", async ()
   expect(row).toEqual({});
 });
 
-test("an upgrade releases prompts frozen by a pre-0.20 save and keeps the real customization", async () => {
-  // A deployment that saved the prompts form once, long ago: the row is
-  // flagged isOverridden and carries old shipped defaults — plus one prompt
-  // the administrator genuinely wrote.
-  const legacyRow: Record<string, string | boolean> = {
-    recipeExtraction: CUSTOM_EXTRACTION,
-    unitConversion: oldestRetiredDefault("unitConversion"),
-    nutritionEstimation: oldestRetiredDefault("nutritionEstimation"),
-    autoTagging: oldestRetiredDefault("autoTagging"),
-    isOverridden: true,
-  };
-
-  // The scenario only bites while old and current defaults actually differ.
-  for (const field of ["unitConversion", "nutritionEstimation", "autoTagging"] as const) {
-    expect(legacyRow[field]).not.toBe(currentDefault(fileFor(field)));
-  }
-
-  await writePromptsRow(legacyRow);
+test("a customized prompt survives a restart and the others follow the shipped defaults", async () => {
+  await writePromptsRow({ recipeExtraction: CUSTOM_EXTRACTION });
   await restartServer();
 
   const panel = await openPromptsPanel(page);
 
-  // The administrator's own prompt survived the upgrade…
   await expectPromptValue(panel, FIELD_LABELS.recipeExtraction, CUSTOM_EXTRACTION);
 
-  // …and every seeded old default was released to the new shipped text.
   for (const field of ["unitConversion", "nutritionEstimation", "autoTagging"] as const) {
     await expectPromptValue(panel, FIELD_LABELS[field], currentDefault(fileFor(field)));
   }
 
-  const row = await readPromptsRow();
-
-  expect(row).toEqual({ recipeExtraction: CUSTOM_EXTRACTION });
+  expect(await readPromptsRow()).toEqual({ recipeExtraction: CUSTOM_EXTRACTION });
 
   // The surviving customization is what extraction actually sends.
-  await setAutomaticEnrichment({});
+  await setAutomaticEnrichment(stack, {});
   ai.control.reset();
-  ai.control.succeedWith(bareRecipe("Imported After The Upgrade"));
+  ai.control.succeedWith(bareRecipe("Imported After The Restart"));
 
   await page.goto("/");
   await submitPasteImport(page, "Import a recipe — the harness supplies the result.");

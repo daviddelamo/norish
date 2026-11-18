@@ -19,6 +19,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 import type { GroceryDto, RecurringGroceryDto, StoreDto } from "@norish/shared/contracts";
 
@@ -55,6 +56,7 @@ interface RecipeSectionProps {
   onEdit: (grocery: GroceryDto) => void;
   onDelete: (id: string) => void;
   onReorder?: (updates: { id: string; sortOrder: number }[]) => void;
+  onClearRecipe?: () => void;
   defaultExpanded?: boolean;
 }
 
@@ -67,17 +69,19 @@ function RecipeSectionComponent({
   onEdit,
   onDelete,
   onReorder,
+  onClearRecipe,
   defaultExpanded = true,
 }: RecipeSectionProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const t = useTranslations("groceries.store");
 
   // Track items that are transitioning (just toggled) - delay their reorder
-  const [transitioningIds, setTransitioningIds] = useState<Set<string>>(new Set());
-  const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const [transitioningIds, setTransitioningIds] = useState<Set<string>>(() => new Set());
+  const timeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Cleanup timeouts on unmount
   useEffect(() => {
-    const timeouts = timeoutRefs.current;
+    const timeouts = timeoutsRef.current;
 
     return () => {
       timeouts.forEach((timeout) => clearTimeout(timeout));
@@ -95,7 +99,7 @@ function RecipeSectionComponent({
         setTransitioningIds((prev) => new Set(prev).add(id));
 
         // Clear any existing timeout for this id
-        const existingTimeout = timeoutRefs.current.get(id);
+        const existingTimeout = timeoutsRef.current.get(id);
 
         if (existingTimeout) clearTimeout(existingTimeout);
 
@@ -108,10 +112,10 @@ function RecipeSectionComponent({
 
             return next;
           });
-          timeoutRefs.current.delete(id);
+          timeoutsRef.current.delete(id);
         }, REORDER_DELAY);
 
-        timeoutRefs.current.set(id, timeout);
+        timeoutsRef.current.set(id, timeout);
       }
     },
     [onToggle]
@@ -253,6 +257,8 @@ function RecipeSectionComponent({
     >
       <div className="bg-surface-secondary">
         <StoreHeading
+          actions={onClearRecipe ? { onClearAll: onClearRecipe } : undefined}
+          actionsLabel={t("recipeActions")}
           activeCount={activeCount}
           doneCount={doneCount}
           expanded={isExpanded}

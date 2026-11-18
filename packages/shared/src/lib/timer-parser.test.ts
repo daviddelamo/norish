@@ -6,6 +6,35 @@ import { parseTimerDurations } from "./timer-parser";
 
 describe("parseTimerDurations", () => {
   describe("default keywords", () => {
+    it.each([
+      ["Låt jäsa i 1 timme", "1 timme", 3600],
+      ["Tillaga i 2 timmar", "2 timmar", 7200],
+      ["Vila i 1 tim", "1 tim", 3600],
+      ["Sjud i 15 minuter", "15 minuter", 900],
+      ["Rör i 30 sekunder", "30 sekunder", 30],
+    ])("detects Swedish timers in %s", (text, originalText, durationSeconds) => {
+      expect(parseTimerDurations(text, defaultTimerKeywords)).toEqual([
+        expect.objectContaining({ originalText, durationSeconds }),
+      ]);
+    });
+
+    it.each([
+      ["Hornear 1 hora", 3600],
+      ["Cozinhe por 20 minutos", 1200],
+      ["Mexa por 30 segundos", 30],
+      ["Laat 45 seconden rusten", 45],
+      ["Piecz 2 godziny", 7200],
+      ["Gotuj 5 minuty", 300],
+      ["Варите 2 часа", 7200],
+      ["Тушите 15 минут", 900],
+      ["Печете 10 минути", 600],
+      ["Мешайте 30 секунды", 30],
+    ])("detects the shipped languages' own words in %s", (text, durationSeconds) => {
+      expect(parseTimerDurations(text, defaultTimerKeywords)[0]?.durationSeconds).toBe(
+        durationSeconds
+      );
+    });
+
     it("detects simple minutes", () => {
       const matches = parseTimerDurations("Bake for 20 minutes");
 
@@ -100,6 +129,24 @@ describe("parseTimerDurations", () => {
         5 * 60
       );
     });
+
+    it("detects Arabic keywords in their plural and short forms, and a range", () => {
+      expect(
+        parseTimerDurations("اطبخ لمدة 10 دقائق", defaultTimerKeywords)[0]?.durationSeconds
+      ).toBe(10 * 60);
+      expect(
+        parseTimerDurations("اخبز 1 ساعة ثم أخرجها", defaultTimerKeywords)[0]?.durationSeconds
+      ).toBe(3600);
+      expect(
+        parseTimerDurations("حرّك 30 ثانية ثم أطفئ النار", defaultTimerKeywords)[0]?.durationSeconds
+      ).toBe(30);
+      expect(parseTimerDurations("اسلق 5 د", defaultTimerKeywords)[0]?.durationSeconds).toBe(
+        5 * 60
+      );
+      expect(
+        parseTimerDurations("اخبز من 20 إلى 25 دقيقة", defaultTimerKeywords)[0]?.durationSeconds
+      ).toBe(25 * 60);
+    });
   });
 
   describe("custom keywords", () => {
@@ -134,6 +181,37 @@ describe("parseTimerDurations", () => {
 
       expect(matches).toHaveLength(1);
       expect(matches[0].durationSeconds).toBe(45);
+    });
+
+    describe("in Arabic", () => {
+      const arabic = {
+        hours: ["ساعة", "ساعات"],
+        minutes: ["دقيقة", "دقائق"],
+        seconds: ["ثانية", "ثوان"],
+      };
+
+      it("ends a keyword at Arabic punctuation as at Latin", () => {
+        expect(parseTimerDurations("اخبز 1 ساعة، ثم أخرجها", arabic)[0]?.durationSeconds).toBe(
+          3600
+        );
+        expect(
+          parseTimerDurations("حرّك 30 ثانية؛ ثم أطفئ النار", arabic)[0]?.durationSeconds
+        ).toBe(30);
+        expect(parseTimerDurations("هل تكفي 10 دقائق؟", arabic)[0]?.durationSeconds).toBe(600);
+      });
+
+      it("never reads a range across an Arabic comma", () => {
+        const matches = parseTimerDurations("انقع 10 دقائق، 5 ساعات", arabic);
+
+        expect(matches.map((match) => match.durationSeconds)).toEqual([10 * 60, 5 * 3600]);
+      });
+
+      it("reads the unit after a clock time", () => {
+        const matches = parseTimerDurations("اخبز 1:30 ساعة", arabic);
+
+        expect(matches[0]?.durationSeconds).toBe(90 * 60);
+        expect(matches[0]?.originalText).toBe("1:30 ساعة");
+      });
     });
 
     it("correctly maps keywords to multipliers", () => {

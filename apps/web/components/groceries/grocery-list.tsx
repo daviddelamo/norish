@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useStoresContext } from "@/app/(app)/groceries/stores-context";
 import { IngredientIconsProvider } from "@/components/ingredients/ingredient-icon";
 import { useUnitsQuery } from "@/hooks/config/use-units-query";
+import { useStructuralSharing } from "@/hooks/use-structural-sharing";
 import { ShoppingCartIcon } from "@heroicons/react/24/outline";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
@@ -31,6 +32,7 @@ interface GroceryListProps {
   ) => void;
   onMarkAllDoneInStore?: (storeId: string | null) => void;
   onDeleteDoneInStore?: (storeId: string | null) => void;
+  onClearAllInStore?: (storeId: string | null, storeName: string) => void;
   getRecipeNameForGrocery?: (grocery: GroceryDto) => string | null;
   /** Whether to group similar ingredients together */
   groupSimilarIngredients?: boolean;
@@ -61,10 +63,12 @@ function GroceryListContent({
   onReorderInStore,
   onMarkAllDoneInStore,
   onDeleteDoneInStore,
+  onClearAllInStore,
   getRecipeNameForGrocery,
   groupSimilarIngredients = false,
 }: GroceryListProps) {
   const t = useTranslations("groceries.empty");
+  const tStore = useTranslations("groceries.store");
   const { units: customUnits } = useUnitsQuery();
   // Where each Store files each name — the one place a grocery's aisle comes
   // from (ADR-0031) — and the one write a drop into an aisle makes.
@@ -112,7 +116,7 @@ function GroceryListContent({
   }, [stores, groupedGroceries]);
 
   // Compute grouped groceries by ingredient (for grouped mode)
-  const ingredientGroups = useMemo(() => {
+  const builtGroups = useMemo(() => {
     if (!groupSimilarIngredients) return null;
 
     // Groups are per aisle per Store, so a filing that lands regroups the list.
@@ -123,6 +127,10 @@ function GroceryListContent({
       (grocery) => aisleFor(grocery.storeId, grocery.ingredientId)
     );
   }, [groupSimilarIngredients, groceries, getRecipeNameForGrocery, customUnits, aisleFor]);
+  // A group whose groceries did not change keeps its object, so its row does
+  // not re-render for a change to another.
+  const sharedGroupEntries = useStructuralSharing(builtGroups ? [...builtGroups] : null);
+  const ingredientGroups = sharedGroupEntries ? new Map(sharedGroupEntries) : null;
 
   // Check if there are any groceries at all
   const hasGroceries = groceries.length > 0;
@@ -180,6 +188,7 @@ function GroceryListContent({
                 groups={ingredientGroups.get(null) ?? []}
                 recurringGroceries={recurringGroceries}
                 store={null}
+                onClearAll={() => onClearAllInStore?.(null, tStore("unsorted"))}
                 onDelete={onDelete}
                 onDeleteDone={() => onDeleteDoneInStore?.(null)}
                 onEdit={onEdit}
@@ -210,6 +219,7 @@ function GroceryListContent({
                   groups={storeGroups}
                   recurringGroceries={recurringGroceries}
                   store={store}
+                  onClearAll={() => onClearAllInStore?.(store.id, store.name)}
                   onDelete={onDelete}
                   onDeleteDone={() => onDeleteDoneInStore?.(store.id)}
                   onEdit={onEdit}
@@ -253,6 +263,7 @@ function GroceryListContent({
               groceries={unsortedGroceries}
               recurringGroceries={recurringGroceries}
               store={null}
+              onClearAll={() => onClearAllInStore?.(null, tStore("unsorted"))}
               onDelete={onDelete}
               onDeleteDone={() => onDeleteDoneInStore?.(null)}
               onEdit={onEdit}
@@ -278,6 +289,7 @@ function GroceryListContent({
               groceries={storeGroceries}
               recurringGroceries={recurringGroceries}
               store={store}
+              onClearAll={() => onClearAllInStore?.(store.id, store.name)}
               onDelete={onDelete}
               onDeleteDone={() => onDeleteDoneInStore?.(store.id)}
               onEdit={onEdit}

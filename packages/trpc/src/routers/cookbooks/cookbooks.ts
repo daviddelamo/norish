@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 
 import {
-  addRecipeToCookbook,
+  addRecipesToCookbook,
   createCookbook,
   deleteCookbookById,
   getCookbookForViewer,
@@ -22,17 +22,17 @@ import {
 } from "@norish/shared/contracts/zod";
 
 import { formDataInputSchema, getFormDataString } from "../../form-data";
-import { authedProcedure } from "../../middleware";
+import { authedProcedure, viewerOf } from "../../middleware";
 import { router } from "../../trpc";
-import { assertRecipeAccess } from "../recipes/helpers";
+import { recipeAccess } from "../recipes/helpers";
 import { extractAndValidateImage } from "../recipes/images";
-import { assertCookbookAccess, emitCookbookEvent, listContextFor } from "./helpers";
+import { assertCookbookAccess, emitCookbookEvent } from "./helpers";
 
 const list = authedProcedure
   .input(CookbookListInputSchema)
   .output(CookbookListResultSchema)
   .query(async ({ ctx, input }) => {
-    const result = await listCookbooks(listContextFor(ctx), {
+    const result = await listCookbooks(viewerOf(ctx), {
       limit: input.limit,
       offset: input.cursor,
       search: input.search,
@@ -50,7 +50,7 @@ const get = authedProcedure
   .input(CookbookGetInputSchema)
   .output(CookbookSummarySchema)
   .query(async ({ ctx, input }) => {
-    const cookbook = await getCookbookForViewer(listContextFor(ctx), input.id);
+    const cookbook = await getCookbookForViewer(viewerOf(ctx), input.id);
 
     if (!cookbook) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Cookbook not found" });
@@ -63,37 +63,33 @@ const create = authedProcedure
   .input(CookbookCreateInputSchema)
   .output(CookbookSummarySchema)
   .mutation(async ({ ctx, input }) => {
-    // A cookbook made from a recipe holds it from the first moment, so
-    // "these two belong together" is one step. Only view rights on the
-    // recipe are needed, and the recipe itself is not written (ADR-0027).
-    if (input.recipeId) {
-      await assertRecipeAccess(ctx, input.recipeId, "view");
-    }
+    // View rights on each recipe suffice and no recipe is written (ADR-0027); one gone or
+    // unseen by the time a queued create replays is left out, and the cookbook still lands.
+    const access = await recipeAccess(ctx, input.recipeIds, "view");
+    const recipeIds = input.recipeIds.filter((recipeId) => access.get(recipeId) === true);
 
-    const cookbook = await createCookbook({
+    const created = await createCookbook({
       id: input.id,
       userId: ctx.user.id,
       title: input.title,
     });
 
-    if (input.recipeId) {
-      await addRecipeToCookbook(cookbook.id, input.recipeId);
-    }
+    await addRecipesToCookbook(created.id, recipeIds);
+
+    const cookbook = { ...created, memberCount: recipeIds.length };
 
     log.info({ userId: ctx.user.id, cookbookId: cookbook.id }, "Cookbook created");
-    await emitCookbookEvent(ctx, "created", {
-      cookbook: input.recipeId ? { ...cookbook, memberCount: 1 } : cookbook,
-    });
+    await emitCookbookEvent(ctx, "created", { cookbook });
 
-    if (input.recipeId) {
+    if (recipeIds.length > 0) {
       await emitCookbookEvent(ctx, "membershipChanged", {
         cookbookId: cookbook.id,
-        recipeId: input.recipeId,
+        recipeIds,
         isMember: true,
       });
     }
 
-    return input.recipeId ? { ...cookbook, memberCount: 1 } : cookbook;
+    return cookbook;
   });
 
 const update = authedProcedure
@@ -119,7 +115,7 @@ const update = authedProcedure
 
     // The member summaries are viewer-scoped, so the echo carries the actor's
     // own view of the updated cookbook rather than a bare row.
-    const [cookbook] = await withMemberSummaries(listContextFor(ctx), [outcome.value]);
+    const [cookbook] = await withMemberSummaries(viewerOf(ctx), [outcome.value]);
 
     if (!cookbook) return null;
 

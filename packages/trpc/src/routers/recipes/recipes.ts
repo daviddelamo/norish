@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
+import { setTimeout as sleep } from "node:timers/promises";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import type { RecipeListContext } from "@norish/db";
 import type { FullRecipeDTO } from "@norish/shared/contracts";
 import type { RecipeEnrichmentSkipReason } from "@norish/shared/lib/recipe-enrichment";
 import { canAccessResource, isAIEnabled as checkAIEnabled } from "@norish/auth/permissions";
 import {
   dashboardRecipe,
-  deleteRecipeById,
+  deleteRecipesByIds,
   FullRecipeInsertSchema,
   getRandomRecipeCandidates,
   getRecipeFull,
@@ -18,6 +18,8 @@ import {
   RecipeGetInputSchema,
   RecipeImportInputSchema,
   RecipeImportResultSchema,
+  RecipeImportStatusInputSchema,
+  RecipeImportStatusSchema,
   RecipeListInputSchema,
   RecipeUpdateInputSchema,
   searchRecipesByName,
@@ -34,6 +36,7 @@ import {
 } from "@norish/queue";
 import { announceUsableRecipe } from "@norish/queue/enrichment/announce";
 import { getRecipeEnrichmentStatus } from "@norish/queue/enrichment/status";
+import { readStepProgress } from "@norish/queue/job-steps";
 import { getQueues } from "@norish/queue/registry";
 import {
   getRecipePermissionPolicy,
@@ -53,13 +56,20 @@ import { convertRecipeMeasurements } from "@norish/shared-server/recipes/measure
 import { selectWeightedRandomRecipe } from "@norish/shared-server/recipes/randomizer";
 import { FilterMode, RecipeCategory, SortOrder } from "@norish/shared/contracts";
 import { FullRecipeSchema, RecipeListResultSchema } from "@norish/shared/contracts/zod";
+import { addBasePath } from "@norish/shared/lib/base-path";
 import { isVideoUrl } from "@norish/shared/lib/helpers";
 import { ENRICHMENT_KINDS } from "@norish/shared/lib/recipe-enrichment";
 
+import type { RecipeUserContext } from "./helpers";
 import { formDataInputSchema, isUploadedFile } from "../../form-data";
-import { authedProcedure } from "../../middleware";
+import { authedProcedure, viewerOf } from "../../middleware";
 import { router } from "../../trpc";
-import { assertRecipeAccess, findRecipeForViewer, handleRecipeError } from "./helpers";
+import {
+  assertRecipeAccess,
+  findRecipeForViewer,
+  handleRecipeError,
+  recipeAccess,
+} from "./helpers";
 import {
   randomRecipeInputSchema,
   recipeAutocompleteInputSchema,
@@ -102,11 +112,7 @@ export const listProcedure = authedProcedure
 
     log.debug({ userId: ctx.user.id, cursor, limit }, "Listing recipes");
 
-    const listCtx: RecipeListContext = {
-      userId: ctx.user.id,
-      householdUserIds: ctx.householdUserIds,
-      isServerAdmin: ctx.isServerAdmin,
-    };
+    const listCtx = viewerOf(ctx);
 
     const result = await listRecipes(
       listCtx,
@@ -249,47 +255,82 @@ export const createRecipeProcedure = authedProcedure
     return recipeId;
   });
 
-const update = authedProcedure.input(RecipeUpdateInputSchema).mutation(({ ctx, input }) => {
-  const { id, data, version } = input;
-
+/** Apply an edit and announce it; a stale `version` changes nothing and returns no recipe. */
+async function applyRecipeUpdate(
+  ctx: RecipeUserContext,
+  { id, data, version }: z.infer<typeof RecipeUpdateInputSchema>
+) {
   log.info({ userId: ctx.user.id, recipeId: id }, "Updating recipe");
-  log.debug({ recipe: input }, "Full recipe data");
+  log.debug({ recipe: data }, "Full recipe data");
 
-  assertRecipeAccess(ctx, id, "edit")
-    .then(async () => {
-      // An edit that touches the media recomputes the Dish Colour from what
-      // the recipe now shows; one that does not leaves the colour alone.
-      const result = await updateResolvedRecipe(
-        id,
-        ctx.user.id,
-        await withDishColorForUpdate(data),
-        { userId: ctx.user.id },
-        version
-      );
+  await assertRecipeAccess(ctx, id, "edit");
 
-      if (result.stale) {
-        log.info({ userId: ctx.user.id, recipeId: id, version }, "Ignoring stale recipe update");
+  // An edit that touches the media recomputes the Dish Colour from what
+  // the recipe now shows; one that does not leaves the colour alone.
+  const result = await updateResolvedRecipe(
+    id,
+    ctx.user.id,
+    await withDishColorForUpdate(data),
+    { userId: ctx.user.id },
+    version
+  );
 
-        return;
-      }
+  if (result.stale) {
+    log.info({ userId: ctx.user.id, recipeId: id, version }, "Ignoring stale recipe update");
 
-      const updatedRecipe = await getRecipeFull(id);
+    return { recipe: null, stale: true };
+  }
 
-      if (updatedRecipe) {
-        log.info({ userId: ctx.user.id, recipeId: id }, "Recipe updated");
-        const policy = await getRecipePermissionPolicy();
+  const updatedRecipe = await getRecipeFull(id);
 
-        void recipes.publish(
-          "updated",
-          { recipe: updatedRecipe },
-          { viewPolicy: policy.view, userId: ctx.user.id, householdKey: ctx.householdKey }
-        );
-      }
-    })
-    .catch((err) => handleRecipeError(ctx, err, "update recipe", { recipeId: id }));
+  if (updatedRecipe) {
+    log.info({ userId: ctx.user.id, recipeId: id }, "Recipe updated");
+    const policy = await getRecipePermissionPolicy();
+
+    void recipes.publish(
+      "updated",
+      { recipe: updatedRecipe },
+      { viewPolicy: policy.view, userId: ctx.user.id, householdKey: ctx.householdKey }
+    );
+  }
+
+  return { recipe: updatedRecipe, stale: false };
+}
+
+const update = authedProcedure.input(RecipeUpdateInputSchema).mutation(({ ctx, input }) => {
+  applyRecipeUpdate(ctx, input).catch((err) =>
+    handleRecipeError(ctx, err, "update recipe", { recipeId: input.id })
+  );
 
   return { success: true };
 });
+
+export const updateRecipeProcedure = authedProcedure
+  .meta({
+    openapi: {
+      method: "PATCH",
+      path: "/recipes/{id}",
+      protect: true,
+      tags: ["Recipes"],
+      summary: "Edit a recipe",
+      description:
+        "Send only the fields to change in `data`; a list you send (`recipeIngredients`, `steps`, `tags`, `cuisines`, `images`, `videos`) replaces the stored one. Send the recipe's current `version` from Get a recipe. If it no longer matches, nothing changes and the response has `stale: true`: fetch the recipe again and retry.",
+      errorResponses: {
+        401: "Missing or invalid API credentials",
+        403: "No permission to edit this recipe",
+        404: "Recipe not found",
+      },
+    },
+  })
+  .input(RecipeUpdateInputSchema)
+  .output(z.object({ recipe: FullRecipeSchema.nullable(), stale: z.boolean() }))
+  .mutation(async ({ ctx, input }) => {
+    if (!(await findRecipeForViewer(ctx, input.id))) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+    }
+
+    return applyRecipeUpdate(ctx, input);
+  });
 
 const updateCategories = authedProcedure
   .input(
@@ -332,36 +373,45 @@ const updateCategories = authedProcedure
     return { success: true };
   });
 
+/**
+ * Delete each recipe on its own: skipped if not permitted, kept if edited since, done if gone,
+ * so a Replay after others changed the data still succeeds.
+ */
 const deleteProcedure = authedProcedure
   .input(RecipeDeleteInputSchema)
-  .mutation(({ ctx, input }) => {
-    const { id, version } = input;
+  .mutation(async ({ ctx, input }) => {
+    log.info({ userId: ctx.user.id, count: input.recipes.length }, "Deleting recipes");
 
-    log.info({ userId: ctx.user.id, recipeId: id }, "Deleting recipe");
+    const access = await recipeAccess(
+      ctx,
+      input.recipes.map((recipe) => recipe.id),
+      "delete"
+    );
+    // One already gone is not in the map and counts as deleted.
+    const permitted = input.recipes.filter((recipe) => access.get(recipe.id) !== false);
 
-    assertRecipeAccess(ctx, id, "delete")
-      .then(async () => {
-        await deleteRecipeImagesDir(id);
-        const result = await deleteRecipeById(id, version);
+    const { deletedIds, staleIds } = await deleteRecipesByIds(permitted);
 
-        if (result.stale) {
-          log.info({ userId: ctx.user.id, recipeId: id, version }, "Ignoring stale recipe delete");
+    // Only once the rows are gone: a kept recipe still needs its images.
+    await Promise.all(deletedIds.map((id) => deleteRecipeImagesDir(id)));
 
-          return;
-        }
+    const policy = await getRecipePermissionPolicy();
 
-        log.info({ userId: ctx.user.id, recipeId: id }, "Recipe deleted");
-        const policy = await getRecipePermissionPolicy();
+    if (deletedIds.length > 0) {
+      log.info({ userId: ctx.user.id, count: deletedIds.length }, "Recipes deleted");
+      void recipes.publish(
+        "deleted",
+        { ids: deletedIds },
+        { viewPolicy: policy.view, userId: ctx.user.id, householdKey: ctx.householdKey }
+      );
+    }
 
-        void recipes.publish(
-          "deleted",
-          { id },
-          { viewPolicy: policy.view, userId: ctx.user.id, householdKey: ctx.householdKey }
-        );
-      })
-      .catch((err) => handleRecipeError(ctx, err, "delete recipe", { recipeId: id }));
+    if (staleIds.length > 0) {
+      log.info({ userId: ctx.user.id, recipeIds: staleIds }, "Kept recipes edited elsewhere");
+      void recipes.publish("deleteKept", { ids: staleIds }, { userId: ctx.user.id });
+    }
 
-    return { success: true };
+    return { deletedIds, staleIds };
   });
 
 export const importFromUrlProcedure = authedProcedure
@@ -432,8 +482,111 @@ export const importFromUrlProcedure = authedProcedure
       });
     }
 
-    return { recipeId, status: "queued" as const };
+    return {
+      recipeId,
+      status: "queued" as const,
+      statusUrl: addBasePath(`/api/v1/recipes/import/status/${recipeId}`),
+    };
   });
+
+export const importStatusProcedure = authedProcedure
+  .meta({
+    openapi: {
+      method: "GET",
+      path: "/recipes/import/status/{recipeId}",
+      protect: true,
+      tags: ["Recipe Imports"],
+      summary: "Get status of a queued recipe import",
+      errorResponses: {
+        401: "Missing or invalid API credentials",
+        404: "Import job or recipe not found",
+      },
+    },
+  })
+  .input(RecipeImportStatusInputSchema)
+  .output(RecipeImportStatusSchema)
+  .query(async ({ ctx, input }) => {
+    const queue = getQueues().recipeImport;
+    let job = await queue.getJob(input.recipeId);
+    const canView =
+      job &&
+      (await canAccessResource(
+        "view",
+        ctx.user.id,
+        job.data.userId,
+        ctx.householdUserIds,
+        ctx.isServerAdmin
+      ));
+
+    if (job && canView) {
+      let state = await job.getState();
+      const deadline = Date.now() + (input.wait ?? 0) * 1000;
+
+      // The job is re-read each tick: its progress, failure and result are a snapshot.
+      while (job && !isSettled(state) && Date.now() < deadline) {
+        await sleep(Math.min(deadline - Date.now(), 500));
+        job = await queue.getJob(input.recipeId);
+        state = job ? await job.getState() : "unknown";
+      }
+
+      if (job && state !== "unknown") {
+        const status = {
+          recipeId: input.recipeId,
+          url: job.data.url,
+          step: readStepProgress(job.progress)?.step ?? null,
+          error: null,
+          recipe: null,
+        };
+
+        if (state === "failed") {
+          return {
+            ...status,
+            status: "failed" as const,
+            error: job.failedReason || "Recipe import failed",
+          };
+        }
+
+        if (state === "completed") {
+          // A URL already in the library ends the import on that recipe.
+          const importedId = typeof job.returnvalue === "string" ? job.returnvalue : input.recipeId;
+
+          return {
+            ...status,
+            status: "completed" as const,
+            recipe: await dashboardRecipe(importedId),
+          };
+        }
+
+        return {
+          ...status,
+          status: state === "active" ? ("active" as const) : ("waiting" as const),
+        };
+      }
+    }
+
+    // Jobs leave the queue's history, so a finished import is read from its recipe.
+    const accessibleRecipe = await findRecipeForViewer(ctx, input.recipeId);
+
+    if (accessibleRecipe) {
+      return {
+        recipeId: input.recipeId,
+        url: accessibleRecipe.url ?? undefined,
+        status: "completed" as const,
+        step: null,
+        error: null,
+        recipe: await dashboardRecipe(input.recipeId),
+      };
+    }
+
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Import job or recipe not found",
+    });
+  });
+
+function isSettled(state: string): boolean {
+  return state === "completed" || state === "failed" || state === "unknown";
+}
 
 const convertMeasurements = authedProcedure
   .input(RecipeConvertInputSchema)
@@ -600,11 +753,7 @@ const autocomplete = authedProcedure
   .query(async ({ ctx, input }) => {
     log.debug({ userId: ctx.user.id, query: input.query }, "Searching recipes for autocomplete");
 
-    const listCtx: RecipeListContext = {
-      userId: ctx.user.id,
-      householdUserIds: ctx.householdUserIds,
-      isServerAdmin: ctx.isServerAdmin,
-    };
+    const listCtx = viewerOf(ctx);
 
     const results = await searchRecipesByName(listCtx, input.query, 10);
 
@@ -614,11 +763,7 @@ const autocomplete = authedProcedure
 const getRandomRecipe = authedProcedure
   .input(randomRecipeInputSchema)
   .query(async ({ ctx, input }) => {
-    const listCtx: RecipeListContext = {
-      userId: ctx.user.id,
-      householdUserIds: ctx.householdUserIds,
-      isServerAdmin: ctx.isServerAdmin,
-    };
+    const listCtx = viewerOf(ctx);
 
     let candidates = await getRandomRecipeCandidates(listCtx, input.category);
 
@@ -836,6 +981,7 @@ export const recipesProcedures = router({
   update,
   delete: deleteProcedure,
   importFromUrl: importFromUrlProcedure,
+  importStatus: importStatusProcedure,
   importFromImages: importFromImagesProcedure,
   importFromPaste: importFromPasteProcedure,
   convertMeasurements,

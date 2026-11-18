@@ -87,6 +87,15 @@ describe("every word of the default units map names one unit", () => {
   });
 });
 
+describe("foldUnitWord", () => {
+  it("drops the trailing dots and folds the case, except T and t", () => {
+    expect(foldUnitWord(" Tbsp.. ")).toBe("tbsp");
+    expect(foldUnitWord("fl.  oz.")).toBe("fl. oz");
+    expect(foldUnitWord("T.")).toBe("T");
+    expect(foldUnitWord("...")).toBe("");
+  });
+});
+
 describe("Unit Localization", () => {
   describe("normalizeUnit - input => canonical ID", () => {
     it("normalizes German 'EL' to canonical 'tablespoon'", () => {
@@ -173,7 +182,6 @@ describe("Unit Localization", () => {
         // Spanish stood here until it became a language the vocabulary knows
         // (#504); the fallback is for languages Norish is not translated into.
         expect(formatUnit("tablespoon", "ja", unitsConfig)).toBe("tbsp");
-        expect(formatUnit("tablespoon", "sv", unitsConfig)).toBe("tbsp");
       });
 
       it("returns unitId for unknown units", () => {
@@ -238,6 +246,27 @@ describe("Unit Localization", () => {
     });
   });
 
+  describe("Swedish units", () => {
+    it("uses Swedish abbreviations and plural forms", () => {
+      expect(formatUnit("teaspoon", "sv", unitsConfig, 1)).toBe("tsk");
+      expect(formatUnit("tablespoon", "sv", unitsConfig, 2)).toBe("matskedar");
+      expect(formatUnit("gram", "sv", unitsConfig, 500)).toBe("gram");
+    });
+
+    it.each([
+      ["2 tsk salt", 2, "teaspoon", "salt"],
+      ["2 matskedar olja", 2, "tablespoon", "olja"],
+      ["2 dl mjöl", 2, "deciliter", "mjöl"],
+      ["3 klyftor vitlök", 3, "clove", "vitlök"],
+    ])("parses %s", (line, quantity, unitId, description) => {
+      const parsed = parseIngredientWithDefaults(line, unitsConfig)[0];
+
+      expect(parsed.quantity).toBe(quantity);
+      expect(parsed.unitOfMeasureID).toBe(unitId);
+      expect(parsed.description).toBe(description);
+    });
+  });
+
   describe("flattenForLibrary - prepare config for parser", () => {
     it("flattens locale-aware config to simple format", () => {
       const flattened = flattenForLibrary(unitsConfig);
@@ -261,6 +290,28 @@ describe("Unit Localization", () => {
       const flattened = flattenForLibrary(unitsConfig);
 
       expect(Array.isArray(flattened.gram.alternates)).toBe(true);
+    });
+  });
+
+  describe("formatUnit abbreviated", () => {
+    const units = defaultUnits as UnitsMap;
+
+    it("keeps an abbreviation at any amount", () => {
+      expect(formatUnit("gram", "en", units, 500, "abbreviated")).toBe("g");
+      expect(formatUnit("milliliter", "en", units, 250, "abbreviated")).toBe("ml");
+      expect(formatUnit("tablespoon", "en", units, 2, "abbreviated")).toBe("tbsp");
+      expect(formatUnit("heaping_tablespoon", "en", units, 2, "abbreviated")).toBe("heaping tbsp");
+      expect(formatUnit("tablespoon", "nl", units, 2, "abbreviated")).toBe("el");
+    });
+
+    it("still pluralises a unit whose short form is a word", () => {
+      expect(formatUnit("cup", "en", units, 2, "abbreviated")).toBe("cups");
+      expect(formatUnit("leaf", "en", units, 3, "abbreviated")).toBe("leaves");
+      expect(formatUnit("clove", "nl", units, 3, "abbreviated")).toBe("tenen");
+    });
+
+    it("writes units out by default", () => {
+      expect(formatUnit("gram", "en", units, 500)).toBe("grams");
     });
   });
 });
