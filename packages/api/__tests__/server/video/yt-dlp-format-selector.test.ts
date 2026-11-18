@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DOWNLOAD_VIDEO_FORMAT_SELECTOR,
+  extractNormalizedTikTokFallbackUrl,
   METADATA_PROBE_ARGS,
   TRANSCRIPTION_AUDIO_FALLBACKS,
   TRANSCRIPTION_AUDIO_FORMAT,
@@ -75,4 +76,23 @@ describe("the yt-dlp command line", () => {
       expect(() => ytDlpArgs(url, [])).toThrow("Unsupported URL");
     }
   );
+});
+
+describe("TikTok photo redirect fallback", () => {
+  it("rewrites Unsupported URL stderr targeting a TikTok /photo/ post to /video/", () => {
+    const stderr =
+      "WARNING: [generic] Falling back on generic information extractor\n" +
+      "ERROR: Unsupported URL: https://www.tiktok.com/@dailycookewithbella/photo/7705307625692417302?_r=1&_t=ZN-9BUra3w3J0Y\n";
+
+    expect(extractNormalizedTikTokFallbackUrl(stderr)).toBe(
+      "https://www.tiktok.com/@dailycookewithbella/video/7705307625692417302?_r=1&_t=ZN-9BUra3w3J0Y"
+    );
+  });
+
+  it("returns null for unrelated unsupported URLs", () => {
+    expect(
+      extractNormalizedTikTokFallbackUrl("ERROR: Unsupported URL: https://example.com/post/123")
+    ).toBeNull();
+    expect(extractNormalizedTikTokFallbackUrl(undefined)).toBeNull();
+  });
 });

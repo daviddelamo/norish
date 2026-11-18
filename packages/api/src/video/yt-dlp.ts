@@ -15,6 +15,7 @@ import { getFfmpegPath } from "@norish/shared-server/media/ffmpeg";
 
 import type { VideoMetadata, VideoStream } from "./types";
 import { MediaUnavailableError } from "./errors";
+import { normalizeTikTokPhotoUrl } from "./url-utils";
 
 const execFileAsync = promisify(execFile);
 
@@ -116,8 +117,11 @@ export const TRANSCRIPTION_AUDIO_FALLBACKS = [
 // In production (Docker), binary is pre-downloaded during build to /app/bin
 // In development, download to the configured runtime bin directory on first use
 const ytDlpPath = path.resolve(SERVER_CONFIG.YT_DLP_BIN_DIR, ytDlpFilename);
-// Use /tmp for video temp files to avoid permission issues with mounted volumes
-const outputDir = SERVER_CONFIG.NODE_ENV === "production" ? "/tmp/video-temp" : path.join(SERVER_CONFIG.UPLOADS_DIR, "video-temp");
+// Use os.tmpdir() for video temp files in production to avoid permission issues with mounted volumes
+const outputDir =
+  SERVER_CONFIG.NODE_ENV === "production"
+    ? path.join(os.tmpdir(), "video-temp")
+    : path.join(SERVER_CONFIG.UPLOADS_DIR, "video-temp");
 
 /**
  * Check if the URL is an Instagram URL
@@ -126,8 +130,8 @@ function isInstagramUrl(url: string): boolean {
   return url.includes("instagram.com");
 }
 
-// Path where we'll write the cookies file (use /tmp which is always writable)
-const instagramCookiesFilePath = "/tmp/instagram-cookies.txt";
+// Path where we'll write the cookies file (use os.tmpdir() which is always writable)
+const instagramCookiesFilePath = path.join(os.tmpdir(), "instagram-cookies.txt");
 let instagramCookiesInitialized = false;
 
 /**
@@ -144,6 +148,7 @@ function getInstagramCookiesPath(): string | null {
 
   if (!cookiesBase64) {
     log.warn("INSTAGRAM_COOKIES env var not set - Instagram video authentication disabled");
+
     return null;
   }
 
@@ -152,23 +157,27 @@ function getInstagramCookiesPath(): string | null {
     try {
       // Ensure directory exists
       const dir = path.dirname(instagramCookiesFilePath);
+
       if (!fsSync.existsSync(dir)) {
         fsSync.mkdirSync(dir, { recursive: true });
       }
 
       // Decode base64 and write to file
       const cookiesContent = Buffer.from(cookiesBase64, "base64").toString("utf-8");
+
       fsSync.writeFileSync(instagramCookiesFilePath, cookiesContent, { mode: 0o600 });
       instagramCookiesInitialized = true;
       log.info({ path: instagramCookiesFilePath }, "Instagram cookies file created from env var");
     } catch (err) {
       log.error({ err }, "Failed to write Instagram cookies file");
+
       return null;
     }
   }
 
   if (fsSync.existsSync(instagramCookiesFilePath)) {
     log.debug({ cookiesPath: instagramCookiesFilePath }, "Using Instagram cookies file");
+
     return instagramCookiesFilePath;
   }
 
@@ -193,34 +202,79 @@ export function ytDlpArgs(url: string, options: readonly string[]): string[] {
   return [...options, "--", url];
 }
 
-async function execYtDlp(url: string, options: string[], cwd?: string): Promise<string> {
+const UNSUPPORTED_URL_PATTERN = /ERROR:\s*Unsupported URL:\s*(https?:\/\/\S+)/;
+
+/**
+ * When yt-dlp follows a short link (such as `vm.tiktok.com`) and rejects the
+ * target as a TikTok `/photo/` URL, return the `/video/` equivalent so the
+ * caller can retry.
+ */
+export function extractNormalizedTikTokFallbackUrl(stderr?: string): string | null {
+  if (!stderr) return null;
+
+  const matchedUrl = UNSUPPORTED_URL_PATTERN.exec(stderr)?.[1];
+
+  if (!matchedUrl) return null;
+
+  const rewritten = normalizeTikTokPhotoUrl(matchedUrl);
+
+  return rewritten !== matchedUrl ? rewritten : null;
+}
+
+function formatYtDlpError(error: unknown): Error {
+  const childError = error as Error & { stdout?: string | Buffer; stderr?: string | Buffer };
+  const stderr = childError.stderr?.toString().trim();
+  const stdout = childError.stdout?.toString().trim();
+  const details = [childError.message];
+
+  if (stderr) {
+    details.push(`Stderr:\n${stderr}`);
+  }
+
+  if (stdout) {
+    details.push(`Stdout:\n${stdout}`);
+  }
+
+  return new Error(details.join("\n\n"), { cause: error });
+}
+
+async function runYtDlp(url: string, options: string[], cwd?: string): Promise<string> {
   const args = ytDlpArgs(url, options);
 
+  // --dump-json prints a whole info dict per media entry, so a long playlist
+  // answers with several megabytes on stdout.
+  const { stdout } = await execFileAsync(ytDlpPath, args, {
+    cwd,
+    windowsHide: true,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+
+  return stdout;
+}
+
+async function execYtDlp(url: string, options: string[], cwd?: string): Promise<string> {
+  const targetUrl = normalizeTikTokPhotoUrl(url);
+
   try {
-    // --dump-json prints a whole info dict per media entry, so a long playlist
-    // answers with several megabytes on stdout.
-    const { stdout } = await execFileAsync(ytDlpPath, args, {
-      cwd,
-      windowsHide: true,
-      maxBuffer: 64 * 1024 * 1024,
-    });
-
-    return stdout;
+    return await runYtDlp(targetUrl, options, cwd);
   } catch (error: unknown) {
-    const childError = error as Error & { stdout?: string | Buffer; stderr?: string | Buffer };
-    const stderr = childError.stderr?.toString().trim();
-    const stdout = childError.stdout?.toString().trim();
-    const details = [childError.message];
+    const childError = error as Error & { stderr?: string | Buffer };
+    const fallbackUrl = extractNormalizedTikTokFallbackUrl(childError.stderr?.toString());
 
-    if (stderr) {
-      details.push(`Stderr:\n${stderr}`);
+    if (fallbackUrl && fallbackUrl !== targetUrl) {
+      log.debug(
+        { url: targetUrl, fallbackUrl },
+        "Retrying yt-dlp with normalized TikTok photo URL"
+      );
+
+      try {
+        return await runYtDlp(fallbackUrl, options, cwd);
+      } catch (retryError: unknown) {
+        throw formatYtDlpError(retryError);
+      }
     }
 
-    if (stdout) {
-      details.push(`Stdout:\n${stdout}`);
-    }
-
-    throw new Error(details.join("\n\n"), { cause: error });
+    throw formatYtDlpError(error);
   }
 }
 
@@ -530,11 +584,7 @@ export async function getVideoMetadata(
     }
 
     const proxyArgs = await getProxyArgs();
-    const rawInfo = await fetchVideoInfo(url, [
-      ...execArgs,
-      ...(auth?.args ?? []),
-      ...proxyArgs,
-    ]);
+    const rawInfo = await fetchVideoInfo(url, [...execArgs, ...(auth?.args ?? []), ...proxyArgs]);
     const container = toInfo(rawInfo);
     const primary = selectMediaEntry(container);
 
@@ -915,7 +965,7 @@ export async function downloadVideo(
     const stats = await fs.stat(filePath);
 
     if (stats.size === 0) {
-      await fs.unlink(filePath).catch(() => { });
+      await fs.unlink(filePath).catch(() => {});
       throw new Error("Downloaded video file is empty");
     }
 

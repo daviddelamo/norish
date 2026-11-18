@@ -6,6 +6,7 @@ import {
   isFacebookUrl,
   isInstagramUrl,
   isYouTubeUrl,
+  normalizeTikTokPhotoUrl,
 } from "@norish/api/video/url-utils";
 
 describe("URL detection utilities", () => {
@@ -96,6 +97,33 @@ describe("URL detection utilities", () => {
     it("throws for invalid URLs", () => {
       expect(() => detectPlatform("not-a-url")).toThrow();
       expect(() => detectPlatform("")).toThrow();
+    });
+  });
+
+  describe("normalizeTikTokPhotoUrl", () => {
+    it("rewrites TikTok /photo/ URLs to /video/ preserving query params", () => {
+      expect(
+        normalizeTikTokPhotoUrl(
+          "https://www.tiktok.com/@dailycookewithbella/photo/7705307625692417302?_r=1&_t=ZN-9BUra3w3J0Y"
+        )
+      ).toBe(
+        "https://www.tiktok.com/@dailycookewithbella/video/7705307625692417302?_r=1&_t=ZN-9BUra3w3J0Y"
+      );
+      expect(normalizeTikTokPhotoUrl("https://tiktok.com/photo/7705307625692417302")).toBe(
+        "https://tiktok.com/video/7705307625692417302"
+      );
+    });
+
+    it("leaves TikTok /video/, shortlinks, and other hosts untouched", () => {
+      expect(normalizeTikTokPhotoUrl("https://www.tiktok.com/@user/video/123")).toBe(
+        "https://www.tiktok.com/@user/video/123"
+      );
+      expect(normalizeTikTokPhotoUrl("https://vm.tiktok.com/ZN8aDGLP4/")).toBe(
+        "https://vm.tiktok.com/ZN8aDGLP4/"
+      );
+      expect(normalizeTikTokPhotoUrl("https://evil-tiktok.com/@user/photo/123")).toBe(
+        "https://evil-tiktok.com/@user/photo/123"
+      );
     });
   });
 });
